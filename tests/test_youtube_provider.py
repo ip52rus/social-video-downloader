@@ -351,7 +351,7 @@ def test_default_download_uses_best_available_quality(
 
     client = factory.instances[-1]
     expected_selector = (
-        "bv*[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
+        "bv[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
         "b[vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
         "bv*+ba/b"
     )
@@ -379,7 +379,7 @@ def test_video_with_audio_download_prefers_compatible_codecs_for_selected_qualit
     )
 
     expected_selector = (
-        "bv*[height<=720][vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
+        "bv[height<=720][vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
         "b[height<=720][vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
         "bv*[height<=720]+ba/b[height<=720]"
     )
@@ -543,12 +543,12 @@ def test_missing_final_media_file_maps_to_media_processing_error(tmp_path: Path)
         "bv*+ba/b",
         "bv[height<=720]",
         (
-            "bv*[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
+            "bv[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
             "b[vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
             "bv*+ba/b"
         ),
         (
-            "bv*[height<=720][vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
+            "bv[height<=720][vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
             "b[height<=720][vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
             "bv*[height<=720]+ba/b[height<=720]"
         ),
