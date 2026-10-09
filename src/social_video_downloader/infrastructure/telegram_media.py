@@ -17,11 +17,18 @@ def _probe_streams(path: Path, runner: Runner) -> tuple[str | None, str | None]:
     """Return the first video and audio codec names, failing closed on invalid media."""
     result = runner(
         [
-            "ffprobe", "-v", "error",
-            "-show_entries", "stream=codec_type,codec_name",
-            "-of", "json", str(path),
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "stream=codec_type,codec_name",
+            "-of",
+            "json",
+            str(path),
         ],
-        check=True, capture_output=True, text=True,
+        check=True,
+        capture_output=True,
+        text=True,
     )
     try:
         streams = json.loads(result.stdout)["streams"]
