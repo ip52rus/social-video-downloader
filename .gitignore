@@ -7,6 +7,16 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
+# Python build artifacts
+build/
+dist/
+*.egg-info/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
 # Virtual environments
 .venv/
 venv/
@@ -40,3 +50,14 @@ temp/
 *.mov
 *.avi
 *.part
+*.m4a
+*.mp3
+*.opus
+*.aac
+*.flac
+*.wav
+*.ogg
+*.wma
+*.aif
+*.aiff
+*.mka
