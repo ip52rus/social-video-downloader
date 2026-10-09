@@ -59,6 +59,21 @@ async def test_youtube_url_is_downloaded_and_delivered_then_workspace_is_cleaned
     service = FakeDownloadService()
     monkeypatch.setattr(handlers, "download_service", service)
     monkeypatch.setattr(handlers, "prepare_telegram_video", lambda path: path)
+    monkeypatch.setattr(
+        handlers,
+        "inspect_telegram_video",
+        lambda path: {
+            "format": {"duration": "72.534"},
+            "streams": [
+                {
+                    "codec_type": "video",
+                    "width": 1080,
+                    "height": 1920,
+                    "side_data_list": [],
+                }
+            ],
+        },
+    )
     message.text = "https://www.youtube.com/watch?v=abc"
 
     await handle_text(message)
@@ -69,6 +84,9 @@ async def test_youtube_url_is_downloaded_and_delivered_then_workspace_is_cleaned
     uploaded_file = message.answer_video.await_args.args[0]
     assert uploaded_file.path.name == "example.mp4"
     assert message.answer_video.await_args.kwargs["supports_streaming"] is True
+    assert message.answer_video.await_args.kwargs["width"] == 1080
+    assert message.answer_video.await_args.kwargs["height"] == 1920
+    assert message.answer_video.await_args.kwargs["duration"] == 73
     assert not uploaded_file.path.exists()
     assert message.answer.await_args_list[0].args[0].startswith("Ссылка YouTube распознана")
 
