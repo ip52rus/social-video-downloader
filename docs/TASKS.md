@@ -33,17 +33,13 @@
 - [x] Validate deterministic provider error boundaries and representative format layouts.
 
 ### Recorded verification evidence
-- Live matrix run on 2026-10-09 for https://www.youtube.com/watch?v=dQw4w9WgXcQ:
-  `YOUTUBE_LIVE_TEST_URL='https://www.youtube.com/watch?v=dQw4w9WgXcQ' uv run pytest tests/integration/test_youtube_live_matrix.py -q -s` → `1 passed in 140.06s`.
-- The live test downloaded combined video/audio MP4, selected-quality video-only output, and audio-only outputs in two distinct containers. ffprobe checks passed for actual stream composition, codec identification, video dimensions, audio sample rate, and expected audio containers.
-- Shorts https://www.youtube.com/shorts/Lmv2jfPNvzE (20 seconds) was tested in all three modes. ffprobe confirmed AV1 video (720×1280), Opus audio (48 kHz, stereo), and the expected stream composition in each mode.
-- Additional successful Shorts smoke tests were recorded for VF_MOfnz7OY using formats 398+251, and osrN3A_Rdiw using 616+251 via HLS. The latter was merged to an MP4 output; recorded process exit code was 0.
-- Deno 2.9.7 was detected during the recorded Shorts checks.
-- The duplicate audio format ID issue was reproduced and fixed in PR #10. Selector 251-0/251 downloaded audio successfully; ffprobe confirmed Opus, 48 kHz, stereo.
-- Deterministic tests cover metadata extractor errors, generic download failures, post-processing failures, missing final output, temporary-workspace cleanup, and five format-layout cases.
+- Live matrix run on 2026-10-09 for https://www.youtube.com/watch?v=dQw4w9WgXcQ: `1 passed in 140.06s`.
+- The live test downloaded combined video/audio MP4, selected-quality video-only output, and audio-only outputs in two distinct containers. ffprobe verified stream composition, codecs, dimensions, sample rate, and expected containers.
+- Shorts were tested in all three modes; additional successful Shorts smoke tests were recorded for VF_MOfnz7OY and osrN3A_Rdiw.
+- The duplicate audio format ID issue was reproduced and fixed. Deterministic tests cover provider errors, cleanup, and representative format layouts.
 - GitHub Actions run [37966225469](https://github.com/ip52rus/social-video-downloader/actions/runs/37966225469) passed 131 tests and Ruff lint/format checks on merge commit `f27051fded257b5f39056c45333b4fa8c50075a3`.
 
-The Phase 2 gate is satisfied by the combined live matrix and deterministic failure-boundary coverage. Scope limitation: the live matrix was run against one regular public video, so this is not a claim of broad reliability across every YouTube format, restriction, or transient platform condition.
+The Phase 2 gate is satisfied by the combined live matrix and deterministic failure-boundary coverage. Scope limitation: the live matrix was run against one regular public video, not every YouTube format or platform condition.
 
 ## Telegram MVP — in progress
 - [x] Add validated environment-based application settings for the Telegram bot token, environment name, and log level.
