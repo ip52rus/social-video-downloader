@@ -39,9 +39,7 @@ def test_settings_normalizes_optional_telegram_api_base_url():
 
 
 def test_settings_ignores_blank_optional_telegram_api_base_url():
-    settings = Settings.from_env(
-        {"TELEGRAM_BOT_TOKEN": "test-token", "TELEGRAM_API_BASE_URL": " "}
-    )
+    settings = Settings.from_env({"TELEGRAM_BOT_TOKEN": "test-token", "TELEGRAM_API_BASE_URL": " "})
 
     assert settings.telegram_api_base_url is None
 
@@ -59,9 +57,7 @@ def test_settings_ignores_blank_optional_telegram_api_base_url():
 )
 def test_settings_rejects_invalid_telegram_api_base_url(base_url):
     with pytest.raises(ConfigurationError, match="TELEGRAM_API_BASE_URL"):
-        Settings.from_env(
-            {"TELEGRAM_BOT_TOKEN": "test-token", "TELEGRAM_API_BASE_URL": base_url}
-        )
+        Settings.from_env({"TELEGRAM_BOT_TOKEN": "test-token", "TELEGRAM_API_BASE_URL": base_url})
 
 
 def test_settings_accepts_custom_api_timeout():
