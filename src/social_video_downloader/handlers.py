@@ -25,6 +25,7 @@ from social_video_downloader.domain.urls import detect_platform, normalize_media
 from social_video_downloader.infrastructure.telegram_media import (
     inspect_telegram_video,
     prepare_telegram_video,
+    telegram_video_upload_parameters,
 )
 from social_video_downloader.services.download import DownloadService
 
@@ -116,18 +117,21 @@ async def handle_text(message: Message) -> None:
                 prepare_telegram_video,
                 downloaded.file_path,
             )
+            upload_parameters: dict[str, int] = {}
 
             try:
                 probe_data = await asyncio.to_thread(inspect_telegram_video, telegram_video)
+                upload_parameters = telegram_video_upload_parameters(probe_data)
                 logger.info(
                     "Telegram upload input: python=%s handler_module=%s path=%s "
-                    "resolved_path=%s filename=%s file_size=%s probe=%s",
+                    "resolved_path=%s filename=%s file_size=%s upload_parameters=%s probe=%s",
                     sys.executable,
                     __file__,
                     telegram_video,
                     telegram_video.resolve(),
                     telegram_video.name,
                     telegram_video.stat().st_size,
+                    upload_parameters,
                     json.dumps(probe_data, ensure_ascii=False, sort_keys=True),
                 )
             except Exception:
@@ -141,6 +145,7 @@ async def handle_text(message: Message) -> None:
                 FSInputFile(telegram_video),
                 caption=downloaded.metadata.title[:1024],
                 supports_streaming=True,
+                **upload_parameters,
             )
 
             video = sent_message.video
