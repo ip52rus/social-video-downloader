@@ -13,14 +13,14 @@
 - [x] Add dependency management.
 
 ## Downloader Core
-- [ ] Define domain models.
-- [ ] Define provider interface.
-- [ ] Implement URL normalization.
-- [ ] Implement platform detection.
+- [x] Define domain models.
+- [x] Define provider interface.
+- [x] Implement URL normalization.
+- [x] Implement platform detection.
 - [ ] Implement safe filename generation.
 - [ ] Implement temporary workspace lifecycle.
-- [ ] Define error taxonomy.
-- [ ] Add unit tests.
+- [x] Define error taxonomy.
+- [x] Add unit tests for models, errors, provider contract, and URL handling.
 - [ ] Add integration harness.
 
 ## YouTube
