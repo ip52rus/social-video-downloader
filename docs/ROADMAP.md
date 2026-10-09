@@ -19,12 +19,12 @@ Gate: a representative integration matrix passes, including relevant success and
 - Additional successful Shorts smoke tests were recorded for VF_MOfnz7OY (formats 398+251) and osrN3A_Rdiw (formats 616+251 via HLS, merged output, exit code 0).
 - Deno 2.9.7 was detected during the recorded Shorts checks.
 - PR #10 fixed a reproduced duplicate audio format ID issue by trying the normalized suffixed ID before the raw ID. A live check of selector 251-0/251 downloaded audio that ffprobe identified as Opus, 48 kHz, stereo.
-- The latest recorded automated suite passed with 122 tests. Ruff lint and format checks passed for the changed YouTube provider and its tests.
+- GitHub Actions CI run [37965947548](https://github.com/ip52rus/social-video-downloader/actions/runs/37965947548) passed 131 tests and Ruff lint/format checks on validation branch commit `6d4dccb08bd8208efa75da617638364bc51b59e4`.
 - GitHub Actions quality passed on PR #10 head commit 5b49c9455a71ec7d562c46db00e12a1172769dd8. A separate CI result for the merge commit was not confirmed.
 
 ### Remaining Phase 2 checks
 - Validate a representative matrix of available formats and media characteristics beyond the targeted smoke tests already recorded.
-- Validate provider failure scenarios and relevant error boundaries, distinguishing application defects from external-platform and transient network failures. Deterministic tests for extractor, download, post-processing, and missing-output failures are being added; their CI result remains pending.
+- Review whether any additional provider failure scenarios require coverage, distinguishing application defects from external-platform and transient network failures. Deterministic tests for extractor, download, post-processing, missing-output, cleanup, and representative format-layout cases now pass in GitHub Actions run [37965947548](https://github.com/ip52rus/social-video-downloader/actions/runs/37965947548) (131 tests; Ruff lint and format passed). This does not validate live external-platform failure behavior.
 - Re-run the relevant automated tests and quality checks after further provider changes.
 
 Shorts smoke testing is recorded as complete, but Phase 2 remains in progress until the broader format matrix and failure scenarios satisfy the acceptance gate. Do not infer broad provider reliability from a small number of successful URLs.
