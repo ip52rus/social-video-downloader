@@ -30,5 +30,6 @@ The Phase 2 acceptance gate is satisfied by the live output-mode/container matri
 - tests/test_bot.py verifies bot and dispatcher construction.
 - tests/test_handlers.py covers /start, invalid links, unsupported domains, non-YouTube platform messaging, successful mocked download/delivery, safe error responses, and temporary workspace cleanup.
 - tests/test_download_service.py covers provider selection, URL normalization, delegation, and recognized platforms without configured providers.
+- GitHub Actions run [37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474) passed lint, format, and the deterministic test suite for this implementation.
 
 These deterministic tests do not exercise a real YouTube download from the Telegram process, Telegram network upload, or polling against Telegram. A manual test-bot end-to-end check remains outstanding and is required before Phase 3 can be accepted.
