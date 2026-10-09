@@ -16,8 +16,8 @@ Evidence and limits are documented in TASKS.md and TESTING.md. Live matrix cover
 Implement URL -> download -> result without advertising or monetization.
 - Complete: validated settings, application logging, and minimal aiogram polling entry point.
 - Complete: /start and text-based URL intake with deterministic handler tests.
-- In implementation: provider-selection service, YouTube download orchestration, safe domain-error messages, Telegram file delivery, and temporary workspace cleanup. The current PR must pass CI before these are considered verified.
-- Remaining gate: manually run a public YouTube URL through a real Telegram test bot, confirm the uploaded file is playable, and record relevant failure behavior and setup instructions.
+- Complete: provider-selection service, YouTube download orchestration, safe domain-error messages, Telegram document delivery path, and temporary workspace cleanup; deterministic CI passed in [run 37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474).
+- Remaining gate: manually run a public YouTube URL through a real Telegram test bot, confirm the uploaded file is playable, and record upload-limit/error behavior and setup instructions.
 - Instagram and TikTok are recognized but do not have download providers yet.
 
 Gate: complete core user flow works in a test bot, including relevant user-facing error cases. Deterministic tests alone do not satisfy the live Telegram end-to-end gate.
