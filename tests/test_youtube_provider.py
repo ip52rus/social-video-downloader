@@ -305,6 +305,8 @@ def test_video_only_download_uses_selected_quality(
     client = factory.instances[-1]
     assert client.params["format"] == "bv[height<=720]"
     assert client.format_selector == "bv[height<=720]"
+    assert client.params["retries"] == 10
+    assert client.params["fragment_retries"] == 10
     assert "merge_output_format" not in client.params
     assert downloaded.file_path.is_file()
 
