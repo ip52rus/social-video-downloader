@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Add Telegram /start and text-based URL intake with supported-platform recognition, user-facing validation responses, and deterministic handler tests.
 - Add standard-library logging configuration and a minimal aiogram bot/dispatcher polling entry point, with deterministic construction/configuration tests.
 - Add validated environment-based settings for Telegram bot configuration, app environment, and log level, with deterministic tests.
 - Record successful opt-in live YouTube output-mode/container matrix verification and close the Phase 2 validation gate with explicit evidence limits.
@@ -18,4 +19,4 @@
 ## Verification notes
 - GitHub Actions run [37966225469](https://github.com/ip52rus/social-video-downloader/actions/runs/37966225469) passed 131 tests and Ruff lint/format checks on merge commit f27051fded257b5f39056c45333b4fa8c50075a3.
 - Opt-in live matrix passed locally on 2026-10-09 for https://www.youtube.com/watch?v=dQw4w9WgXcQ in 140.06 seconds. It verified combined MP4, selected-quality video-only output, and audio-only output in two containers using ffprobe.
-- Live evidence is limited to a small set of public URLs and does not establish broad platform reliability. Telegram polling, user-facing flow, and access control remain unverified or unimplemented.
+- Live evidence is limited to a small set of public URLs and does not establish broad platform reliability. Telegram polling, media download/delivery, and access control remain unverified or unimplemented.

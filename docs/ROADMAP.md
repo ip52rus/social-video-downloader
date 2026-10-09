@@ -14,9 +14,9 @@ Evidence and limits are documented in TASKS.md and TESTING.md. Live matrix cover
 
 ## Phase 3 - Telegram MVP — in progress
 Implement URL -> download -> result without advertising or monetization.
-- Complete: validated environment-based settings and deterministic tests.
-- Complete: standard-library logging configuration and minimal aiogram bot/dispatcher polling entry point.
-- Next: /start and URL intake, then download orchestration, error mapping, and result delivery.
+- Complete: validated settings, application logging, and minimal aiogram polling entry point.
+- Complete: /start and text-based URL intake with deterministic handler tests. Supported domains are recognized; this step does not download media.
+- Next: connect provider selection and download orchestration, map errors, and deliver files.
 Gate: complete core user flow works in a test bot, including relevant user-facing error cases. Handler tests alone do not satisfy the live Telegram end-to-end gate.
 
 ## Phase 4 - Access Control

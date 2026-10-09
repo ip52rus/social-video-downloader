@@ -1,7 +1,7 @@
 # Testing Strategy
 
 ## Unit tests
-Fast deterministic tests for URL normalization, provider detection, filename sanitization, configuration parsing, logging configuration, bot/dispatcher construction, and error mapping.
+Fast deterministic tests for URL normalization, provider detection, filename sanitization, configuration parsing, logging configuration, bot/dispatcher construction, handler behavior, and error mapping.
 
 ## Integration tests
 Provider metadata extraction, media download, video/audio merging, and temporary workspace cleanup. External tests must not require personal credentials.
@@ -27,6 +27,7 @@ The Phase 2 acceptance gate is satisfied by the live output-mode/container matri
 ### Telegram foundation tests
 - tests/test_config.py covers required token handling, defaults, normalization, invalid values, token redaction in the settings repr, and immutability.
 - tests/test_logging_config.py verifies that the configured level and fixed log format are passed to the logging setup without including the bot token.
-- tests/test_bot.py verifies bot construction and dispatcher construction. No Telegram API request is made by these tests.
+- tests/test_bot.py verifies bot and dispatcher construction.
+- tests/test_handlers.py covers /start, recognized supported-platform URLs, invalid links, and unsupported domains without Telegram API requests or real downloads.
 
-The logging and entry-point tests are deterministic; they do not establish that polling succeeds against Telegram or that a user-facing flow works. A manual test-bot end-to-end check remains outstanding.
+These deterministic tests do not establish that polling succeeds against Telegram or that media can be downloaded and delivered. A manual test-bot end-to-end check remains outstanding.

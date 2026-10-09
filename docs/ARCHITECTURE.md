@@ -1,16 +1,16 @@
 # Architecture
 
 ## Target logical architecture
-Telegram -> Application layer -> Download service -> Provider interface -> provider implementation -> media engine -> temporary storage.
+Telegram -> Telegram handlers -> application/download service -> provider interface -> provider implementation -> media engine -> temporary storage.
 
 ## Configuration and startup
-Environment-based settings are validated before starting the application. The Telegram token is required, is excluded from the settings representation, and must never be written to logs. Application environment and log level have explicit accepted values. The package entry point is python -m social_video_downloader; it configures standard-library logging, creates an aiogram bot and dispatcher, and starts polling. Bot session cleanup runs when polling stops.
+Environment-based settings are validated before starting the application. The Telegram token is required, excluded from the settings representation, and must never be written to logs. The package entry point is python -m social_video_downloader; it configures standard-library logging, creates an aiogram bot and dispatcher, registers the Telegram router, and starts polling. Bot session cleanup runs when polling stops.
 
 ## Telegram layer
-Commands, messages, buttons, access checks, user-facing errors, and result delivery. It must not contain provider-specific download logic. The current entry point intentionally has no user-facing handlers yet.
+The aiogram router owns commands and text intake, user-facing validation responses, access checks, and result delivery. It must not contain provider-specific download logic. Currently /start explains usage, and text messages are treated as candidate URLs and validated against supported platform domains. Accepted links receive an explicit acknowledgement that downloading is not yet connected.
 
 ## Application layer
-Orchestrates requests, validates input, selects providers, enforces policies, and returns transport-neutral results.
+Orchestrates requests, validates input, selects providers, enforces policies, and returns transport-neutral results. Download orchestration is not connected to Telegram handlers yet.
 
 ## Provider layer
 Each provider owns URL recognition, metadata retrieval, media acquisition, and provider-specific quirks.
