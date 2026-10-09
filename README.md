@@ -4,7 +4,7 @@ Free Telegram bot-service for downloading media from popular social platforms.
 
 ## Project status
 
-The downloader core and YouTube provider are implemented, and the YouTube validation gate has passed with documented limits. Phase 3 (Telegram MVP) is in progress: the bot recognizes supported URLs, can download individual YouTube videos through the existing provider, and attempts to send the resulting file in Telegram. Deterministic tests and CI for this flow are being validated; a real Telegram test-bot end-to-end run remains outstanding. Instagram and TikTok links are recognized but their download providers are not implemented.
+The downloader core and YouTube provider are implemented, and the YouTube validation gate has passed with documented limits. Phase 3 (Telegram MVP) is in progress: the bot recognizes supported URLs, downloads individual YouTube videos through the existing provider, and attempts to send the resulting file in Telegram. Deterministic tests, lint, and formatting passed in [GitHub Actions run 37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474); a real Telegram test-bot end-to-end run remains outstanding. Instagram and TikTok links are recognized but their download providers are not implemented.
 
 The project is not production-ready. Telegram community-membership access control is a separate planned Phase 4. See [the roadmap](docs/ROADMAP.md), [task checklist](docs/TASKS.md), and [testing strategy](docs/TESTING.md).
 
