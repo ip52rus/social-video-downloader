@@ -22,9 +22,7 @@ class Settings:
             raise ConfigurationError("TELEGRAM_BOT_TOKEN must not be empty.")
 
         if self.app_env not in {"development", "test", "production"}:
-            raise ConfigurationError(
-                "APP_ENV must be one of: development, test, production."
-            )
+            raise ConfigurationError("APP_ENV must be one of: development, test, production.")
 
         normalized_log_level = self.log_level.upper()
         if normalized_log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
