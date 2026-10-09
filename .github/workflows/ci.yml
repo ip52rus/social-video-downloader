@@ -24,7 +24,7 @@ jobs:
           enable-cache: true
 
       - name: Sync environment
-        run: uv sync
+        run: uv sync --locked
 
       - name: Lint
         run: uv run ruff check .
