@@ -6,6 +6,8 @@ from typing import Any
 import pytest
 
 from social_video_downloader.domain.errors import (
+    DownloadFailedError,
+    MediaProcessingError,
     MetadataExtractionError,
     UnsupportedDownloadModeError,
     UnsupportedQualityError,
@@ -75,11 +77,17 @@ class FakeYoutubeDL:
         params: dict[str, Any],
         info: dict[str, Any],
         download_extension: str = "mp4",
+        extract_error: Exception | None = None,
+        process_error: Exception | None = None,
+        write_output: bool = True,
     ) -> None:
         self.params = params
         self.format_selector = params.get("format")
         self.info = info
         self.download_extension = download_extension
+        self.extract_error = extract_error
+        self.process_error = process_error
+        self.write_output = write_output
         self.extract_calls: list[tuple[str, bool, bool]] = []
         self.processed = False
 
@@ -102,6 +110,8 @@ class FakeYoutubeDL:
         force_generic_extractor: bool = False,
     ) -> dict[str, Any]:
         self.extract_calls.append((url, download, process))
+        if self.extract_error is not None:
+            raise self.extract_error
         return self.info.copy()
 
     def process_ie_result(
@@ -120,7 +130,10 @@ class FakeYoutubeDL:
             .replace("%(ext)s", self.download_extension)
         )
         output_path = Path(output_name)
-        output_path.write_bytes(b"fake media")
+        if self.process_error is not None:
+            raise self.process_error
+        if self.write_output:
+            output_path.write_bytes(b"fake media")
         return {"filepath": str(output_path)}
 
 
@@ -131,9 +144,15 @@ class FakeYoutubeDLFactory:
         self,
         info: dict[str, Any] | None = None,
         download_extension: str = "mp4",
+        extract_error: Exception | None = None,
+        process_error: Exception | None = None,
+        write_output: bool = True,
     ) -> None:
         self.info = info if info is not None else VIDEO_INFO
         self.download_extension = download_extension
+        self.extract_error = extract_error
+        self.process_error = process_error
+        self.write_output = write_output
         self.instances: list[FakeYoutubeDL] = []
 
     def __call__(self, params: dict[str, Any]) -> FakeYoutubeDL:
@@ -141,6 +160,9 @@ class FakeYoutubeDLFactory:
             params,
             self.info,
             download_extension=self.download_extension,
+            extract_error=self.extract_error,
+            process_error=self.process_error,
+            write_output=self.write_output,
         )
         self.instances.append(client)
         return client
@@ -388,6 +410,51 @@ def test_rejects_playlist_metadata() -> None:
 
     with pytest.raises(MetadataExtractionError):
         provider.extract_metadata("https://youtu.be/abc123")
+
+
+def test_metadata_extractor_failure_maps_to_domain_error() -> None:
+    factory = FakeYoutubeDLFactory(extract_error=RuntimeError("simulated extractor failure"))
+    provider = YouTubeProvider(ydl_factory=factory)
+
+    with pytest.raises(MetadataExtractionError) as exc_info:
+        provider.extract_metadata("https://youtu.be/abc123")
+
+    assert isinstance(exc_info.value.__cause__, RuntimeError)
+
+
+def test_download_failure_maps_to_download_failed_error(tmp_path: Path) -> None:
+    factory = FakeYoutubeDLFactory(process_error=RuntimeError("simulated network failure"))
+    provider = YouTubeProvider(ydl_factory=factory)
+
+    with pytest.raises(DownloadFailedError) as exc_info:
+        provider.download("https://youtu.be/abc123", tmp_path)
+
+    assert isinstance(exc_info.value.__cause__, RuntimeError)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_post_processing_failure_maps_to_media_processing_error(tmp_path: Path) -> None:
+    class PostProcessingError(Exception):
+        pass
+
+    factory = FakeYoutubeDLFactory(process_error=PostProcessingError("simulated ffmpeg failure"))
+    provider = YouTubeProvider(ydl_factory=factory)
+
+    with pytest.raises(MediaProcessingError) as exc_info:
+        provider.download("https://youtu.be/abc123", tmp_path)
+
+    assert isinstance(exc_info.value.__cause__, PostProcessingError)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_missing_final_media_file_maps_to_media_processing_error(tmp_path: Path) -> None:
+    provider = YouTubeProvider(ydl_factory=FakeYoutubeDLFactory(write_output=False))
+
+    with pytest.raises(MediaProcessingError, match="exactly one final media file"):
+        provider.download("https://youtu.be/abc123", tmp_path)
+
+    # The temporary workspace is removed even when no final media file is produced.
+    assert list(tmp_path.iterdir()) == []
 
 
 @pytest.mark.parametrize(
