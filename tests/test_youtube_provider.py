@@ -211,6 +211,55 @@ def test_lists_supported_modes(provider: YouTubeProvider) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("formats", "expected_modes"),
+    [
+        pytest.param(
+            [
+                {"format_id": "18", "height": 360, "vcodec": "avc1", "acodec": "mp4a"},
+            ],
+            (DownloadMode.VIDEO_WITH_AUDIO,),
+            id="progressive-video-with-audio",
+        ),
+        pytest.param(
+            [
+                {"format_id": "137", "height": 1080, "vcodec": "avc1", "acodec": "none"},
+                {"format_id": "248", "height": 1080, "vcodec": "vp9", "acodec": "none"},
+                {"format_id": "399", "height": 1080, "vcodec": "av01", "acodec": "none"},
+                {"format_id": "140", "vcodec": "none", "acodec": "mp4a.40.2"},
+                {"format_id": "251", "vcodec": "none", "acodec": "opus"},
+            ],
+            (
+                DownloadMode.VIDEO_WITH_AUDIO,
+                DownloadMode.VIDEO_ONLY,
+                DownloadMode.AUDIO_ONLY,
+            ),
+            id="adaptive-avc-vp9-av1-and-aac-opus",
+        ),
+        pytest.param(
+            [{"format_id": "137", "height": 1080, "vcodec": "avc1", "acodec": "none"}],
+            (DownloadMode.VIDEO_ONLY,),
+            id="video-only-source",
+        ),
+        pytest.param(
+            [{"format_id": "251", "vcodec": "none", "acodec": "opus"}],
+            (DownloadMode.AUDIO_ONLY,),
+            id="audio-only-source",
+        ),
+        pytest.param(
+            [{"format_id": "unknown", "vcodec": "none", "acodec": "none"}],
+            (),
+            id="no-usable-audio-or-video",
+        ),
+    ],
+)
+def test_supported_modes_for_representative_format_layouts(
+    formats: list[dict[str, Any]],
+    expected_modes: tuple[DownloadMode, ...],
+) -> None:
+    assert YouTubeProvider._supported_modes_from_info({"formats": formats}) == expected_modes
+
+
 def test_lists_video_qualities_from_available_formats(
     provider: YouTubeProvider,
 ) -> None:
