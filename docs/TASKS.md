@@ -47,6 +47,7 @@
 - Latest recorded automated suite: 122 passed.
 - Ruff lint and format checks passed for src/social_video_downloader/providers/youtube.py and tests/test_youtube_provider.py.
 - GitHub Actions quality job passed on PR #10 head commit 5b49c9455a71ec7d562c46db00e12a1172769dd8. This is evidence for the PR head, not a separate CI result for the merge commit.
+- Additional deterministic provider tests have been added on `test/youtube-provider-validation` for extractor exceptions, generic download failures, post-processing failures, missing final output, and temporary-workspace cleanup. Their CI result is pending; do not count them as passed until the workflow completes.
 - These are targeted smoke tests and automated checks, not evidence of broad provider reliability or complete coverage.
 
 ## Telegram
