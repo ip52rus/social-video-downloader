@@ -90,4 +90,8 @@ def safe_filename(
     if not name:
         name = "media"
 
+    reserved_name = name.split(".", maxsplit=1)[0].rstrip(" .").upper()
+    if reserved_name in _RESERVED_WINDOWS_NAMES:
+        name = f"_{name}"
+
     return f"{name}{suffix}"

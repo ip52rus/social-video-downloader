@@ -57,3 +57,10 @@ def test_rejects_non_string_title() -> None:
 def test_rejects_boolean_byte_limit() -> None:
     with pytest.raises(TypeError):
         safe_filename("video", max_bytes=True)
+
+
+def test_truncation_does_not_create_reserved_windows_device_name() -> None:
+    result = safe_filename("COM1я", max_bytes=5)
+
+    assert result == "_COM1"
+    assert len(result.encode("utf-8")) <= 5
