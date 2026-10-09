@@ -29,6 +29,21 @@ The Phase 2 acceptance gate is satisfied by the live output-mode/container matri
 - `tests/test_handlers.py` verifies video-message delivery with streaming support and temporary workspace cleanup.
 - These deterministic tests do not prove playback on every Telegram client. After deployment, repeat a live test on desktop and iPhone.
 
+#### Controlled no-transcode experiment (PR #23)
+This is a diagnostic experiment only. Do not disable transcoding by default based on unit tests or one successful Telegram client.
+
+1. Start the bot with `TELEGRAM_VIDEO_TRANSCODING=false` set in the same terminal/process environment. The default remains `true`.
+2. Submit these exact URLs to the test bot, one at a time:
+   - https://www.youtube.com/shorts/HuWYqMhCELc
+   - https://www.youtube.com/shorts/JqqIoHOn7ug
+3. Confirm the bot log contains `Telegram video transcoding disabled; uploading original downloaded file` and that the logged path is the original download, not a `.telegram-compatible.mp4` file.
+4. For each upload, check that video opens, image orientation/aspect ratio is correct, audio plays, seeking works, and displayed duration is plausible. Record the upload size and wait time.
+5. Test Telegram Desktop on macOS first; if available, repeat in Telegram Web and on iPhone. Record client and OS versions and any differences.
+6. Report results per URL and client. A failed playback is useful evidence; do not silently retry with transcoding before recording it.
+7. Stop the test bot and restart without the environment override. Verify the default transcoding behavior is restored.
+
+Automated CI verifies that the switch bypasses the transcoder; it does not verify actual playback, upload success for large files, or compatibility across Telegram clients.
+
 ### Telegram deterministic tests
 - tests/test_config.py covers required token handling, defaults, normalization, invalid values, token redaction in the settings repr, and immutability.
 - tests/test_logging_config.py verifies that the configured level and fixed log format are passed to the logging setup without including the bot token.
