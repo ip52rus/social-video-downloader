@@ -8,28 +8,25 @@ Gate: governance files exist, contain no secrets or personal data, and the repos
 Transport-independent URL validation, provider detection, provider interface, download result model, temporary workspace, safe filenames, errors, logging, and tests.
 Gate: core behavior is independently testable without Telegram.
 
-## Phase 2 - YouTube Provider
+## Phase 2 - YouTube Provider — validation gate passed
 Move the validated prototype into the provider architecture and validate Shorts, representative formats/media cases, and failure behavior.
 Gate: a representative integration matrix passes, including relevant success and failure scenarios.
 
 ### Verified progress
 - The YouTube provider is implemented in the provider architecture.
-- Real downloads have succeeded for VIDEO_WITH_AUDIO, VIDEO_ONLY, and AUDIO_ONLY using a public YouTube video; ffprobe confirmed the expected stream composition for VIDEO_ONLY and AUDIO_ONLY.
+- Real regular-video downloads succeeded in VIDEO_WITH_AUDIO, VIDEO_ONLY, and AUDIO_ONLY modes.
+- The live format-matrix test passed on 2026-10-09 for public video https://www.youtube.com/watch?v=dQw4w9WgXcQ: combined MP4 with video and audio streams, selected-quality video-only output, and audio-only outputs in two distinct containers. ffprobe verified stream composition and reported codecs plus video dimensions/audio sample rate. Command: `YOUTUBE_LIVE_TEST_URL='https://www.youtube.com/watch?v=dQw4w9WgXcQ' uv run pytest tests/integration/test_youtube_live_matrix.py -q -s`; result: `1 passed in 140.06s`.
 - Shorts were tested in all three download modes for Lmv2jfPNvzE. ffprobe confirmed AV1 video (720×1280) and Opus audio (48 kHz, stereo) for the combined output, video-only output without audio, and audio-only output without video.
 - Additional successful Shorts smoke tests were recorded for VF_MOfnz7OY (formats 398+251) and osrN3A_Rdiw (formats 616+251 via HLS, merged output, exit code 0).
 - Deno 2.9.7 was detected during the recorded Shorts checks.
-- PR #10 fixed a reproduced duplicate audio format ID issue by trying the normalized suffixed ID before the raw ID. A live check of selector 251-0/251 downloaded audio that ffprobe identified as Opus, 48 kHz, stereo.
-- GitHub Actions CI run [37965947548](https://github.com/ip52rus/social-video-downloader/actions/runs/37965947548) passed 131 tests and Ruff lint/format checks on validation branch commit `6d4dccb08bd8208efa75da617638364bc51b59e4`.
-- GitHub Actions quality passed on PR #10 head commit 5b49c9455a71ec7d562c46db00e12a1172769dd8. A separate CI result for the merge commit was not confirmed.
+- PR #10 fixed a reproduced duplicate audio format ID issue by trying the normalized suffixed ID before the raw ID. A live check of selector 251-0/251 downloaded audio; ffprobe confirmed Opus, 48 kHz, stereo.
+- Deterministic tests cover metadata extraction errors, download failures, post-processing failures, missing final output, workspace cleanup, and five representative format-layout cases.
+- GitHub Actions on merge commit `f27051fded257b5f39056c45333b4fa8c50075a3` passed 131 tests and Ruff lint/format checks. The opt-in live test was added in PR #13 and passed CI as a skip when no URL was configured; a separate local real-platform run is recorded above.
 
-### Remaining Phase 2 checks
-- Validate a representative matrix of available formats and media characteristics beyond the targeted smoke tests already recorded. An opt-in live test is now available at `tests/integration/test_youtube_live_matrix.py`; it has not yet been run against a new public video, so this gate remains open.
-- Review whether any additional provider failure scenarios require coverage, distinguishing application defects from external-platform and transient network failures. Deterministic tests for extractor, download, post-processing, missing-output, cleanup, and representative format-layout cases now pass in GitHub Actions run [37965947548](https://github.com/ip52rus/social-video-downloader/actions/runs/37965947548) (131 tests; Ruff lint and format passed). This does not validate live external-platform failure behavior.
-- Re-run the relevant automated tests and quality checks after further provider changes.
+### Gate result and limits
+The Phase 2 acceptance gate is satisfied by the combination of the live output-mode/container matrix, previously recorded Shorts and regular-video smoke tests, and deterministic provider error-boundary/format-layout tests. This is targeted acceptance evidence, not proof of broad YouTube reliability: live matrix coverage is one regular-video URL, and platform restrictions, transient failures, and untested media variants remain possible. Re-run the live matrix when making material provider/yt-dlp changes and investigate real user-facing failures as they arise.
 
-Shorts smoke testing is recorded as complete, but Phase 2 remains in progress until the broader format matrix and failure scenarios satisfy the acceptance gate. Do not infer broad provider reliability from a small number of successful URLs.
-
-## Phase 3 - Telegram MVP
+## Phase 3 - Telegram MVP — next
 Implement URL -> download -> result without advertising or monetization.
 Gate: complete core user flow works in a test bot, including relevant user-facing error cases.
 

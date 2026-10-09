@@ -4,8 +4,8 @@ Free Telegram bot-service for downloading media from popular social platforms.
 
 ## Project status
 
-The transport-independent downloader core and the first YouTube provider are implemented. YouTube has passed targeted real-download smoke tests for regular videos and Shorts, including video-with-audio, video-only, and audio-only modes. The automated test suite has 122 passing tests in the latest recorded run.
+The transport-independent downloader core and YouTube provider are implemented. The YouTube provider's Phase 2 validation gate has passed: recorded real downloads cover regular videos and Shorts, all three output modes, two audio containers in the live matrix, and deterministic provider error-boundary tests. The latest recorded GitHub Actions suite passed 131 tests with Ruff lint/format checks; the opt-in live matrix also passed locally on a public regular video.
 
-**Current stage: YouTube provider validation.** A representative format matrix and provider failure/error-boundary scenarios remain open. The Telegram bot flow and community-membership access control have not yet been implemented.
+**Current stage: Telegram MVP.** The Telegram bot flow and community-membership access control have not yet been implemented. This project is not production-ready, and a successful matrix on one URL does not establish broad YouTube reliability.
 
-See [the roadmap](docs/ROADMAP.md), [task checklist](docs/TASKS.md), and [testing strategy](docs/TESTING.md) for verified evidence and remaining acceptance criteria.
+See [the roadmap](docs/ROADMAP.md), [task checklist](docs/TASKS.md), and [testing strategy](docs/TESTING.md) for evidence, limitations, and remaining work.

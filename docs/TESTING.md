@@ -16,18 +16,19 @@ A phase cannot be marked complete only because the happy path works. Relevant ne
 Distinguish application regressions, provider/platform changes, and temporary network failures. Record external changes before modifying unrelated code.
 
 ### Current YouTube verification snapshot
-- Automated suite: 131 passed in GitHub Actions run [37965947548](https://github.com/ip52rus/social-video-downloader/actions/runs/37965947548) on validation branch commit `6d4dccb08bd8208efa75da617638364bc51b59e4`.
-- Ruff lint and format checks passed for src/social_video_downloader/providers/youtube.py and tests/test_youtube_provider.py.
-- GitHub Actions quality job passed on PR #10 head commit 5b49c9455a71ec7d562c46db00e12a1172769dd8. A separate result for the merge commit was not confirmed.
-- Real downloads were verified for a regular public YouTube video in VIDEO_WITH_AUDIO, VIDEO_ONLY, and AUDIO_ONLY modes.
+- GitHub Actions run [37966225469](https://github.com/ip52rus/social-video-downloader/actions/runs/37966225469) passed 131 tests on merge commit `f27051fded257b5f39056c45333b4fa8c50075a3`; Ruff lint and format checks passed.
+- The opt-in live-matrix CI test is intentionally skipped when `YOUTUBE_LIVE_TEST_URL` is not set. The PR #13 head and merge-commit workflows passed with that test skipped.
+- Real regular-video downloads were verified in VIDEO_WITH_AUDIO, VIDEO_ONLY, and AUDIO_ONLY modes.
+- Live matrix run on 2026-10-09 for https://www.youtube.com/watch?v=dQw4w9WgXcQ:
+  `YOUTUBE_LIVE_TEST_URL='https://www.youtube.com/watch?v=dQw4w9WgXcQ' uv run pytest tests/integration/test_youtube_live_matrix.py -q -s` → `1 passed in 140.06s`.
+- The live matrix downloaded combined video/audio MP4, a selected-quality video-only output, and audio-only outputs in two distinct containers. ffprobe verified the actual streams, codec names, video dimensions, audio sample rate, and expected audio containers.
 - Shorts Lmv2jfPNvzE was verified in all three modes. ffprobe confirmed AV1 video (720×1280) and Opus audio (48 kHz, stereo) in the combined output, a video-only stream in VIDEO_ONLY, and an audio-only stream in AUDIO_ONLY.
 - Additional successful Shorts smoke tests were recorded for VF_MOfnz7OY (formats 398+251) and osrN3A_Rdiw (formats 616+251 via HLS).
 - A duplicate audio format ID issue was reproduced and fixed; a live selector check for 251-0/251 successfully downloaded Opus audio (48 kHz, stereo).
 
-Ruff lint and format checks passed in the same CI run. Deterministic tests now cover extractor exceptions, generic download failures, post-processing failures, missing final output and workspace cleanup, plus five format-layout cases spanning progressive, adaptive AVC/VP9/AV1 and AAC/Opus, video-only, audio-only, and unusable formats. These tests do not substitute for real YouTube downloads across a representative format/media matrix.
+Deterministic tests cover extractor exceptions, generic download failures, post-processing failures, missing final output and workspace cleanup, plus five format-layout cases spanning progressive, adaptive AVC/VP9/AV1 and AAC/Opus, video-only, audio-only, and unusable formats.
 
-These results are targeted smoke-test evidence. They do not establish a representative format matrix, comprehensive failure-path coverage, or broad provider reliability. Those checks remain acceptance criteria for Phase 2.
-
+The Phase 2 acceptance gate is satisfied by the combination of the live output-mode/container matrix, recorded Shorts and regular-video smoke tests, and deterministic error-boundary/format-layout tests. This is targeted acceptance evidence, not proof of broad reliability: the live matrix has been run against one regular public video. It does not establish behavior for every codec/container combination, geo-/age-restricted media, all live-stream conditions, or transient YouTube/platform changes. Re-run the live matrix after material provider or yt-dlp changes, and classify future failures as application issues, platform restrictions/changes, or transient network failures.
 
 ### Opt-in live YouTube format matrix
 
@@ -39,4 +40,4 @@ Run it locally with:
 YOUTUBE_LIVE_TEST_URL='https://www.youtube.com/watch?v=dQw4w9WgXcQ' uv run pytest tests/integration/test_youtube_live_matrix.py -q -s
 ```
 
-The test downloads combined video/audio, a selected video-only quality, and audio-only outputs in two distinct containers; `ffprobe` verifies actual streams, codecs, dimensions/sample rate, and expected output containers. Files are created under pytest's temporary directory and removed after the test. A skipped test is not acceptance evidence: record a successful live run and classify any failure as an application issue, platform restriction/change, or transient network failure. Do not repeat already verified Shorts cases merely to rerun this matrix.
+The test downloads combined video/audio, a selected video-only quality, and audio-only outputs in two distinct containers; `ffprobe` verifies actual streams, codecs, dimensions/sample rate, and expected output containers. Files are created under pytest's temporary directory and removed after the test. A skipped test is not acceptance evidence. Choose a different public non-live URL only if a fixture no longer exposes the required modes or containers.
