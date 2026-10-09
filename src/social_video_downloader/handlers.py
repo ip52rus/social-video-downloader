@@ -111,11 +111,30 @@ async def handle_text(message: Message) -> None:
                 prepare_telegram_video,
                 downloaded.file_path,
             )
-            await message.answer_video(
+            sent_message = await message.answer_video(
                 FSInputFile(telegram_video),
                 caption=downloaded.metadata.title[:1024],
                 supports_streaming=True,
             )
+
+            video = sent_message.video
+            if video is not None:
+                logger.info(
+                    "Telegram video metadata: width=%s height=%s duration=%s "
+                    "file_name=%s mime_type=%s file_size=%s",
+                    video.width,
+                    video.height,
+                    video.duration,
+                    video.file_name,
+                    video.mime_type,
+                    video.file_size,
+                )
+            else:
+                logger.warning(
+                    "Telegram returned a sent message without video metadata "
+                    "for file %s",
+                    telegram_video.name,
+                )
     except TelegramEntityTooLarge:
         await message.answer(
             "Файл слишком большой для отправки через Telegram. Попробуй видео меньшего размера."
