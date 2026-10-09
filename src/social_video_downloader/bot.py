@@ -5,6 +5,7 @@ import asyncio
 from aiogram import Bot, Dispatcher
 
 from social_video_downloader.config import Settings
+from social_video_downloader.handlers import router
 from social_video_downloader.logging_config import configure_logging
 
 
@@ -14,8 +15,10 @@ def create_bot(settings: Settings) -> Bot:
 
 
 def create_dispatcher() -> Dispatcher:
-    """Create the root dispatcher; feature routers are registered in later steps."""
-    return Dispatcher()
+    """Create the root dispatcher and register Telegram handlers."""
+    dispatcher = Dispatcher()
+    dispatcher.include_router(router)
+    return dispatcher
 
 
 async def run_bot(settings: Settings) -> None:

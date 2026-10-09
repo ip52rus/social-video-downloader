@@ -34,7 +34,7 @@
 
 ### Recorded verification evidence
 - Live matrix run on 2026-10-09 for https://www.youtube.com/watch?v=dQw4w9WgXcQ: 1 passed in 140.06s.
-- The live test downloaded combined video/audio MP4, selected-quality video-only output, and audio-only outputs in two distinct containers. ffprobe verified stream composition, codecs, dimensions, sample rate, and expected containers.
+- The live test downloaded combined video/audio MP4, selected-quality video-only, and audio-only outputs in two distinct containers. ffprobe verified stream composition, codecs, dimensions, sample rate, and expected containers.
 - Shorts were tested in all three modes; additional successful Shorts smoke tests were recorded for VF_MOfnz7OY and osrN3A_Rdiw.
 - The duplicate audio format ID issue was reproduced and fixed. Deterministic tests cover provider errors, cleanup, and representative format layouts.
 - GitHub Actions run [37966225469](https://github.com/ip52rus/social-video-downloader/actions/runs/37966225469) passed 131 tests and Ruff lint/format checks on merge commit f27051fded257b5f39056c45333b4fa8c50075a3.
@@ -42,18 +42,16 @@
 The Phase 2 gate is satisfied by the combined live matrix and deterministic failure-boundary coverage. Scope limitation: the live matrix was run against one regular public video, not every YouTube format or platform condition.
 
 ## Telegram MVP — in progress
-- [x] Add validated environment-based application settings for the Telegram bot token, environment name, and log level.
-- [x] Add deterministic tests for required configuration, defaults, normalization, invalid values, token redaction in repr, and immutability.
-- [x] Configure standard-library application logging from validated settings.
-- [x] Add an aiogram bot/dispatcher factory and polling entry point (python -m social_video_downloader).
+- [x] Add validated environment-based application settings and deterministic tests.
+- [x] Configure standard-library application logging and add an aiogram bot/dispatcher polling entry point.
 - [x] Test logging configuration and bot/dispatcher construction without Telegram API calls.
-- [ ] Implement /start and URL intake.
+- [x] Implement /start and text-based URL intake with supported-platform recognition and safe user-facing validation responses.
+- [x] Add deterministic handler tests for /start, valid YouTube/Instagram/TikTok URLs, invalid links, and unsupported domains.
 - [ ] Connect URL validation/provider selection to the download service.
 - [ ] Implement progress/state handling and result delivery.
-- [ ] Map expected domain errors to safe user-facing messages.
-- [ ] Test handler logic with mocked Telegram interactions.
+- [ ] Map download-domain errors to safe user-facing messages.
 - [ ] Perform a manual test-bot end-to-end flow for a public YouTube URL.
-- [ ] Document setup and run instructions.
+- [ ] Document the full test-bot setup and end-to-end run.
 
 ## Access control — separate Phase 4
 - [ ] Define required Telegram community.
