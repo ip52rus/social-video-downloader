@@ -21,7 +21,7 @@
 - [x] Implement temporary workspace lifecycle.
 - [x] Define error taxonomy.
 - [x] Add unit tests for models, errors, provider contract, URL handling, filenames, and workspace lifecycle.
-- [ ] Add integration harness.
+- [x] Add integration harness.
 
 ## YouTube
 - [ ] Move validated prototype into provider.
