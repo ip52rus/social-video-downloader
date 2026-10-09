@@ -10,13 +10,13 @@ Gate: core behavior is independently testable without Telegram.
 
 ## Phase 2 - YouTube Provider — validation gate passed
 The YouTube provider is implemented in the provider architecture. Real regular-video downloads succeeded in all three output modes, a live matrix passed for combined MP4, selected-quality video-only, and two audio containers, and Shorts smoke tests plus deterministic error-boundary/format-layout tests are recorded.
-Evidence and limitations are documented in TASKS.md and TESTING.md. Live matrix coverage is one regular public URL, not proof of broad reliability.
+Evidence and limits are documented in TASKS.md and TESTING.md. Live matrix coverage is one regular public URL, not proof of broad reliability.
 
 ## Phase 3 - Telegram MVP — in progress
 Implement URL -> download -> result without advertising or monetization.
 - Initial step complete: validated environment-based settings and deterministic tests.
 - Next: logging and the aiogram application entry point, then handlers, downloader orchestration, and result delivery.
-Gate: complete core user flow works in a test bot, including relevant user-facing error cases. Handler tests alone do not satisfy the live Telegram E2E gate.
+Gate: complete core user flow works in a test bot, including relevant user-facing error cases. Handler tests alone do not satisfy the live Telegram end-to-end gate.
 
 ## Phase 4 - Access Control
 Require membership in the project's Telegram community and test member, non-member, leave, and rejoin scenarios. Membership is an ongoing condition of access, not a requirement to actively post or participate.
