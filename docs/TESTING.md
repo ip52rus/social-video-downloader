@@ -27,3 +27,16 @@ Distinguish application regressions, provider/platform changes, and temporary ne
 Ruff lint and format checks passed in the same CI run. Deterministic tests now cover extractor exceptions, generic download failures, post-processing failures, missing final output and workspace cleanup, plus five format-layout cases spanning progressive, adaptive AVC/VP9/AV1 and AAC/Opus, video-only, audio-only, and unusable formats. These tests do not substitute for real YouTube downloads across a representative format/media matrix.
 
 These results are targeted smoke-test evidence. They do not establish a representative format matrix, comprehensive failure-path coverage, or broad provider reliability. Those checks remain acceptance criteria for Phase 2.
+
+
+### Opt-in live YouTube format matrix
+
+The live test in `tests/integration/test_youtube_live_matrix.py` is skipped during ordinary CI unless `YOUTUBE_LIVE_TEST_URL` is set. It requires a public, non-live video that exposes all three output modes, a selectable video quality, and at least two audio containers, plus an installed `ffprobe`.
+
+Run it locally with:
+
+```bash
+YOUTUBE_LIVE_TEST_URL='https://www.youtube.com/watch?v=dQw4w9WgXcQ' uv run pytest tests/integration/test_youtube_live_matrix.py -q -s
+```
+
+The test downloads combined video/audio, a selected video-only quality, and audio-only outputs in two distinct containers; `ffprobe` verifies actual streams, codecs, dimensions/sample rate, and expected output containers. Files are created under pytest's temporary directory and removed after the test. A skipped test is not acceptance evidence: record a successful live run and classify any failure as an application issue, platform restriction/change, or transient network failure. Do not repeat already verified Shorts cases merely to rerun this matrix.
