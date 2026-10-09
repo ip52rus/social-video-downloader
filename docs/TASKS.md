@@ -15,6 +15,8 @@
 ## Downloader Core
 - [x] Define domain models.
 - [x] Define provider interface.
+- [x] Define platform-independent download modes and quality options.
+- [x] Extend provider contract for mode and quality discovery.
 - [x] Implement URL normalization.
 - [x] Implement platform detection.
 - [x] Implement safe filename generation.

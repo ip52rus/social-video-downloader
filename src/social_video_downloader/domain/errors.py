@@ -27,3 +27,11 @@ class DownloadTimeoutError(DownloadFailedError):
 
 class MediaProcessingError(DownloadFailedError):
     """Raised when downloaded media cannot be assembled or processed."""
+
+
+class UnsupportedDownloadModeError(DownloaderError):
+    """Raised when a provider cannot produce the requested output mode."""
+
+
+class UnsupportedQualityError(DownloaderError):
+    """Raised when a requested quality option is unavailable."""

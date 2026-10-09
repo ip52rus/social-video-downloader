@@ -7,7 +7,9 @@ from social_video_downloader.domain.errors import (
     InvalidMediaURLError,
     MediaProcessingError,
     MetadataExtractionError,
+    UnsupportedDownloadModeError,
     UnsupportedPlatformError,
+    UnsupportedQualityError,
 )
 
 
@@ -20,6 +22,8 @@ from social_video_downloader.domain.errors import (
         DownloadFailedError,
         DownloadTimeoutError,
         MediaProcessingError,
+        UnsupportedDownloadModeError,
+        UnsupportedQualityError,
     ],
 )
 def test_all_domain_errors_inherit_from_downloader_error(error_type):
