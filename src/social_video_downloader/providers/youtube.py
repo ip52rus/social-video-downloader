@@ -340,7 +340,8 @@ class YouTubeProvider:
         if mode is DownloadMode.AUDIO_ONLY:
             if quality is None:
                 return "ba"
-            return quality.id.removeprefix("audio:")
+            format_id = quality.id.removeprefix("audio:")
+            return f"{format_id}-0/{format_id}"
 
         if quality is None:
             if mode is DownloadMode.VIDEO_ONLY:

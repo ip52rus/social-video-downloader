@@ -311,11 +311,21 @@ def test_video_only_download_uses_selected_quality(
     assert downloaded.file_path.is_file()
 
 
+@pytest.mark.parametrize(
+    ("quality_id", "expected_selector", "extension"),
+    [
+        ("audio:140", "140-0/140", "m4a"),
+        ("audio:251", "251-0/251", "webm"),
+    ],
+)
 def test_audio_only_download_uses_selected_format(
     factory: FakeYoutubeDLFactory,
     tmp_path: Path,
+    quality_id: str,
+    expected_selector: str,
+    extension: str,
 ) -> None:
-    factory.download_extension = "m4a"
+    factory.download_extension = extension
     provider = YouTubeProvider(ydl_factory=factory)
 
     downloaded = provider.download(
@@ -323,15 +333,15 @@ def test_audio_only_download_uses_selected_format(
         tmp_path,
         DownloadOptions(
             mode=DownloadMode.AUDIO_ONLY,
-            quality_id="audio:140",
+            quality_id=quality_id,
         ),
     )
 
     client = factory.instances[-1]
-    assert client.params["format"] == "140"
-    assert client.format_selector == "140"
+    assert client.params["format"] == expected_selector
+    assert client.format_selector == expected_selector
     assert "merge_output_format" not in client.params
-    assert downloaded.file_path.suffix == ".m4a"
+    assert downloaded.file_path.suffix == f".{extension}"
     assert downloaded.file_path.is_file()
 
 
@@ -385,7 +395,8 @@ def test_rejects_playlist_metadata() -> None:
     [
         "bv*+ba/b",
         "bv[height<=720]",
-        "140",
+        "140-0/140",
+        "251-0/251",
     ],
 )
 def test_format_selectors_compile_with_installed_yt_dlp(
