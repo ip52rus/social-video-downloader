@@ -47,6 +47,67 @@ def inspect_telegram_video(path: Path, runner: Runner | None = None) -> dict[str
         raise MediaProcessingError("Unable to inspect video metadata for Telegram upload.") from exc
 
 
+def telegram_video_upload_parameters(probe_data: dict[str, Any]) -> dict[str, int]:
+    """Extract real display dimensions and duration for Telegram's sendVideo method."""
+    streams = probe_data.get("streams")
+    if not isinstance(streams, list):
+        raise MediaProcessingError("Video metadata does not contain stream information.")
+    video_stream = next(
+        (
+            stream
+            for stream in streams
+            if isinstance(stream, dict) and stream.get("codec_type") == "video"
+        ),
+        None,
+    )
+    if video_stream is None:
+        raise MediaProcessingError("Video metadata does not contain a video stream.")
+
+    try:
+        width = int(video_stream["width"])
+        height = int(video_stream["height"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise MediaProcessingError("Video metadata does not contain valid dimensions.") from exc
+    if width <= 0 or height <= 0:
+        raise MediaProcessingError("Video metadata contains invalid dimensions.")
+
+    rotation: float | None = None
+    side_data = video_stream.get("side_data_list", [])
+    if isinstance(side_data, list):
+        for item in side_data:
+            if isinstance(item, dict) and item.get("rotation") is not None:
+                try:
+                    rotation = float(item["rotation"])
+                    break
+                except (TypeError, ValueError):
+                    continue
+    if rotation is None:
+        tags = video_stream.get("tags")
+        if isinstance(tags, dict) and tags.get("rotate") is not None:
+            try:
+                rotation = float(tags["rotate"])
+            except (TypeError, ValueError):
+                rotation = None
+
+    # Telegram dimensions should describe the displayed orientation, not the
+    # encoded storage orientation when a rotation matrix/tag is present.
+    if rotation is not None and int(round(rotation)) % 180 != 0:
+        width, height = height, width
+
+    parameters = {"width": width, "height": height}
+    format_data = probe_data.get("format")
+    duration_value = format_data.get("duration") if isinstance(format_data, dict) else None
+    if duration_value is None:
+        duration_value = video_stream.get("duration")
+    try:
+        duration = int(round(float(duration_value)))
+    except (TypeError, ValueError, OverflowError):
+        duration = 0
+    if duration > 0:
+        parameters["duration"] = duration
+    return parameters
+
+
 def _probe_streams(path: Path, runner: Runner) -> tuple[str | None, str | None]:
     """Return the first video and audio codec names, failing closed on invalid media."""
     result = runner(
