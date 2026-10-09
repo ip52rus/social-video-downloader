@@ -423,7 +423,7 @@ def test_metadata_extractor_failure_maps_to_domain_error() -> None:
 
 
 def test_download_failure_maps_to_download_failed_error(tmp_path: Path) -> None:
-    factory = FakeYoutubeDLFactory(process_error=RuntimeError("simulated network failure"))
+    factory = FakeYoutubeDLFactory(process_error=RuntimeError("simulated download failure"))
     provider = YouTubeProvider(ydl_factory=factory)
 
     with pytest.raises(DownloadFailedError) as exc_info:
