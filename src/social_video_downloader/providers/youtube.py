@@ -347,7 +347,7 @@ class YouTubeProvider:
             if mode is DownloadMode.VIDEO_ONLY:
                 return "bv"
             return (
-                "bv*[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
+                "bv[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
                 "b[vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
                 "bv*+ba/b"
             )
@@ -360,7 +360,7 @@ class YouTubeProvider:
             return f"bv[height<={height}]"
 
         return (
-            f"bv*[height<={height}][vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
+            f"bv[height<={height}][vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
             f"b[height<={height}][vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
             f"bv*[height<={height}]+ba/b[height<={height}]"
         )
