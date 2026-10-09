@@ -34,6 +34,13 @@ async def handle_text(message: Message) -> None:
     """Validate a submitted URL and acknowledge its recognized platform."""
     submitted_text = (message.text or "").strip()
 
+    if any(character.isspace() for character in submitted_text):
+        await message.answer(
+            "Не удалось распознать ссылку. Отправь полную HTTP- или HTTPS-ссылку "
+            "на YouTube, Instagram или TikTok."
+        )
+        return
+
     try:
         normalized_url = normalize_media_url(submitted_text)
         platform = detect_platform(normalized_url)
