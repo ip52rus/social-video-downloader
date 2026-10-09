@@ -148,7 +148,6 @@ async def test_text_handler_rejects_unsupported_platform(message):
     assert "пока не поддерживается" in message.answer.await_args.args[0]
 
 
-
 def test_video_preparation_can_be_disabled_for_controlled_test(
     monkeypatch, tmp_path
 ):
