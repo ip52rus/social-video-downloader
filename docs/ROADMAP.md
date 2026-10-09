@@ -23,7 +23,7 @@ Gate: a representative integration matrix passes, including relevant success and
 - GitHub Actions quality passed on PR #10 head commit 5b49c9455a71ec7d562c46db00e12a1172769dd8. A separate CI result for the merge commit was not confirmed.
 
 ### Remaining Phase 2 checks
-- Validate a representative matrix of available formats and media characteristics beyond the targeted smoke tests already recorded.
+- Validate a representative matrix of available formats and media characteristics beyond the targeted smoke tests already recorded. An opt-in live test is now available at `tests/integration/test_youtube_live_matrix.py`; it has not yet been run against a new public video, so this gate remains open.
 - Review whether any additional provider failure scenarios require coverage, distinguishing application defects from external-platform and transient network failures. Deterministic tests for extractor, download, post-processing, missing-output, cleanup, and representative format-layout cases now pass in GitHub Actions run [37965947548](https://github.com/ip52rus/social-video-downloader/actions/runs/37965947548) (131 tests; Ruff lint and format passed). This does not validate live external-platform failure behavior.
 - Re-run the relevant automated tests and quality checks after further provider changes.
 
