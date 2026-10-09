@@ -47,11 +47,12 @@ The Phase 2 gate is satisfied by the combined live matrix and deterministic fail
 - [x] Test logging configuration and bot/dispatcher construction without Telegram API calls.
 - [x] Implement /start and text-based URL intake with supported-platform recognition and safe user-facing validation responses.
 - [x] Add deterministic handler tests for /start, valid YouTube/Instagram/TikTok URLs, invalid links, and unsupported domains.
-- [ ] Connect URL validation/provider selection to the download service.
-- [ ] Implement progress/state handling and result delivery.
-- [ ] Map download-domain errors to safe user-facing messages.
-- [ ] Perform a manual test-bot end-to-end flow for a public YouTube URL.
+- [x] Connect URL normalization and provider selection through the transport-independent DownloadService.
+- [x] Add deterministic tests for YouTube handler orchestration, safe domain-error responses, file delivery calls, and temporary workspace cleanup; CI passed.
+- [ ] Perform a manual test-bot end-to-end flow for a public YouTube URL, confirm the uploaded file is playable, and check upload-limit/failure behavior.
 - [ ] Document the full test-bot setup and end-to-end run.
+
+The automated checks for the provider-selection and mocked Telegram download/delivery flow passed in [GitHub Actions run 37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474). This verifies deterministic behavior only; the real Telegram end-to-end acceptance gate remains open. Instagram and TikTok links are recognized but their download providers are not implemented.
 
 ## Access control — separate Phase 4
 - [ ] Define required Telegram community.

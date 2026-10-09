@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Connect Telegram YouTube URL intake to the provider-selection download service and attempt to deliver downloaded files as Telegram documents.
+- Add safe user-facing download and upload error messages, non-blocking download execution, and per-request temporary-file cleanup.
+- Add deterministic tests for provider selection, URL normalization, Telegram download orchestration, error responses, and cleanup.
 - Add Telegram /start and text-based URL intake with supported-platform recognition, user-facing validation responses, and deterministic handler tests.
 - Add standard-library logging configuration and a minimal aiogram bot/dispatcher polling entry point, with deterministic construction/configuration tests.
 - Add validated environment-based settings for Telegram bot configuration, app environment, and log level, with deterministic tests.
@@ -19,4 +22,5 @@
 ## Verification notes
 - GitHub Actions run [37966225469](https://github.com/ip52rus/social-video-downloader/actions/runs/37966225469) passed 131 tests and Ruff lint/format checks on merge commit f27051fded257b5f39056c45333b4fa8c50075a3.
 - Opt-in live matrix passed locally on 2026-10-09 for https://www.youtube.com/watch?v=dQw4w9WgXcQ in 140.06 seconds. It verified combined MP4, selected-quality video-only output, and audio-only output in two containers using ffprobe.
-- Live evidence is limited to a small set of public URLs and does not establish broad platform reliability. Telegram polling, media download/delivery, and access control remain unverified or unimplemented.
+- GitHub Actions run [37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474) passed lint, format, and deterministic tests for Telegram download orchestration and file-delivery handling.
+- Live YouTube evidence is limited to a small set of public URLs and does not establish broad platform reliability. The real Telegram test-bot download/upload flow remains unverified; access control is a separate planned phase.

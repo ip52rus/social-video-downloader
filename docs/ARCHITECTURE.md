@@ -7,10 +7,12 @@ Telegram -> Telegram handlers -> application/download service -> provider interf
 Environment-based settings are validated before starting the application. The Telegram token is required, excluded from the settings representation, and must never be written to logs. The package entry point is python -m social_video_downloader; it configures standard-library logging, creates an aiogram bot and dispatcher, registers the Telegram router, and starts polling. Bot session cleanup runs when polling stops.
 
 ## Telegram layer
-The aiogram router owns commands and text intake, user-facing validation responses, access checks, and result delivery. It must not contain provider-specific download logic. Currently /start explains usage, and text messages are treated as candidate URLs and validated against supported platform domains. Accepted links receive an explicit acknowledgement that downloading is not yet connected.
+The aiogram router owns commands and text intake, user-facing validation responses, access checks, and result delivery. It does not contain provider-specific download logic. The /start response describes current platform support. Text messages are validated against supported platform domains. YouTube URLs are passed to the application service; Instagram and TikTok URLs are recognized but receive an explicit message that downloading is not yet available.
+
+The synchronous download operation runs in a worker thread so yt-dlp does not block the aiogram event loop. A per-request temporary directory holds the final file while Telegram uploads it, and is removed after delivery or failure. Telegram upload errors and expected downloader errors are mapped to safe user-facing messages; detailed source exceptions are not sent to the user.
 
 ## Application layer
-Orchestrates requests, validates input, selects providers, enforces policies, and returns transport-neutral results. Download orchestration is not connected to Telegram handlers yet.
+DownloadService normalizes the URL, detects its platform, selects a registered MediaProvider, and returns the provider's transport-neutral DownloadedMedia result. The default registry contains the YouTube provider. A recognized platform without a registered provider raises a domain-level UnsupportedPlatformError. The service does not depend on Telegram.
 
 ## Provider layer
 Each provider owns URL recognition, metadata retrieval, media acquisition, and provider-specific quirks.

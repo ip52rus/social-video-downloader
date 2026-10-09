@@ -24,10 +24,12 @@ Distinguish application regressions, provider/platform changes, and temporary ne
 
 The Phase 2 acceptance gate is satisfied by the live output-mode/container matrix, recorded Shorts and regular-video smoke tests, and deterministic error-boundary/format-layout tests. This is targeted evidence, not proof of broad reliability across all YouTube content and platform conditions.
 
-### Telegram foundation tests
+### Telegram deterministic tests
 - tests/test_config.py covers required token handling, defaults, normalization, invalid values, token redaction in the settings repr, and immutability.
 - tests/test_logging_config.py verifies that the configured level and fixed log format are passed to the logging setup without including the bot token.
 - tests/test_bot.py verifies bot and dispatcher construction.
-- tests/test_handlers.py covers /start, recognized supported-platform URLs, invalid links, and unsupported domains without Telegram API requests or real downloads.
+- tests/test_handlers.py covers /start, invalid links, unsupported domains, non-YouTube platform messaging, successful mocked download/delivery, safe error responses, and temporary workspace cleanup.
+- tests/test_download_service.py covers provider selection, URL normalization, delegation, and recognized platforms without configured providers.
+- GitHub Actions run [37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474) passed lint, format, and the deterministic test suite for this implementation.
 
-These deterministic tests do not establish that polling succeeds against Telegram or that media can be downloaded and delivered. A manual test-bot end-to-end check remains outstanding.
+These deterministic tests do not exercise a real YouTube download from the Telegram process, Telegram network upload, or polling against Telegram. A manual test-bot end-to-end check remains outstanding and is required before Phase 3 can be accepted.
