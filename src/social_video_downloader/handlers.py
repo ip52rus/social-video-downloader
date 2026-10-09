@@ -106,9 +106,14 @@ async def handle_text(message: Message) -> None:
             if not downloaded.file_path.is_file():
                 raise MediaProcessingError("The downloader returned a missing output file.")
 
-            await message.answer_document(
-                FSInputFile(downloaded.file_path),
+            telegram_video = await asyncio.to_thread(
+                prepare_telegram_video,
+                downloaded.file_path,
+            )
+            await message.answer_video(
+                FSInputFile(telegram_video),
                 caption=downloaded.metadata.title[:1024],
+                supports_streaming=True,
             )
     except TelegramEntityTooLarge:
         await message.answer(

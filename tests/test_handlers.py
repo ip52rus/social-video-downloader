@@ -14,6 +14,7 @@ def message():
     result = MagicMock()
     result.answer = AsyncMock()
     result.answer_document = AsyncMock()
+    result.answer_video = AsyncMock()
     result.text = ""
     return result
 
@@ -57,15 +58,17 @@ async def test_youtube_url_is_downloaded_and_delivered_then_workspace_is_cleaned
 ):
     service = FakeDownloadService()
     monkeypatch.setattr(handlers, "download_service", service)
+    monkeypatch.setattr(handlers, "prepare_telegram_video", lambda path: path)
     message.text = "https://www.youtube.com/watch?v=abc"
 
     await handle_text(message)
 
     assert len(service.calls) == 1
     assert service.calls[0][0] == "https://www.youtube.com/watch?v=abc"
-    message.answer_document.assert_awaited_once()
-    uploaded_file = message.answer_document.await_args.args[0]
+    message.answer_video.assert_awaited_once()
+    uploaded_file = message.answer_video.await_args.args[0]
     assert uploaded_file.path.name == "example.mp4"
+    assert message.answer_video.await_args.kwargs["supports_streaming"] is True
     assert not uploaded_file.path.exists()
     assert message.answer.await_args_list[0].args[0].startswith("Ссылка YouTube распознана")
 
@@ -101,7 +104,7 @@ async def test_download_failure_returns_safe_message_and_cleans_workspace(messag
 
     await handle_text(message)
 
-    assert message.answer_document.await_count == 0
+    assert message.answer_video.await_count == 0
     replies = [call.args[0] for call in message.answer.await_args_list]
     assert any("Не удалось скачать видео" in reply for reply in replies)
     assert all("private provider detail" not in reply for reply in replies)

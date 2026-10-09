@@ -14,7 +14,7 @@ Use Python 3.13 and uv. Install dependencies with uv sync, set TELEGRAM_BOT_TOKE
 
     uv run python -m social_video_downloader
 
-The bot responds to /start. Send a public YouTube video URL to start a download; the bot sends the resulting file if both download and Telegram upload succeed. Instagram and TikTok are currently recognition-only. Optional settings are APP_ENV (development, test, or production) and LOG_LEVEL (DEBUG, INFO, WARNING, ERROR, or CRITICAL). Never commit the real token or put it in logs.
+The bot responds to /start. Send a public YouTube video URL to start a download; the bot prepares a Telegram-friendly H.264/AAC MP4 when needed and sends it as a video if download and upload succeed. Instagram and TikTok are currently recognition-only. Optional settings are APP_ENV (development, test, or production) and LOG_LEVEL (DEBUG, INFO, WARNING, ERROR, or CRITICAL). Never commit the real token or put it in logs.
 
 ## Verification status
 
