@@ -1,4 +1,4 @@
-"""Telegram command and URL-intake handlers."""
+""""Telegram command and URL-intake handlers."""
 
 import asyncio
 import logging
@@ -131,8 +131,7 @@ async def handle_text(message: Message) -> None:
                 )
             else:
                 logger.warning(
-                    "Telegram returned a sent message without video metadata "
-                    "for file %s",
+                    "Telegram returned a sent message without video metadata for file %s",
                     telegram_video.name,
                 )
     except TelegramEntityTooLarge:
