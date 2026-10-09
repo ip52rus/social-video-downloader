@@ -146,3 +146,16 @@ async def test_text_handler_rejects_unsupported_platform(message):
     await handle_text(message)
 
     assert "пока не поддерживается" in message.answer.await_args.args[0]
+
+
+def test_video_preparation_can_be_disabled_for_controlled_test(monkeypatch, tmp_path):
+    source = tmp_path / "original.mp4"
+    source.write_bytes(b"original")
+    monkeypatch.setenv("TELEGRAM_VIDEO_TRANSCODING", "false")
+    monkeypatch.setattr(
+        handlers,
+        "prepare_telegram_video",
+        lambda path: pytest.fail("transcoding must be bypassed"),
+    )
+
+    assert handlers._prepare_video_for_telegram(source) == source
