@@ -4,7 +4,7 @@
 - Prepare Telegram video uploads as H.264/AAC MP4 when source codecs or container are incompatible; verify converted output and preserve already-compatible MP4 files without re-encoding.
 - Deliver prepared media as Telegram video messages with streaming support rather than generic documents.
 - Add deterministic compatibility tests for passthrough, transcoding, output verification, and processing failures.
-- Connect Telegram YouTube URL intake to the provider-selection download service and attempt to deliver downloaded files as Telegram documents.
+- Connect Telegram YouTube URL intake to the provider-selection download service and deliver prepared media as Telegram video messages.
 - Add safe user-facing download and upload error messages, non-blocking download execution, and per-request temporary-file cleanup.
 - Add deterministic tests for provider selection, URL normalization, Telegram download orchestration, error responses, and cleanup.
 - Add Telegram /start and text-based URL intake with supported-platform recognition, user-facing validation responses, and deterministic handler tests.
