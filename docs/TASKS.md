@@ -17,10 +17,10 @@
 - [x] Define provider interface.
 - [x] Implement URL normalization.
 - [x] Implement platform detection.
-- [ ] Implement safe filename generation.
-- [ ] Implement temporary workspace lifecycle.
+- [x] Implement safe filename generation.
+- [x] Implement temporary workspace lifecycle.
 - [x] Define error taxonomy.
-- [x] Add unit tests for models, errors, provider contract, and URL handling.
+- [x] Add unit tests for models, errors, provider contract, URL handling, filenames, and workspace lifecycle.
 - [ ] Add integration harness.
 
 ## YouTube
