@@ -22,4 +22,5 @@
 ## Verification notes
 - GitHub Actions run [37966225469](https://github.com/ip52rus/social-video-downloader/actions/runs/37966225469) passed 131 tests and Ruff lint/format checks on merge commit f27051fded257b5f39056c45333b4fa8c50075a3.
 - Opt-in live matrix passed locally on 2026-10-09 for https://www.youtube.com/watch?v=dQw4w9WgXcQ in 140.06 seconds. It verified combined MP4, selected-quality video-only output, and audio-only output in two containers using ffprobe.
-- Live evidence is limited to a small set of public URLs and does not establish broad platform reliability. The Telegram download/delivery code is implemented in the current work, but its CI results and real test-bot end-to-end flow remain outstanding. Access control remains unimplemented and is a separate planned phase.
+- GitHub Actions run [37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474) passed lint, format, and deterministic tests for Telegram download orchestration and file-delivery handling.
+- Live YouTube evidence is limited to a small set of public URLs and does not establish broad platform reliability. The real Telegram test-bot download/upload flow remains unverified; access control is a separate planned phase.
