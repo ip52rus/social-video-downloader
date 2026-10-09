@@ -1,8 +1,8 @@
 """Environment-based application configuration."""
 
 import os
-from dataclasses import dataclass, field
 from collections.abc import Mapping
+from dataclasses import dataclass, field
 
 
 class ConfigurationError(ValueError):
