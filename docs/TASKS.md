@@ -44,10 +44,10 @@
 - Additional Shorts smoke tests succeeded for VF_MOfnz7OY using formats 398+251, and osrN3A_Rdiw using 616+251 via HLS. The latter was merged to NEVER GIVE UP 🙌.mp4; the recorded process exit code was 0.
 - Deno 2.9.7 was detected during the recorded Shorts checks; no missing-JavaScript-runtime warning was observed.
 - The duplicate audio format ID issue was reproduced and fixed in PR #10. The selector 251-0/251 successfully downloaded audio from one public YouTube video; ffprobe confirmed Opus, 48 kHz, stereo.
-- Latest recorded automated suite: 122 passed.
+- GitHub Actions CI run [37965947548](https://github.com/ip52rus/social-video-downloader/actions/runs/37965947548) passed 131 tests on validation branch commit `6d4dccb08bd8208efa75da617638364bc51b59e4`; Ruff lint and format checks also passed.
 - Ruff lint and format checks passed for src/social_video_downloader/providers/youtube.py and tests/test_youtube_provider.py.
 - GitHub Actions quality job passed on PR #10 head commit 5b49c9455a71ec7d562c46db00e12a1172769dd8. This is evidence for the PR head, not a separate CI result for the merge commit.
-- Additional deterministic provider tests have been added on `test/youtube-provider-validation` for extractor exceptions, generic download failures, post-processing failures, missing final output, and temporary-workspace cleanup. Their CI result is pending; do not count them as passed until the workflow completes.
+- Deterministic provider tests now pass for extractor exceptions, generic download failures, post-processing failures, missing final output, temporary-workspace cleanup, and five representative format-layout cases (progressive, adaptive AVC/VP9/AV1 with AAC/Opus, video-only, audio-only, and unusable formats). These are network-free tests; the real YouTube format/media matrix remains outstanding.
 - These are targeted smoke tests and automated checks, not evidence of broad provider reliability or complete coverage.
 
 ## Telegram
