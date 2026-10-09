@@ -11,6 +11,7 @@ from social_video_downloader.domain.errors import MediaProcessingError
 from social_video_downloader.infrastructure.telegram_media import (
     inspect_telegram_video,
     prepare_telegram_video,
+    telegram_video_upload_parameters,
 )
 
 
@@ -67,6 +68,63 @@ def test_inspect_telegram_video_maps_ffprobe_failure(tmp_path: Path) -> None:
 
     with pytest.raises(MediaProcessingError, match="Unable to inspect video metadata"):
         inspect_telegram_video(source, runner=runner)
+
+
+def test_upload_parameters_use_real_video_dimensions_and_duration() -> None:
+    parameters = telegram_video_upload_parameters(
+        {
+            "format": {"duration": "72.534"},
+            "streams": [
+                {
+                    "codec_type": "video",
+                    "width": 1080,
+                    "height": 1920,
+                    "side_data_list": [],
+                }
+            ],
+        }
+    )
+
+    assert parameters == {"width": 1080, "height": 1920, "duration": 73}
+
+
+def test_upload_parameters_swap_dimensions_for_quarter_turn_rotation() -> None:
+    parameters = telegram_video_upload_parameters(
+        {
+            "format": {"duration": "12"},
+            "streams": [
+                {
+                    "codec_type": "video",
+                    "width": 1920,
+                    "height": 1080,
+                    "side_data_list": [{"side_data_type": "Display Matrix", "rotation": -90}],
+                }
+            ],
+        }
+    )
+
+    assert parameters == {"width": 1080, "height": 1920, "duration": 12}
+
+
+def test_upload_parameters_omit_unknown_duration() -> None:
+    parameters = telegram_video_upload_parameters(
+        {
+            "streams": [
+                {
+                    "codec_type": "video",
+                    "width": 1080,
+                    "height": 1920,
+                }
+            ]
+        }
+    )
+
+    assert parameters == {"width": 1080, "height": 1920}
+
+
+def test_upload_parameters_reject_missing_video_dimensions() -> None:
+    with pytest.raises(MediaProcessingError, match="valid dimensions"):
+        telegram_video_upload_parameters({"streams": [{"codec_type": "video"}]})
 
 
 def test_compatible_mp4_is_preserved_without_transcoding(tmp_path: Path) -> None:
