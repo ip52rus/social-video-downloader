@@ -52,8 +52,7 @@ async def handle_text(message: Message) -> None:
         return
     except UnsupportedPlatformError:
         await message.answer(
-            "Эта платформа пока не поддерживается. Отправь ссылку на YouTube, "
-            "Instagram или TikTok."
+            "Эта платформа пока не поддерживается. Отправь ссылку на YouTube, Instagram или TikTok."
         )
         return
 
