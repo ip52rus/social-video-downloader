@@ -20,6 +20,7 @@ from social_video_downloader.domain.errors import (
 )
 from social_video_downloader.domain.models import Platform
 from social_video_downloader.domain.urls import detect_platform, normalize_media_url
+from social_video_downloader.infrastructure.telegram_media import prepare_telegram_video
 from social_video_downloader.services.download import DownloadService
 
 logger = logging.getLogger(__name__)
@@ -106,9 +107,14 @@ async def handle_text(message: Message) -> None:
             if not downloaded.file_path.is_file():
                 raise MediaProcessingError("The downloader returned a missing output file.")
 
-            await message.answer_document(
-                FSInputFile(downloaded.file_path),
+            telegram_video = await asyncio.to_thread(
+                prepare_telegram_video,
+                downloaded.file_path,
+            )
+            await message.answer_video(
+                FSInputFile(telegram_video),
                 caption=downloaded.metadata.title[:1024],
+                supports_streaming=True,
             )
     except TelegramEntityTooLarge:
         await message.answer(

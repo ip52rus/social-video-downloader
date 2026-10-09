@@ -24,6 +24,11 @@ Distinguish application regressions, provider/platform changes, and temporary ne
 
 The Phase 2 acceptance gate is satisfied by the live output-mode/container matrix, recorded Shorts and regular-video smoke tests, and deterministic error-boundary/format-layout tests. This is targeted evidence, not proof of broad reliability across all YouTube content and platform conditions.
 
+### Telegram playback compatibility tests
+- `tests/test_telegram_media.py` covers compatible MP4 passthrough, AV1/Opus transcoding to H.264/AAC, conversion of non-MP4 containers, post-conversion verification, missing audio, and FFmpeg failure mapping.
+- `tests/test_handlers.py` verifies video-message delivery with streaming support and temporary workspace cleanup.
+- These deterministic tests do not prove playback on every Telegram client. After deployment, repeat a live test on desktop and iPhone.
+
 ### Telegram deterministic tests
 - tests/test_config.py covers required token handling, defaults, normalization, invalid values, token redaction in the settings repr, and immutability.
 - tests/test_logging_config.py verifies that the configured level and fixed log format are passed to the logging setup without including the bot token.
