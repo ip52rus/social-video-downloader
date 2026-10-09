@@ -9,8 +9,8 @@
 - [x] Document architecture.
 - [x] Document roadmap.
 - [x] Document security, development, and testing policies.
-- [ ] Add CI.
-- [ ] Add dependency management.
+- [x] Add CI.
+- [x] Add dependency management.
 
 ## Downloader Core
 - [ ] Define domain models.
@@ -32,7 +32,7 @@
 - [ ] Validate failure scenarios.
 
 ## Telegram
-- [ ] Select and pin Telegram framework/dependencies.
+- [x] Select and pin Telegram framework/dependencies.
 - [ ] Implement configuration loading.
 - [ ] Implement /start.
 - [ ] Implement URL intake.
