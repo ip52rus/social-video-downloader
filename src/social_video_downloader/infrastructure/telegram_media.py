@@ -13,6 +13,40 @@ _COMPATIBLE_VIDEO_CODEC = "h264"
 _COMPATIBLE_AUDIO_CODEC = "aac"
 
 
+def inspect_telegram_video(path: Path, runner: Runner | None = None) -> dict[str, Any]:
+    """Return container and stream metadata for diagnosing Telegram upload issues."""
+    execute = runner or subprocess.run
+    source = Path(path)
+    try:
+        result = execute(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                (
+                    "format=format_name,duration,size,bit_rate:"
+                    "stream=index,codec_type,codec_name,width,height,sample_aspect_ratio,"
+                    "display_aspect_ratio,avg_frame_rate,r_frame_rate,bit_rate,pix_fmt,"
+                    "duration,nb_frames:stream_tags=rotate:"
+                    "stream_side_data=side_data_type,rotation"
+                ),
+                "-of",
+                "json",
+                str(source),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        data = json.loads(result.stdout)
+        if not isinstance(data, dict):
+            raise TypeError("ffprobe returned an unexpected JSON shape")
+        return data
+    except (OSError, subprocess.SubprocessError, TypeError, json.JSONDecodeError) as exc:
+        raise MediaProcessingError("Unable to inspect video metadata for Telegram upload.") from exc
+
+
 def _probe_streams(path: Path, runner: Runner) -> tuple[str | None, str | None]:
     """Return the first video and audio codec names, failing closed on invalid media."""
     result = runner(

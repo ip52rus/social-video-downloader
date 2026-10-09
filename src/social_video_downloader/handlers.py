@@ -1,7 +1,9 @@
 """Telegram command and URL-intake handlers."""
 
 import asyncio
+import json
 import logging
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -20,7 +22,10 @@ from social_video_downloader.domain.errors import (
 )
 from social_video_downloader.domain.models import Platform
 from social_video_downloader.domain.urls import detect_platform, normalize_media_url
-from social_video_downloader.infrastructure.telegram_media import prepare_telegram_video
+from social_video_downloader.infrastructure.telegram_media import (
+    inspect_telegram_video,
+    prepare_telegram_video,
+)
 from social_video_downloader.services.download import DownloadService
 
 logger = logging.getLogger(__name__)
@@ -111,6 +116,27 @@ async def handle_text(message: Message) -> None:
                 prepare_telegram_video,
                 downloaded.file_path,
             )
+
+            try:
+                probe_data = await asyncio.to_thread(inspect_telegram_video, telegram_video)
+                logger.info(
+                    "Telegram upload input: python=%s handler_module=%s path=%s "
+                    "resolved_path=%s filename=%s file_size=%s probe=%s",
+                    sys.executable,
+                    __file__,
+                    telegram_video,
+                    telegram_video.resolve(),
+                    telegram_video.name,
+                    telegram_video.stat().st_size,
+                    json.dumps(probe_data, ensure_ascii=False, sort_keys=True),
+                )
+            except Exception:
+                # Diagnostics must not prevent a valid media file from being delivered.
+                logger.exception(
+                    "Could not inspect Telegram upload input; continuing with upload: path=%s",
+                    telegram_video,
+                )
+
             sent_message = await message.answer_video(
                 FSInputFile(telegram_video),
                 caption=downloaded.metadata.title[:1024],

@@ -8,7 +8,10 @@ from types import SimpleNamespace
 import pytest
 
 from social_video_downloader.domain.errors import MediaProcessingError
-from social_video_downloader.infrastructure.telegram_media import prepare_telegram_video
+from social_video_downloader.infrastructure.telegram_media import (
+    inspect_telegram_video,
+    prepare_telegram_video,
+)
 
 
 def _probe(video: str, audio: str) -> SimpleNamespace:
@@ -22,6 +25,48 @@ def _probe(video: str, audio: str) -> SimpleNamespace:
             }
         )
     )
+
+
+def test_inspect_telegram_video_returns_container_and_stream_metadata(tmp_path: Path) -> None:
+    source = tmp_path / "video.mp4"
+    source.write_bytes(b"video")
+    metadata = {
+        "format": {"format_name": "mov,mp4,m4a", "duration": "72.534", "size": "5"},
+        "streams": [
+            {
+                "index": 0,
+                "codec_type": "video",
+                "codec_name": "h264",
+                "width": 1080,
+                "height": 1920,
+                "sample_aspect_ratio": "1:1",
+                "display_aspect_ratio": "9:16",
+            },
+            {"index": 1, "codec_type": "audio", "codec_name": "aac"},
+        ],
+    }
+    calls = []
+
+    def runner(command, **kwargs):
+        calls.append(command)
+        return SimpleNamespace(stdout=json.dumps(metadata))
+
+    result = inspect_telegram_video(source, runner=runner)
+
+    assert result == metadata
+    assert calls[0][0] == "ffprobe"
+    assert "-show_entries" in calls[0]
+    assert str(source) == calls[0][-1]
+
+
+def test_inspect_telegram_video_maps_ffprobe_failure(tmp_path: Path) -> None:
+    source = tmp_path / "video.mp4"
+
+    def runner(command, **kwargs):
+        raise subprocess.CalledProcessError(1, command, stderr="probe failed")
+
+    with pytest.raises(MediaProcessingError, match="Unable to inspect video metadata"):
+        inspect_telegram_video(source, runner=runner)
 
 
 def test_compatible_mp4_is_preserved_without_transcoding(tmp_path: Path) -> None:
