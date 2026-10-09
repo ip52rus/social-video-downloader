@@ -46,6 +46,7 @@ def _prepare_video_for_telegram(path: Path) -> Path:
         return path
     return prepare_telegram_video(path)
 
+
 _PLATFORM_LABELS = {
     Platform.YOUTUBE: "YouTube",
     Platform.INSTAGRAM: "Instagram",
