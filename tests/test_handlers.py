@@ -149,7 +149,9 @@ async def test_text_handler_rejects_unsupported_platform(message):
 
 
 
-def test_video_preparation_can_be_disabled_for_controlled_test(monkeypatch, tmp_path):
+def test_video_preparation_can_be_disabled_for_controlled_test(
+    monkeypatch, tmp_path
+):
     source = tmp_path / "original.mp4"
     source.write_bytes(b"original")
     monkeypatch.setenv("TELEGRAM_VIDEO_TRANSCODING", "false")
