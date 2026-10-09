@@ -20,6 +20,7 @@ from social_video_downloader.domain.errors import (
 )
 from social_video_downloader.domain.models import Platform
 from social_video_downloader.domain.urls import detect_platform, normalize_media_url
+from social_video_downloader.infrastructure.telegram_media import prepare_telegram_video
 from social_video_downloader.services.download import DownloadService
 
 logger = logging.getLogger(__name__)
