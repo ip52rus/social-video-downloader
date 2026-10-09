@@ -11,8 +11,8 @@ from aiogram.filters import CommandStart
 from aiogram.types import FSInputFile, Message
 
 from social_video_downloader.domain.errors import (
-    DownloadFailedError,
     DownloaderError,
+    DownloadFailedError,
     InvalidMediaURLError,
     MediaProcessingError,
     MetadataExtractionError,
@@ -89,7 +89,8 @@ async def handle_text(message: Message) -> None:
     platform_label = _PLATFORM_LABELS[platform]
     if platform is not Platform.YOUTUBE:
         await message.answer(
-            f"Ссылка {platform_label} распознана, но скачивание с этой платформы пока не подключено."
+            f"Ссылка {platform_label} распознана, но скачивание "
+            "с этой платформы пока не подключено."
         )
         return
 
