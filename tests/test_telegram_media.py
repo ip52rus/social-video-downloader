@@ -12,12 +12,16 @@ from social_video_downloader.infrastructure.telegram_media import prepare_telegr
 
 
 def _probe(video: str, audio: str) -> SimpleNamespace:
-    return SimpleNamespace(stdout=json.dumps({
-        "streams": [
-            {"codec_type": "video", "codec_name": video},
-            {"codec_type": "audio", "codec_name": audio},
-        ]
-    }))
+    return SimpleNamespace(
+        stdout=json.dumps(
+            {
+                "streams": [
+                    {"codec_type": "video", "codec_name": video},
+                    {"codec_type": "audio", "codec_name": audio},
+                ]
+            }
+        )
+    )
 
 
 def test_compatible_mp4_is_preserved_without_transcoding(tmp_path: Path) -> None:
@@ -93,9 +97,9 @@ def test_missing_audio_is_rejected(tmp_path: Path) -> None:
     source.write_bytes(b"video only")
 
     def runner(command, **kwargs):
-        return SimpleNamespace(stdout=json.dumps({
-            "streams": [{"codec_type": "video", "codec_name": "h264"}]
-        }))
+        return SimpleNamespace(
+            stdout=json.dumps({"streams": [{"codec_type": "video", "codec_name": "h264"}]})
+        )
 
     with pytest.raises(MediaProcessingError, match="both video and audio"):
         prepare_telegram_video(source, runner=runner)
