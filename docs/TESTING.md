@@ -24,4 +24,6 @@ Distinguish application regressions, provider/platform changes, and temporary ne
 - Additional successful Shorts smoke tests were recorded for VF_MOfnz7OY (formats 398+251) and osrN3A_Rdiw (formats 616+251 via HLS).
 - A duplicate audio format ID issue was reproduced and fixed; a live selector check for 251-0/251 successfully downloaded Opus audio (48 kHz, stereo).
 
+Additional deterministic tests are being added for extractor exceptions, generic download failures, post-processing failures, missing final output, and temporary-workspace cleanup. The validation branch's CI result is pending, so these tests are not yet recorded as passing.
+
 These results are targeted smoke-test evidence. They do not establish a representative format matrix, comprehensive failure-path coverage, or broad provider reliability. Those checks remain acceptance criteria for Phase 2.
