@@ -17,7 +17,10 @@ def create_bot(settings: Settings) -> Bot:
         return Bot(token=settings.telegram_bot_token)
 
     api = TelegramAPIServer.from_base(settings.telegram_api_base_url, is_local=True)
-    session = AiohttpSession(api=api)
+    session = AiohttpSession(
+        api=api,
+        timeout=settings.telegram_api_timeout_seconds,
+    )
     return Bot(token=settings.telegram_bot_token, session=session)
 
 
