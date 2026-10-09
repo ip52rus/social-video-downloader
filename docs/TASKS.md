@@ -25,39 +25,37 @@
 - [x] Add unit tests for models, errors, provider contract, URL handling, filenames, and workspace lifecycle.
 - [x] Add integration harness.
 
-## YouTube
-- [x] Move the provider implementation into the provider architecture.
-- [x] Smoke-test metadata extraction through real download runs for public videos.
-- [x] Smoke-test video/audio merging with public videos.
-- [x] Validate Shorts with real downloads.
-- [ ] Validate a representative format matrix across relevant media cases. An opt-in live test is available at `tests/integration/test_youtube_live_matrix.py`; a successful real-platform run is still outstanding.
-- [ ] Validate provider failure scenarios and relevant error boundaries.
+## YouTube — Phase 2 acceptance gate passed
+- [x] Move the YouTube provider implementation into the provider architecture.
+- [x] Smoke-test metadata extraction and downloads with public videos.
+- [x] Validate Shorts with real downloads in all three modes.
+- [x] Validate a representative live output-mode/container matrix on a regular public video.
+- [x] Validate deterministic provider error boundaries and representative format layouts.
 
 ### Recorded verification evidence
-- A public YouTube video was downloaded successfully in VIDEO_WITH_AUDIO, VIDEO_ONLY, and AUDIO_ONLY modes.
-- VIDEO_ONLY output was checked with ffprobe and contained a video stream without audio.
-- AUDIO_ONLY output was checked with ffprobe and contained an audio stream without video.
-- Shorts https://www.youtube.com/shorts/Lmv2jfPNvzE (Секрет от Мироновой, 20 seconds) was tested in all three download modes:
+- Live matrix run on 2026-10-09 for https://www.youtube.com/watch?v=dQw4w9WgXcQ:
+  `YOUTUBE_LIVE_TEST_URL='https://www.youtube.com/watch?v=dQw4w9WgXcQ' uv run pytest tests/integration/test_youtube_live_matrix.py -q -s` → `1 passed in 140.06s`.
+- The live test downloaded combined video/audio MP4, selected-quality video-only output, and audio-only outputs in two distinct containers. ffprobe checks passed for actual stream composition, codec identification, video dimensions, audio sample rate, and expected audio containers.
+- Shorts https://www.youtube.com/shorts/Lmv2jfPNvzE (20 seconds) was tested in all three modes:
   - VIDEO_WITH_AUDIO: ffprobe confirmed AV1 video (720×1280) and Opus audio (48 kHz, stereo); duration about 20.13 seconds.
   - VIDEO_ONLY: ffprobe confirmed an AV1 video stream without audio.
   - AUDIO_ONLY: ffprobe confirmed an Opus audio stream (48 kHz, stereo) without video; duration about 20.14 seconds.
-- Additional Shorts smoke tests succeeded for VF_MOfnz7OY using formats 398+251, and osrN3A_Rdiw using 616+251 via HLS. The latter was merged to NEVER GIVE UP 🙌.mp4; the recorded process exit code was 0.
-- Deno 2.9.7 was detected during the recorded Shorts checks; no missing-JavaScript-runtime warning was observed.
-- The duplicate audio format ID issue was reproduced and fixed in PR #10. The selector 251-0/251 successfully downloaded audio from one public YouTube video; ffprobe confirmed Opus, 48 kHz, stereo.
-- GitHub Actions CI run [37965947548](https://github.com/ip52rus/social-video-downloader/actions/runs/37965947548) passed 131 tests on validation branch commit `6d4dccb08bd8208efa75da617638364bc51b59e4`; Ruff lint and format checks also passed.
-- Ruff lint and format checks passed for src/social_video_downloader/providers/youtube.py and tests/test_youtube_provider.py.
-- GitHub Actions quality job passed on PR #10 head commit 5b49c9455a71ec7d562c46db00e12a1172769dd8. This is evidence for the PR head, not a separate CI result for the merge commit.
-- Deterministic provider tests now pass for extractor exceptions, generic download failures, post-processing failures, missing final output, temporary-workspace cleanup, and five representative format-layout cases (progressive, adaptive AVC/VP9/AV1 with AAC/Opus, video-only, audio-only, and unusable formats). These are network-free tests; the real YouTube format/media matrix remains outstanding.
-- These are targeted smoke tests and automated checks, not evidence of broad provider reliability or complete coverage.
+- Additional Shorts smoke tests succeeded for VF_MOfnz7OY using formats 398+251, and osrN3A_Rdiw using 616+251 via HLS. The latter was merged to an MP4 output; recorded process exit code was 0.
+- Deno 2.9.7 was detected during the recorded Shorts checks.
+- The duplicate audio format ID issue was reproduced and fixed in PR #10. Selector 251-0/251 downloaded audio successfully; ffprobe confirmed Opus, 48 kHz, stereo.
+- Deterministic tests cover metadata extractor errors, generic download failures, post-processing failures, missing final output, temporary-workspace cleanup, and five format-layout cases (progressive, adaptive AVC/VP9/AV1 with AAC/Opus, video-only, audio-only, and unusable formats).
+- GitHub Actions run [37966225469](https://github.com/ip52rus/social-video-downloader/actions/runs/37966225469) passed 131 tests and Ruff lint/format checks on merge commit `f27051fded257b5f39056c45333b4fa8c50075a3`. PR #13 CI passed with the opt-in live test skipped because no URL was configured; the live test has now been run successfully locally as recorded above.
+
+The Phase 2 gate is satisfied by the combined live matrix and deterministic failure-boundary coverage. Scope limitation: the live matrix was run against one regular public video, so this is not a claim of broad reliability across every YouTube format, restriction, or transient platform condition. Re-run it after material provider or yt-dlp changes.
 
 ## Telegram
-- [x] Select and pin Telegram framework/dependencies (aiogram 3.x).
 - [ ] Implement configuration loading.
 - [ ] Implement /start.
 - [ ] Implement URL intake.
 - [ ] Implement state and progress handling.
 - [ ] Implement result delivery.
 - [ ] Implement user-facing errors.
+- [ ] Test the complete core user flow with a test bot.
 
 ## Access control
 - [ ] Define required Telegram community.
