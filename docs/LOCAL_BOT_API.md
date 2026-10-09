@@ -33,7 +33,7 @@ When the Local Bot API Server is running and reachable, set the variable to its 
 
     export TELEGRAM_API_BASE_URL="http://127.0.0.1:8081"
 
-Then restart the bot process. The client configuration in this project enables aiogram's local-server mode when the variable is present. The example assumes both processes can reach the same loopback interface; it must be adjusted if they run in separate containers or hosts.
+Then restart the bot process. The client configuration in this project enables aiogram's local-server mode when the variable is present. Local API requests default to a 1800-second timeout to accommodate slow large-file uploads. Set `TELEGRAM_API_TIMEOUT_SECONDS` to an integer from 1 to 86400 to adjust it for your network. The example assumes both processes can reach the same loopback interface; it must be adjusted if they run in separate containers or hosts.
 
 ## Safe migration sequence
 
