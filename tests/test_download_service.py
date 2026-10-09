@@ -4,7 +4,13 @@ from unittest.mock import MagicMock
 import pytest
 
 from social_video_downloader.domain.errors import UnsupportedPlatformError
-from social_video_downloader.domain.models import DownloadedMedia, DownloadMode, DownloadOptions, MediaMetadata, Platform
+from social_video_downloader.domain.models import (
+    DownloadedMedia,
+    DownloadMode,
+    DownloadOptions,
+    MediaMetadata,
+    Platform,
+)
 from social_video_downloader.services.download import DownloadService
 
 
