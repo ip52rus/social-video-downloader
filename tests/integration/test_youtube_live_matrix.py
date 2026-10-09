@@ -73,16 +73,16 @@ def test_real_youtube_format_and_output_mode_matrix(tmp_path: Path) -> None:
         f"found {tuple(audio_qualities_by_extension)}."
     )
 
-    cases: list[tuple[DownloadMode, str | None]] = [
-        (DownloadMode.VIDEO_WITH_AUDIO, None),
-        (DownloadMode.VIDEO_ONLY, selected_video_quality.id),
+    cases: list[tuple[DownloadMode, str | None, str | None]] = [
+        (DownloadMode.VIDEO_WITH_AUDIO, None, "mp4"),
+        (DownloadMode.VIDEO_ONLY, selected_video_quality.id, None),
     ]
     cases.extend(
-        (DownloadMode.AUDIO_ONLY, quality.id)
-        for quality in list(audio_qualities_by_extension.values())[:2]
+        (DownloadMode.AUDIO_ONLY, quality.id, extension.lower())
+        for extension, quality in list(audio_qualities_by_extension.items())[:2]
     )
 
-    for mode, quality_id in cases:
+    for mode, quality_id, expected_extension in cases:
         downloaded = provider.download(
             LIVE_URL,
             tmp_path,
@@ -91,6 +91,10 @@ def test_real_youtube_format_and_output_mode_matrix(tmp_path: Path) -> None:
 
         assert downloaded.file_path.is_file(), f"{mode.value} did not produce a file."
         assert downloaded.file_path.stat().st_size > 0, f"{mode.value} produced an empty file."
+        if expected_extension is not None:
+            assert downloaded.file_path.suffix.lower() == f".{expected_extension}", (
+                f"{mode.value} produced unexpected container {downloaded.file_path.suffix!r}."
+            )
 
         streams = _probe_streams(downloaded.file_path)
         video_streams = [stream for stream in streams if stream.get("codec_type") == "video"]
