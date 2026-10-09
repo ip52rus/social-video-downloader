@@ -350,13 +350,42 @@ def test_default_download_uses_best_available_quality(
     downloaded = provider.download("https://youtu.be/abc123", tmp_path)
 
     client = factory.instances[-1]
-    assert client.params["format"] == "bv*+ba/b"
-    assert client.format_selector == "bv*+ba/b"
+    expected_selector = (
+        "bv[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/b[vcodec^=avc1][acodec^=mp4a][ext=mp4]/bv*+ba/b"
+    )
+    assert client.params["format"] == expected_selector
+    assert client.format_selector == expected_selector
     assert client.params["merge_output_format"] == "mp4"
     assert downloaded.file_path.is_file()
     assert downloaded.file_path.suffix == ".mp4"
     assert downloaded.file_path.read_bytes() == b"fake media"
     assert downloaded.metadata.title == "Test: video/short"
+
+
+def test_video_with_audio_download_prefers_compatible_codecs_for_selected_quality(
+    provider: YouTubeProvider,
+    factory: FakeYoutubeDLFactory,
+    tmp_path: Path,
+) -> None:
+    downloaded = provider.download(
+        "https://youtu.be/abc123",
+        tmp_path,
+        DownloadOptions(
+            mode=DownloadMode.VIDEO_WITH_AUDIO,
+            quality_id="height-720",
+        ),
+    )
+
+    expected_selector = (
+        "bv[height<=720][vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
+        "b[height<=720][vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
+        "bv*[height<=720]+ba/b[height<=720]"
+    )
+    client = factory.instances[-1]
+    assert client.params["format"] == expected_selector
+    assert client.format_selector == expected_selector
+    assert client.params["merge_output_format"] == "mp4"
+    assert downloaded.file_path.is_file()
 
 
 def test_video_only_download_uses_selected_quality(
@@ -511,6 +540,16 @@ def test_missing_final_media_file_maps_to_media_processing_error(tmp_path: Path)
     [
         "bv*+ba/b",
         "bv[height<=720]",
+        (
+            "bv[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
+            "b[vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
+            "bv*+ba/b"
+        ),
+        (
+            "bv[height<=720][vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
+            "b[height<=720][vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
+            "bv*[height<=720]+ba/b[height<=720]"
+        ),
         "140-0/140",
         "251-0/251",
     ],
