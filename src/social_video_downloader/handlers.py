@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -32,6 +33,18 @@ from social_video_downloader.services.download import DownloadService
 logger = logging.getLogger(__name__)
 router = Router(name="telegram-handlers")
 download_service = DownloadService()
+
+
+def _prepare_video_for_telegram(path: Path) -> Path:
+    """Optionally bypass transcoding for a controlled compatibility test."""
+    setting = os.getenv("TELEGRAM_VIDEO_TRANSCODING", "true").strip().lower()
+    if setting in {"0", "false", "no", "off"}:
+        logger.warning(
+            "Telegram video transcoding disabled; uploading original downloaded file: %s",
+            path,
+        )
+        return path
+    return prepare_telegram_video(path)
 
 _PLATFORM_LABELS = {
     Platform.YOUTUBE: "YouTube",
@@ -114,7 +127,7 @@ async def handle_text(message: Message) -> None:
                 raise MediaProcessingError("The downloader returned a missing output file.")
 
             telegram_video = await asyncio.to_thread(
-                prepare_telegram_video,
+                _prepare_video_for_telegram,
                 downloaded.file_path,
             )
             upload_parameters: dict[str, int] = {}
