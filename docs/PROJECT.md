@@ -16,7 +16,7 @@ Planned access is tied to membership in the project's Telegram community. Leavin
 The service is planned to remain free. A separate advertising gateway may later offer compliant advertising actions before downloads. Advertising must remain modular.
 
 ## Initial platforms
-YouTube is the first provider. The provider architecture and targeted real-download checks are in place, including regular videos and Shorts in video-with-audio, video-only, and audio-only modes. The representative format matrix and failure scenarios are still being validated. Instagram and TikTok are planned next, subject to technical validation and an explicit assessment of feasibility and reliability.
+YouTube was the first provider. The provider architecture and Phase 2 validation gate are in place, including live matrix coverage for combined video/audio, selected-quality video-only, and audio-only outputs in two containers, as well as recorded regular-video and Shorts smoke tests and deterministic error-boundary coverage. This is targeted evidence rather than a guarantee of broad reliability across all YouTube content and platform conditions. Instagram and TikTok are planned next, subject to technical validation and an explicit assessment of feasibility and reliability.
 
 ## Current implementation boundary
-The downloader core and YouTube provider exist, but the Telegram user flow and community-membership enforcement are not yet implemented. The project is not production-ready; consult ROADMAP.md and TASKS.md for the current gate and outstanding work.
+The downloader core and YouTube provider exist, but the Telegram user flow and community-membership enforcement are not yet implemented. The project is not production-ready; consult ROADMAP.md and TASKS.md for the current stage and outstanding work.
