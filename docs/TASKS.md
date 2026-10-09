@@ -33,31 +33,28 @@
 - [x] Validate deterministic provider error boundaries and representative format layouts.
 
 ### Recorded verification evidence
-- Live matrix run on 2026-10-09 for https://www.youtube.com/watch?v=dQw4w9WgXcQ:
-  `YOUTUBE_LIVE_TEST_URL='https://www.youtube.com/watch?v=dQw4w9WgXcQ' uv run pytest tests/integration/test_youtube_live_matrix.py -q -s` → `1 passed in 140.06s`.
-- The live test downloaded combined video/audio MP4, selected-quality video-only output, and audio-only outputs in two distinct containers. ffprobe checks passed for actual stream composition, codec identification, video dimensions, audio sample rate, and expected audio containers.
-- Shorts https://www.youtube.com/shorts/Lmv2jfPNvzE (20 seconds) was tested in all three modes:
-  - VIDEO_WITH_AUDIO: ffprobe confirmed AV1 video (720×1280) and Opus audio (48 kHz, stereo); duration about 20.13 seconds.
-  - VIDEO_ONLY: ffprobe confirmed an AV1 video stream without audio.
-  - AUDIO_ONLY: ffprobe confirmed an Opus audio stream (48 kHz, stereo) without video; duration about 20.14 seconds.
-- Additional Shorts smoke tests succeeded for VF_MOfnz7OY using formats 398+251, and osrN3A_Rdiw using 616+251 via HLS. The latter was merged to an MP4 output; recorded process exit code was 0.
-- Deno 2.9.7 was detected during the recorded Shorts checks.
-- The duplicate audio format ID issue was reproduced and fixed in PR #10. Selector 251-0/251 downloaded audio successfully; ffprobe confirmed Opus, 48 kHz, stereo.
-- Deterministic tests cover metadata extractor errors, generic download failures, post-processing failures, missing final output, temporary-workspace cleanup, and five format-layout cases (progressive, adaptive AVC/VP9/AV1 with AAC/Opus, video-only, audio-only, and unusable formats).
-- GitHub Actions run [37966225469](https://github.com/ip52rus/social-video-downloader/actions/runs/37966225469) passed 131 tests and Ruff lint/format checks on merge commit `f27051fded257b5f39056c45333b4fa8c50075a3`. PR #13 CI passed with the opt-in live test skipped because no URL was configured; the live test has now been run successfully locally as recorded above.
+- Live matrix run on 2026-10-09 for https://www.youtube.com/watch?v=dQw4w9WgXcQ: `1 passed in 140.06s`.
+- The live test downloaded combined video/audio MP4, selected-quality video-only output, and audio-only outputs in two distinct containers. ffprobe verified stream composition, codecs, dimensions, sample rate, and expected containers.
+- Shorts were tested in all three modes; additional successful Shorts smoke tests were recorded for VF_MOfnz7OY and osrN3A_Rdiw.
+- The duplicate audio format ID issue was reproduced and fixed. Deterministic tests cover provider errors, cleanup, and representative format layouts.
+- GitHub Actions run [37966225469](https://github.com/ip52rus/social-video-downloader/actions/runs/37966225469) passed 131 tests and Ruff lint/format checks on merge commit `f27051fded257b5f39056c45333b4fa8c50075a3`.
 
-The Phase 2 gate is satisfied by the combined live matrix and deterministic failure-boundary coverage. Scope limitation: the live matrix was run against one regular public video, so this is not a claim of broad reliability across every YouTube format, restriction, or transient platform condition. Re-run it after material provider or yt-dlp changes.
+The Phase 2 gate is satisfied by the combined live matrix and deterministic failure-boundary coverage. Scope limitation: the live matrix was run against one regular public video, not every YouTube format or platform condition.
 
-## Telegram
-- [ ] Implement configuration loading.
-- [ ] Implement /start.
-- [ ] Implement URL intake.
-- [ ] Implement state and progress handling.
-- [ ] Implement result delivery.
-- [ ] Implement user-facing errors.
-- [ ] Test the complete core user flow with a test bot.
+## Telegram MVP — in progress
+- [x] Add validated environment-based application settings for the Telegram bot token, environment name, and log level.
+- [x] Add deterministic tests for required configuration, defaults, normalization, invalid values, token redaction in repr, and immutability.
+- [ ] Configure application logging from settings.
+- [ ] Create the aiogram bot/dispatcher entry point.
+- [ ] Implement /start and URL intake.
+- [ ] Connect URL validation/provider selection to the download service.
+- [ ] Implement progress/state handling and result delivery.
+- [ ] Map expected domain errors to safe user-facing messages.
+- [ ] Test handler logic with mocked Telegram interactions.
+- [ ] Perform a manual test-bot end-to-end flow for a public YouTube URL.
+- [ ] Document setup and run instructions.
 
-## Access control
+## Access control — separate Phase 4
 - [ ] Define required Telegram community.
 - [ ] Implement membership check.
 - [ ] Test member, non-member, leave, and rejoin behavior.

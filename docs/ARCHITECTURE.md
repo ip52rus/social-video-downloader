@@ -3,6 +3,9 @@
 ## Target logical architecture
 Telegram -> Application layer -> Download service -> Provider interface -> provider implementation -> media engine -> temporary storage.
 
+## Configuration and startup
+Environment-based settings are validated before starting the application. The Telegram token is required, is excluded from the settings representation, and must never be written to logs. Application environment and log level have explicit accepted values.
+
 ## Telegram layer
 Commands, messages, buttons, access checks, user-facing errors, and result delivery. It must not contain provider-specific download logic.
 
