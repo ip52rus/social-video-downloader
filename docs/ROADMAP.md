@@ -24,7 +24,7 @@ Gate: a representative integration matrix passes, including relevant success and
 
 ### Remaining Phase 2 checks
 - Validate a representative matrix of available formats and media characteristics beyond the targeted smoke tests already recorded.
-- Validate provider failure scenarios and relevant error boundaries, distinguishing application defects from external-platform and transient network failures.
+- Validate provider failure scenarios and relevant error boundaries, distinguishing application defects from external-platform and transient network failures. Deterministic tests for extractor, download, post-processing, and missing-output failures are being added; their CI result remains pending.
 - Re-run the relevant automated tests and quality checks after further provider changes.
 
 Shorts smoke testing is recorded as complete, but Phase 2 remains in progress until the broader format matrix and failure scenarios satisfy the acceptance gate. Do not infer broad provider reliability from a small number of successful URLs.
