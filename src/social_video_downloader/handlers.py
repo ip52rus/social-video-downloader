@@ -1,4 +1,4 @@
-""""Telegram command and URL-intake handlers."""
+"""Telegram command and URL-intake handlers."""
 
 import asyncio
 import logging
