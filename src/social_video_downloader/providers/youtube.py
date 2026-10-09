@@ -52,6 +52,8 @@ class YouTubeProvider:
             "noplaylist": True,
             "quiet": True,
             "no_warnings": True,
+            "retries": 10,
+            "fragment_retries": 10,
             "js_runtimes": {"deno": {}},
         }
 
