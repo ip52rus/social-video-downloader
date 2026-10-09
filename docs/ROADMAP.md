@@ -9,23 +9,25 @@ Transport-independent URL validation, provider detection, provider interface, do
 Gate: core behavior is independently testable without Telegram.
 
 ## Phase 2 - YouTube Provider
-Move the validated prototype into the provider architecture and test Shorts, separate streams, formats, and failure cases.
-Gate: representative integration matrix passes, including relevant success and failure scenarios.
+Move the validated prototype into the provider architecture and validate Shorts, representative formats/media cases, and failure behavior.
+Gate: a representative integration matrix passes, including relevant success and failure scenarios.
 
 ### Verified progress
 - The YouTube provider is implemented in the provider architecture.
-- Real downloads have succeeded for `VIDEO_WITH_AUDIO`, `VIDEO_ONLY`, and `AUDIO_ONLY` using one public YouTube video.
-- `VIDEO_ONLY` and `AUDIO_ONLY` outputs were checked with `ffprobe` for their expected stream types.
-- The automated suite passed with 120 tests, and Ruff lint and format checks passed at the last recorded verification.
-- These results are initial smoke-test evidence, not completion of the representative provider test matrix.
+- Real downloads have succeeded for VIDEO_WITH_AUDIO, VIDEO_ONLY, and AUDIO_ONLY using a public YouTube video; ffprobe confirmed the expected stream composition for VIDEO_ONLY and AUDIO_ONLY.
+- Shorts were tested in all three download modes for Lmv2jfPNvzE. ffprobe confirmed AV1 video (720×1280) and Opus audio (48 kHz, stereo) for the combined output, video-only output without audio, and audio-only output without video.
+- Additional successful Shorts smoke tests were recorded for VF_MOfnz7OY (formats 398+251) and osrN3A_Rdiw (formats 616+251 via HLS, merged output, exit code 0).
+- Deno 2.9.7 was detected during the recorded Shorts checks.
+- PR #10 fixed a reproduced duplicate audio format ID issue by trying the normalized suffixed ID before the raw ID. A live check of selector 251-0/251 downloaded audio that ffprobe identified as Opus, 48 kHz, stereo.
+- The latest recorded automated suite passed with 122 tests. Ruff lint and format checks passed for the changed YouTube provider and its tests.
+- GitHub Actions quality passed on PR #10 head commit 5b49c9455a71ec7d562c46db00e12a1172769dd8. A separate CI result for the merge commit was not confirmed.
 
 ### Remaining Phase 2 checks
-- Validate YouTube Shorts.
-- Validate a representative range of available formats and relevant media characteristics.
-- Validate provider failure scenarios and distinguish application defects from transient external-platform or network failures.
-- Re-run the required automated tests and quality checks after any related implementation changes.
+- Validate a representative matrix of available formats and media characteristics beyond the targeted smoke tests already recorded.
+- Validate provider failure scenarios and relevant error boundaries, distinguishing application defects from external-platform and transient network failures.
+- Re-run the relevant automated tests and quality checks after further provider changes.
 
-Phase 2 remains in progress until its acceptance gate is satisfied. Do not mark the phase complete or move past its gate based only on the initial smoke tests.
+Shorts smoke testing is recorded as complete, but Phase 2 remains in progress until the broader format matrix and failure scenarios satisfy the acceptance gate. Do not infer broad provider reliability from a small number of successful URLs.
 
 ## Phase 3 - Telegram MVP
 Implement URL -> download -> result without advertising or monetization.

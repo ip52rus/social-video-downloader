@@ -27,23 +27,30 @@
 
 ## YouTube
 - [x] Move the provider implementation into the provider architecture.
-- [x] Smoke-test metadata extraction through real download runs for one public video.
-- [x] Smoke-test video/audio merging with one public video.
-- [ ] Validate Shorts.
+- [x] Smoke-test metadata extraction through real download runs for public videos.
+- [x] Smoke-test video/audio merging with public videos.
+- [x] Validate Shorts with real downloads.
 - [ ] Validate a representative format matrix across relevant media cases.
 - [ ] Validate provider failure scenarios and relevant error boundaries.
 
 ### Recorded verification evidence
-- Real downloads succeeded for `VIDEO_WITH_AUDIO`, `VIDEO_ONLY`, and `AUDIO_ONLY` on one public video.
-- `VIDEO_ONLY` output was checked with `ffprobe` and contained a video stream without audio.
-- `AUDIO_ONLY` output was checked with `ffprobe` and contained an audio stream without video.
-- The automated test suite passed: `120 passed`.
-- `ruff check .` and `ruff format --check .` passed; 34 files were reported already formatted.
-- These checks cover the recorded state at the time of verification. Re-run them after subsequent relevant changes.
-- This evidence does not establish Shorts support, broad format compatibility, or complete failure-path coverage. Phase 2 remains open until the remaining acceptance criteria are met.
+- A public YouTube video was downloaded successfully in VIDEO_WITH_AUDIO, VIDEO_ONLY, and AUDIO_ONLY modes.
+- VIDEO_ONLY output was checked with ffprobe and contained a video stream without audio.
+- AUDIO_ONLY output was checked with ffprobe and contained an audio stream without video.
+- Shorts https://www.youtube.com/shorts/Lmv2jfPNvzE (Секрет от Мироновой, 20 seconds) was tested in all three download modes:
+  - VIDEO_WITH_AUDIO: ffprobe confirmed AV1 video (720×1280) and Opus audio (48 kHz, stereo); duration about 20.13 seconds.
+  - VIDEO_ONLY: ffprobe confirmed an AV1 video stream without audio.
+  - AUDIO_ONLY: ffprobe confirmed an Opus audio stream (48 kHz, stereo) without video; duration about 20.14 seconds.
+- Additional Shorts smoke tests succeeded for VF_MOfnz7OY using formats 398+251, and osrN3A_Rdiw using 616+251 via HLS. The latter was merged to NEVER GIVE UP 🙌.mp4; the recorded process exit code was 0.
+- Deno 2.9.7 was detected during the recorded Shorts checks; no missing-JavaScript-runtime warning was observed.
+- The duplicate audio format ID issue was reproduced and fixed in PR #10. The selector 251-0/251 successfully downloaded audio from one public YouTube video; ffprobe confirmed Opus, 48 kHz, stereo.
+- Latest recorded automated suite: 122 passed.
+- Ruff lint and format checks passed for src/social_video_downloader/providers/youtube.py and tests/test_youtube_provider.py.
+- GitHub Actions quality job passed on PR #10 head commit 5b49c9455a71ec7d562c46db00e12a1172769dd8. This is evidence for the PR head, not a separate CI result for the merge commit.
+- These are targeted smoke tests and automated checks, not evidence of broad provider reliability or complete coverage.
 
 ## Telegram
-- [x] Select and pin Telegram framework/dependencies (`aiogram` 3.x).
+- [x] Select and pin Telegram framework/dependencies (aiogram 3.x).
 - [ ] Implement configuration loading.
 - [ ] Implement /start.
 - [ ] Implement URL intake.
