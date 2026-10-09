@@ -351,9 +351,7 @@ def test_default_download_uses_best_available_quality(
 
     client = factory.instances[-1]
     expected_selector = (
-        "bv[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
-        "b[vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
-        "bv*+ba/b"
+        "bv[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/b[vcodec^=avc1][acodec^=mp4a][ext=mp4]/bv*+ba/b"
     )
     assert client.params["format"] == expected_selector
     assert client.format_selector == expected_selector
