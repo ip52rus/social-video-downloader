@@ -116,9 +116,7 @@ async def handle_text(message: Message) -> None:
         )
     except TelegramAPIError:
         logger.exception("Telegram could not deliver the downloaded media file")
-        await message.answer(
-            "Не удалось отправить файл в Telegram. Попробуй ещё раз позже."
-        )
+        await message.answer("Не удалось отправить файл в Telegram. Попробуй ещё раз позже.")
     except DownloaderError as error:
         logger.warning("Media download failed: %s", type(error).__name__)
         await message.answer(_download_error_message(error))
