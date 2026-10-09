@@ -30,7 +30,7 @@
 - [x] Smoke-test metadata extraction through real download runs for public videos.
 - [x] Smoke-test video/audio merging with public videos.
 - [x] Validate Shorts with real downloads.
-- [ ] Validate a representative format matrix across relevant media cases.
+- [ ] Validate a representative format matrix across relevant media cases. An opt-in live test is available at `tests/integration/test_youtube_live_matrix.py`; a successful real-platform run is still outstanding.
 - [ ] Validate provider failure scenarios and relevant error boundaries.
 
 ### Recorded verification evidence
