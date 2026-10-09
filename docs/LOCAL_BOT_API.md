@@ -35,16 +35,25 @@ When the Local Bot API Server is running and reachable, set the variable to its 
 
 Then restart the bot process. The client configuration in this project enables aiogram's local-server mode when the variable is present. The example assumes both processes can reach the same loopback interface; it must be adjusted if they run in separate containers or hosts.
 
+## Safe migration sequence
+
+Telegram requires the bot to call the Bot API `logOut` method on the cloud endpoint before switching to a local Bot API Server. Stop the bot process first so that it is not polling concurrently. Perform the official cloud `logOut` operation, then start the bot against the local endpoint. After a successful `logOut`, Telegram does not allow the bot to log in to the cloud Bot API again for 10 minutes. Do not attempt a live switch until the operational procedure has been rehearsed with a separate test bot.
+
+Rollback is not just a matter of unsetting the environment variable. Stop the local client, follow Telegram's documented migration procedure from the local server back to cloud, account for the 10-minute cloud restriction, then unset `TELEGRAM_API_BASE_URL` and restart. Keep a maintenance window and a clear user-facing outage message for the migration.
+
+See the [official Bot API documentation](https://core.telegram.org/bots/api#using-a-local-bot-api-server) for the current `logOut` and migration requirements.
+
 ## Required rollout tests
 
-1. Confirm the server is healthy and the bot can poll through the configured endpoint.
-2. Send a known-compatible video smaller than 50 MB; verify playback and logs.
-3. Send a known-compatible video larger than 50 MB; verify it is uploaded without a compression pass.
-4. Test a larger file, increasing size gradually and stopping well below the configured host's disk/RAM limits before attempting files near 2 GB.
-5. Test a codec-incompatible file to verify that media preparation still works.
-6. Restart both processes and verify polling recovers.
-7. Unset `TELEGRAM_API_BASE_URL`, restart the bot, and verify rollback to the cloud API.
-8. Record actual upload size, duration, codecs, upload time, disk peak, and any Telegram errors.
+1. Rehearse the migration and rollback with a separate test bot before touching the production bot.
+2. Confirm the server is healthy and the test bot can poll through the configured endpoint.
+3. Send a known-compatible video smaller than 50 MB; verify playback and logs.
+4. Send a known-compatible video larger than 50 MB; verify it is uploaded without a compression pass.
+5. Test a larger file, increasing size gradually and stopping well below the configured host's disk/RAM limits before attempting files near 2 GB.
+6. Test a codec-incompatible file to verify that media preparation still works.
+7. Restart both processes and verify polling recovers.
+8. Rehearse the documented rollback; do not assume changing the environment variable alone is sufficient.
+9. Record actual upload size, duration, codecs, upload time, disk peak, and any Telegram errors.
 
 Do not advertise support for 2 GB until a real end-to-end test confirms it in the deployed environment.
 
