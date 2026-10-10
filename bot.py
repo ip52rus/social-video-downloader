@@ -1,4 +1,3 @@
-
 """Entry point for hosting platforms."""
 
 from social_video_downloader.bot import main
