@@ -3,6 +3,7 @@
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 
 class ConfigurationError(ValueError):
@@ -16,6 +17,8 @@ class Settings:
     telegram_bot_token: str = field(repr=False)
     app_env: str = "development"
     log_level: str = "INFO"
+    telegram_api_base_url: str | None = None
+    telegram_api_timeout_seconds: int = 1800
 
     def __post_init__(self) -> None:
         if not self.telegram_bot_token.strip():
@@ -32,6 +35,28 @@ class Settings:
 
         object.__setattr__(self, "log_level", normalized_log_level)
 
+        if not 1 <= self.telegram_api_timeout_seconds <= 86400:
+            raise ConfigurationError(
+                "TELEGRAM_API_TIMEOUT_SECONDS must be an integer from 1 to 86400."
+            )
+
+        if self.telegram_api_base_url is not None:
+            base_url = self.telegram_api_base_url.strip().rstrip("/")
+            parsed_url = urlsplit(base_url)
+            if (
+                parsed_url.scheme not in {"http", "https"}
+                or not parsed_url.hostname
+                or parsed_url.username is not None
+                or parsed_url.password is not None
+                or parsed_url.query
+                or parsed_url.fragment
+            ):
+                raise ConfigurationError(
+                    "TELEGRAM_API_BASE_URL must be an HTTP(S) base URL without credentials, "
+                    "query, or fragment."
+                )
+            object.__setattr__(self, "telegram_api_base_url", base_url)
+
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None) -> "Settings":
         """Build settings from an environment mapping or the process environment."""
@@ -42,8 +67,19 @@ class Settings:
                 "TELEGRAM_BOT_TOKEN is required. Set it in the process environment."
             )
 
+        raw_timeout = source.get("TELEGRAM_API_TIMEOUT_SECONDS", "1800").strip()
+        try:
+            api_timeout_seconds = int(raw_timeout)
+        except ValueError as error:
+            raise ConfigurationError(
+                "TELEGRAM_API_TIMEOUT_SECONDS must be an integer from 1 to 86400."
+            ) from error
+
+        api_base_url = source.get("TELEGRAM_API_BASE_URL", "").strip() or None
         return cls(
             telegram_bot_token=token,
             app_env=source.get("APP_ENV", "development").strip().lower(),
             log_level=source.get("LOG_LEVEL", "INFO").strip(),
+            telegram_api_base_url=api_base_url,
+            telegram_api_timeout_seconds=api_timeout_seconds,
         )

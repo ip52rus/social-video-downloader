@@ -14,7 +14,15 @@ Use Python 3.13 and uv. Install dependencies with uv sync, set TELEGRAM_BOT_TOKE
 
     uv run python -m social_video_downloader
 
-The bot responds to /start. Send a public YouTube video URL to start a download; the bot prepares a Telegram-friendly H.264/AAC MP4 when needed and sends it as a video if download and upload succeed. Instagram and TikTok are currently recognition-only. Optional settings are APP_ENV (development, test, or production) and LOG_LEVEL (DEBUG, INFO, WARNING, ERROR, or CRITICAL). Never commit the real token or put it in logs.
+The bot responds to /start. Send a public YouTube video URL to start a download; the bot prepares a Telegram-friendly H.264/AAC MP4 when needed and sends it as a video if download and upload succeed. Instagram and TikTok are currently recognition-only. Optional settings are APP_ENV (development, test, or production), LOG_LEVEL (DEBUG, INFO, WARNING, ERROR, or CRITICAL), TELEGRAM_API_BASE_URL, and TELEGRAM_API_TIMEOUT_SECONDS. Never commit the real token or put it in logs.
+
+## Telegram Bot API endpoint
+
+By default, the bot uses Telegram's cloud Bot API. To point it at a separately running Local Bot API Server, set `TELEGRAM_API_BASE_URL` to its private base URL, for example `http://127.0.0.1:8081`. When this setting is present, the client enables aiogram's local-server mode. Leave it unset to use the cloud API.
+
+Local API requests use a configurable timeout of 1800 seconds by default. Set `TELEGRAM_API_TIMEOUT_SECONDS` to an integer from 1 to 86400 if your deployment needs a different request timeout. This setting is applied only when a custom/local API endpoint is configured; the cloud Bot API retains aiogram's default session behavior.
+
+This setting only configures the bot client; it does not install, start, or secure the Local Bot API Server. See [the setup and rollout notes](docs/LOCAL_BOT_API.md) before enabling it. Do not expose an unauthenticated Bot API endpoint to the public internet.
 
 ## Verification status
 
