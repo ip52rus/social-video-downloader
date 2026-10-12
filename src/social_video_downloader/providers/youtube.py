@@ -57,7 +57,9 @@ class YouTubeProvider:
             "js_runtimes": {"deno": {}},
             # Try YouTube player clients that may avoid anonymous web-client challenges.
             # This is a compatibility workaround, not a guarantee against IP-level blocking.
-            "extractor_args": {"youtube": {"player_client": ["tv", "web_safari"]}},
+            "extractor_args": {
+                "youtube": {"player_client": ["tv", "web_safari"]}
+            },
         }
 
     def _new_ydl(self, options: dict[str, Any]) -> Any:
