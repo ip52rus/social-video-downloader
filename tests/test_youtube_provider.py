@@ -350,6 +350,9 @@ def test_default_download_uses_best_available_quality(
     downloaded = provider.download("https://youtu.be/abc123", tmp_path)
 
     client = factory.instances[-1]
+    assert client.params["extractor_args"] == {
+        "youtube": {"player_client": ["tv", "web_safari"]}
+    }
     expected_selector = (
         "bv[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/b[vcodec^=avc1][acodec^=mp4a][ext=mp4]/bv*+ba/b"
     )
