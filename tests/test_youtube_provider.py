@@ -351,9 +351,7 @@ def test_default_download_uses_best_available_quality(
 
     client = factory.instances[-1]
     assert client.params["js_runtimes"] == {"deno": {}}
-    assert client.params["extractor_args"] == {
-        "youtube": {"player_client": ["tv", "web_safari"]}
-    }
+    assert client.params["extractor_args"] == {"youtube": {"player_client": ["tv", "web_safari"]}}
     expected_selector = (
         "bv[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/b[vcodec^=avc1][acodec^=mp4a][ext=mp4]/bv*+ba/b"
     )
