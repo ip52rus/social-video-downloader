@@ -350,6 +350,7 @@ def test_default_download_uses_best_available_quality(
     downloaded = provider.download("https://youtu.be/abc123", tmp_path)
 
     client = factory.instances[-1]
+    assert client.params["js_runtimes"] == {"deno": {}}
     assert client.params["extractor_args"] == {
         "youtube": {"player_client": ["tv", "web_safari"]}
     }
