@@ -166,10 +166,7 @@ def prepare_telegram_video(path: Path, runner: Runner | None = None) -> Path:
         # If the streams are already compatible, try a stream-copy remux first.
         # This avoids expensive lossy re-encoding for files such as MKV containers
         # that already contain H.264 video and AAC audio.
-        if (
-            video_codec == _COMPATIBLE_VIDEO_CODEC
-            and audio_codec == _COMPATIBLE_AUDIO_CODEC
-        ):
+        if video_codec == _COMPATIBLE_VIDEO_CODEC and audio_codec == _COMPATIBLE_AUDIO_CODEC:
             try:
                 execute(
                     [
