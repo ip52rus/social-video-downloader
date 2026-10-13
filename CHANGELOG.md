@@ -36,4 +36,4 @@
 - Live YouTube evidence is limited to a small set of public URLs and does not establish broad platform reliability.
 - A real Telegram flow through the Local Bot API Server was verified with a short video and an MP4 file of approximately 414.7 MB. The large file was H.264/AAC, 1920x1080, approximately 1649 seconds long, arrived in Telegram, and was confirmed playable. This is a limited scenario, not validated support for files up to 2000 MB.
 - Containerized metadata/simulation validation confirmed the Docker bot image exposes Deno 2.9.7 to yt-dlp and that yt-dlp uses Deno for JavaScript challenge solving on a controlled public URL.
-- Additional Telegram client checks, failure/recovery scenarios, restart and rollback rehearsal, and justified larger-file testing remain outstanding. Community-membership access control is a separate planned phase.
+- Additional Telegram client checks, failure/recovery scenarios, restart and rollback rehearsal, and justified larger-file testing remain outstanding. Community-membership access control is deferred to a future monetization/access phase.

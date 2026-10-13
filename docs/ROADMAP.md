@@ -1,45 +1,150 @@
 # Roadmap
 
-## Phase 0 - Foundation
+## Phase 0 - Foundation — done
 GitHub repository, documentation, security baseline, Git workflow, test strategy, and AI-agent rules.
 Gate: governance files exist, contain no secrets or personal data, and the repository history is reviewable.
 
-## Phase 1 - Downloader Core
+## Phase 1 - Downloader Core — done
 Transport-independent URL validation, provider detection, provider interface, download result model, temporary workspace, safe filenames, errors, logging, and tests.
 Gate: core behavior is independently testable without Telegram.
 
-## Phase 2 - YouTube Provider — validation gate passed
+## Phase 2 - YouTube Provider — done
 The YouTube provider is implemented in the provider architecture. Real regular-video downloads succeeded in all three output modes, a live matrix passed for combined MP4, selected-quality video-only, and two audio containers, and Shorts smoke tests plus deterministic error-boundary/format-layout tests are recorded.
 Evidence and limits are documented in TASKS.md and TESTING.md. Live matrix coverage is one regular public URL, not proof of broad reliability.
 
-## Phase 3 - Telegram MVP — in progress
-Implement URL -> download -> result without advertising or monetization.
-- Complete: validated settings, application logging, and minimal aiogram polling entry point.
-- Complete: /start and text-based URL intake with deterministic handler tests.
-- Complete: provider-selection service, YouTube download orchestration, safe domain-error messages, temporary workspace cleanup, deterministic media-preparation tests, and delivery as Telegram video messages with streaming support.
-- Complete: Docker bot image includes pinned Deno for yt-dlp YouTube JavaScript challenge
-  solving, and containerized metadata/simulation validation confirms yt-dlp and the
-  project metadata path can use it.
-- Live evidence: a short video and an MP4 file of approximately 414.7 MB were delivered through the Local Bot API Server; the large file arrived and was confirmed playable. This is limited evidence for the tested scenario, not proof of support for every client, codec, deployment, or files up to 2 GB.
-- Remaining gate: make the live Telegram checks repeatable, verify upload failures and recovery, validate restart behavior, rehearse cloud/local migration and local-to-cloud rollback with a separate test bot, document operational limits, and record the full test-bot setup and end-to-end procedure.
-- Instagram and TikTok are recognized but do not have download providers yet.
+## Phase 3 - Telegram Functional MVP — done
+The functional Telegram MVP is complete for the supported YouTube flow. It includes:
 
-Gate: complete core user flow works in a test bot, including relevant user-facing error cases. Deterministic tests alone do not satisfy the live Telegram end-to-end gate.
+- Telegram bot entry point and aiogram polling setup;
+- `/start`;
+- text URL intake and supported-platform recognition;
+- YouTube detection and download orchestration;
+- transport-independent `DownloadService`;
+- Telegram video delivery;
+- Local Bot API integration;
+- Telegram-compatible media preparation;
+- H.264/AAC preference;
+- compatible MP4 passthrough;
+- verified stream-copy remux for compatible non-MP4 H.264/AAC input;
+- transcode fallback for incompatible or failed remux output;
+- rotation-aware width, height, and duration upload parameters;
+- real Telegram delivery evidence through the Local Bot API Server;
+- Dockerized yt-dlp with pinned Deno runtime for YouTube JavaScript challenge solving;
+- containerized metadata/simulation evidence for the Deno-enabled runtime.
 
-## Phase 4 - Access Control
-Require membership in the project's Telegram community and test member, non-member, leave, and rejoin scenarios. Membership is an ongoing condition of access, not a requirement to actively post or participate.
+Gate: a core user can submit a supported YouTube URL and receive downloaded media in Telegram through the implemented flow.
+
+This phase closure does not mean production readiness. It does not close restart/recovery, upload/network failure recovery, cloud/local operational rehearsal, larger-file limit work, repeatable E2E/deployment procedure, monitoring, resource limits, or broader reliability checks. Those are tracked in Phase 9, Production Reliability.
+
+Instagram and TikTok URLs are recognized but do not have download providers yet.
+
+## Phase 4 - Download UX and YouTube Options
+Expose the capabilities already supported by the provider architecture through a polished Telegram interaction flow.
+
+Planned work:
+
+- design the complete Telegram interaction flow;
+- define the inline keyboard and state model;
+- support video with audio, video only, and audio only;
+- expose quality selection where the provider supports it;
+- retain automatic/best-option selection;
+- design loading, progress, and status behavior where justified;
+- define cancellation and retry behavior if appropriate;
+- review all user-facing messages;
+- define consistent error messages;
+- keep the UX minimal and fast;
+- avoid unnecessary steps.
+
+The current provider architecture already exposes modes and quality options. This phase should primarily connect those capabilities to Telegram UX instead of redesigning provider internals without evidence.
 
 ## Phase 5 - Instagram Provider
-Technical spike, reliability assessment, implementation, and acceptance tests.
+Do not promise implementation before feasibility validation.
+
+Order:
+
+1. technical spike;
+2. real-world reliability assessment;
+3. explicit Go/No-Go;
+4. provider implementation only if viable;
+5. deterministic and external validation;
+6. integration into the common Telegram UX.
+
+Where Instagram exposes meaningful format or quality choices, map them into the shared download-options model.
 
 ## Phase 6 - TikTok Provider
-Technical spike, reliability assessment, implementation, and acceptance tests.
+Use the same gated process as Instagram:
 
-## Phase 7 - Production Reliability
-Introduce queue, workers, rate limits, storage, retries, monitoring, and cleanup only when justified by workload.
+1. technical spike;
+2. real-world reliability assessment;
+3. explicit Go/No-Go;
+4. provider implementation only if viable;
+5. deterministic and external validation;
+6. Telegram UX integration.
 
-## Phase 8 - Advertising Gateway
-Add a separate replaceable monetization layer that can be enabled or disabled without provider changes.
+## Phase 7 - Additional Social Platforms
+Evaluate other popular services one by one. Do not promise universal platform support.
 
-## Phase 9 - Production Hardening
-Security, abuse prevention, observability, deployment automation, backup and recovery procedures.
+Candidates should be selected later based on:
+
+- user demand;
+- technical feasibility;
+- legal and platform restrictions;
+- extraction reliability;
+- maintenance burden.
+
+Each platform requires its own technical spike and Go/No-Go gate before implementation. Do not hard-code a long unsupported platform list into product claims.
+
+## Phase 8 - Unified Product UX
+Polish the complete downloader experience after multiple providers exist.
+
+Include:
+
+- consistent Telegram UI;
+- inline keyboards;
+- provider-independent mode and quality presentation;
+- all bot messages;
+- loading and waiting messages;
+- success messages;
+- unsupported-content messages;
+- retry and error states;
+- provider-specific exceptions only where necessary;
+- consistent naming and button copy;
+- final interaction-flow review.
+
+Goal: the bot should feel like one coherent service rather than several provider integrations.
+
+## Phase 9 - Production Reliability
+Complete the operational and reliability work that is intentionally not part of the functional MVP gate.
+
+Include:
+
+- bot restart and recovery;
+- Local Bot API restart and recovery;
+- temporary network/API failure behavior;
+- upload failures;
+- repeatable deployment and E2E procedure;
+- resource observations;
+- disk and temporary-file cleanup behavior;
+- concurrency and load assessment;
+- rate limits when justified;
+- queues and workers only if measured workload requires them;
+- monitoring and observability;
+- deployment automation where justified;
+- backup and recovery procedures where relevant;
+- large-file behavior and actual limits;
+- strategy for files exceeding Telegram Bot API delivery limits.
+
+For media above Telegram delivery limits, the current design direction is a possible external temporary object-storage/download-link fallback. Do not implement or commit to S3, R2, or any storage provider until this phase has a demonstrated requirement and design decision. Do not claim support for files above 2 GB.
+
+## Phase 10 - Monetization and Access Control
+Access restrictions and monetization are deferred until the project has a useful, working multi-platform downloader product worth monetizing.
+
+Investigate and design:
+
+- Telegram community membership gate;
+- advertising gateway;
+- optional paid/free models if desired later;
+- other monetization mechanisms;
+- access restrictions required by the chosen model.
+
+Current product decision: membership is not required during core product development. Advertising must remain modular and must not be coupled into provider implementations.
