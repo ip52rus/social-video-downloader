@@ -76,7 +76,7 @@ This closure does not mean production readiness. Additional client checks, uploa
 - [ ] Reuse existing `DownloadMode`, `QualityOption`, `get_supported_modes()`, and `get_available_qualities()` as the provider capability source of truth.
 - [ ] Define the product/UX policy layer that maps technical capabilities to user-facing choices.
 - [ ] Design the Telegram interaction and state flow.
-- [ ] Define exact Low, Medium, and High quality semantics for YouTube.
+- [ ] Implement the documented Low, Medium, and High quality semantics for YouTube.
 - [ ] Design a privacy-conscious analytics event model.
 - [ ] Implement an application-level analytics abstraction and storage only after the analytics design is accepted.
 - [ ] Implement YouTube Video/Audio UX with `🎬 Видео` and `🎵 Аудио`.
