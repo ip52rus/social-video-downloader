@@ -52,7 +52,8 @@ Planned work:
   existing `DownloadMode`, `QualityOption`, `get_supported_modes()`, and
   `get_available_qualities()` provider contract;
 - design the complete Telegram interaction and state flow;
-- define exact Low, Medium, and High quality semantics for YouTube before implementation;
+- apply the Low, Medium, and High YouTube quality semantics from the Phase 4 capability
+  model;
 - design a privacy-conscious analytics event model;
 - implement an application-level analytics abstraction and storage only after the design is accepted;
 - define the inline keyboard and state model;

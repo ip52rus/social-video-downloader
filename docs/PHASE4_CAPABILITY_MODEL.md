@@ -127,18 +127,151 @@ unnecessary choice screens and proceed with the best supported default.
 
 ## YouTube Quality Semantics
 
-Phase 4 should define three user-facing quality levels before implementation:
+Phase 4 uses three user-facing quality tiers for YouTube video:
 
-- Low: lower bandwidth/resolution.
-- Medium: approximately 720p class.
-- High: approximately 1080p class or best reasonable Telegram-oriented quality.
+| Tier | Button label | Target class | Product intent |
+| --- | --- | --- | --- |
+| Low | `Низкое` | approximately 480-class | Lower bandwidth/resolution |
+| Medium | `Среднее` | approximately 720-class | Balanced Telegram-friendly quality |
+| High | `Высокое` | approximately 1080-class | Best reasonable Telegram-oriented quality |
 
-High must not mean unlimited 4K/8K automatically. Final selection should use the nearest
-useful available provider format and degrade gracefully when the exact target is absent.
+High must not mean unlimited maximum/original quality and must not automatically select
+1440p, 2160p, or 4320p when a 1080-class option exists. Do not introduce a `Maximum`
+button in Phase 4.
 
-The exact mapping from Low/Medium/High to `QualityOption` IDs is a Phase 4 design and
-implementation task. The provider continues to expose concrete provider-specific quality
-options; product policy maps those options to user-facing tiers.
+### Orientation-independent metric
+
+Do not classify YouTube quality only by `height`. A landscape 1920x1080 format and a
+portrait 1080x1920 format should both be treated as roughly 1080-class.
+
+Recommended metric for ordinary video:
+
+`quality_resolution = min(width, height)`
+
+Examples:
+
+| Format dimensions | `quality_resolution` | Class |
+| --- | ---: | --- |
+| 854x480 | 480 | 480-class |
+| 1280x720 | 720 | 720-class |
+| 1920x1080 | 1080 | 1080-class |
+| 1080x1920 | 1080 | 1080-class |
+| 720x1280 | 720 | 720-class |
+| 1080x1080 | 1080 | 1080-class |
+
+This metric handles landscape, portrait, and square video with one simple rule. It also
+avoids treating portrait 1080x1920 as a 1920-class or 4K-like option.
+
+### `QualityOption` shape
+
+The current `QualityOption` stores `height` and optional `bitrate_kbps`, but not `width`.
+That is not enough for orientation-independent YouTube tier mapping at the
+application/UX policy layer.
+
+Recommended minimal model change for implementation:
+
+- add optional `width: int | None` to `QualityOption`;
+- keep existing `height: int | None`;
+- compute `quality_resolution = min(width, height)` when both are available;
+- keep provider-specific `quality_id` values opaque to application/Telegram code.
+
+The YouTube provider already reads both `width` and `height` from yt-dlp format metadata
+while building quality labels. Phase 4 should preserve both dimensions in `QualityOption`
+instead of discarding `width`.
+
+### Missing or partial metadata
+
+Selection policy should degrade predictably:
+
+- If both `width` and `height` are present, use `min(width, height)`.
+- If only `height` is present, use `height` as a legacy fallback and mark the mapping as
+  lower confidence because portrait content can be over-classified.
+- If only `width` is present, use `width` as a lower-confidence fallback.
+- If neither dimension is present, treat the option as unclassified for tier mapping.
+- If no classifiable video quality options remain, do not show a fake Low/Medium/High
+  choice.
+- Prefer a safe product default consistent with the High / approximately 1080-class
+  policy when the provider can enforce that ceiling reliably.
+- Only if the provider cannot reliably apply a 1080-class ceiling because metadata is
+  insufficient may it fall back to provider automatic/best behavior.
+- That fallback is exceptional and must not redefine High as unlimited maximum/original
+  quality.
+- Future analytics/diagnostics should distinguish this fallback from normal High
+  selection.
+
+Do not parse dimensions from labels as a primary strategy. Labels are user-facing text,
+not a stable capability contract.
+
+### Tier selection algorithm
+
+Use a deterministic ceiling-first policy for each target tier.
+
+For each tier target `T`:
+
+1. Build candidate video qualities with a classifiable `quality_resolution`.
+2. Prefer the highest candidate where `quality_resolution <= T`.
+3. If no candidate is at or below `T`, choose the lowest candidate above `T`.
+4. If multiple candidates have the same `quality_resolution`, prefer the provider's
+   existing ordering or selector-specific quality ID; do not duplicate codec/bitrate
+   scoring in product policy.
+5. After mapping tiers, collapse duplicate results:
+   - never display multiple quality buttons that resolve to the same underlying
+     `QualityOption`;
+   - collapse duplicate mappings before presenting UX;
+   - if only one distinct useful quality remains, skip the quality screen entirely;
+   - if two distinct mappings remain, show only those meaningful choices rather than
+     three misleading buttons.
+
+This policy intentionally prefers `highest available <= target` rather than nearest
+available. It respects the user's bandwidth/resolution intent: Medium should not jump to
+1080-class merely because 1080 is numerically close to 720 when a lower suitable option
+exists.
+
+### Edge cases
+
+Exact target missing:
+
+- choose the highest available class below the target;
+- if none is below, choose the lowest available class above the target.
+
+All variants above target:
+
+- choose the lowest available class above the target;
+- for High, this is the only case where an above-1080 option may be selected
+  automatically, and it should choose the lowest such option rather than maximum/original.
+
+All variants below target:
+
+- choose the highest available class below the target;
+- High may resolve to 720-class or lower when no better format exists.
+
+Unusual aspect ratios:
+
+- use `min(width, height)` for ordinary video, including square and vertical formats;
+- do not add aspect-ratio-specific policy until real cases show the simple metric is
+  misleading.
+
+Insufficient metadata:
+
+- if individual qualities are missing dimensions, exclude them from tier mapping unless a
+  legacy one-dimension fallback is available;
+- if the provider cannot expose dimensions reliably, skip the quality screen and use
+  automatic/best provider selection.
+
+### Interaction with provider format selection
+
+Quality tiers express resolution intent, not complete format scoring. Product policy
+should map Low/Medium/High to a target class and selected provider `quality_id`; the
+YouTube provider should remain responsible for choosing the best Telegram-friendly format
+inside that intent using existing provider logic.
+
+Do not duplicate codec ranking, estimated-size scoring, bitrate scoring, or adaptive
+network logic in the product policy layer without evidence. H.264/AAC preference and
+container/media assembly remain provider/media-preparation responsibilities.
+
+Estimated file size and bitrate can be recorded for analytics where available, but they
+should not drive Phase 4 quality-tier selection. File-size policy belongs to future
+Production Reliability and large-file limit work.
 
 ## Instagram And TikTok Policy
 
@@ -208,6 +341,9 @@ Phase 4 capability design does not:
 - hard-code Instagram, TikTok, or future-platform capabilities before provider spikes;
 - expose YouTube `VIDEO_ONLY` as a normal user option;
 - define High quality as unlimited 4K/8K;
+- introduce a Maximum/original-quality button;
+- rank formats by bitrate, estimated size, codec, or network conditions in product
+  policy;
 - implement analytics storage, database tables, queues, or external analytics services;
 - implement product code, tests, or Telegram UI in this documentation stage.
 
@@ -217,26 +353,24 @@ Recommended Phase 4 implementation order:
 
 1. Define the application-layer capability interpretation helper against the existing
    provider contract.
-2. Define Telegram interaction/state flow from the helper output.
-3. Define Low/Medium/High mapping rules for YouTube video.
-4. Define privacy-conscious analytics events, including available, hidden, shown, and
+2. Preserve width and height in `QualityOption` or otherwise expose both dimensions to
+   application policy.
+3. Define Telegram interaction/state flow from the helper output.
+4. Implement Low/Medium/High mapping rules for YouTube video.
+5. Define privacy-conscious analytics events, including available, hidden, shown, and
    selected option states.
-5. Design and implement analytics abstraction/storage only after the event model is
+6. Design and implement analytics abstraction/storage only after the event model is
    accepted.
-6. Implement YouTube Video/Audio UX.
-7. Implement YouTube video quality choice.
-8. Validate provider capability combinations, policy decisions, UX flow, and analytics
+7. Implement YouTube Video/Audio UX.
+8. Implement YouTube video quality choice.
+9. Validate provider capability combinations, policy decisions, UX flow, and analytics
    events.
-9. Use real usage evidence later to remove or simplify choices that users do not need.
+10. Use real usage evidence later to remove or simplify choices that users do not need.
 
 ## Unresolved Decisions
 
 Before implementation, decide:
 
-- exact Low/Medium/High mapping from YouTube `QualityOption` values to provider
-  `quality_id` values;
-- whether quality tier mapping should prefer resolution, bitrate, file size, codec, or a
-  weighted rule;
 - how to handle content where `VIDEO_WITH_AUDIO` is unavailable but `VIDEO_ONLY` and
   `AUDIO_ONLY` exist separately;
 - how much metadata can be used for short/regular/long classification without storing
