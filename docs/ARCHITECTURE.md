@@ -7,7 +7,7 @@ Telegram -> Telegram handlers -> application/download service -> provider interf
 
 Current runtime path:
 
-Telegram user -> bot container/process -> aiogram -> application `DownloadService` -> `YouTubeProvider` -> yt-dlp / FFmpeg / ffprobe -> Telegram Bot API endpoint.
+Telegram user -> bot container/process -> aiogram -> application `DownloadService` -> `YouTubeProvider` -> yt-dlp with yt-dlp-ejs and pinned Deno runtime for YouTube JavaScript challenge solving -> FFmpeg / ffprobe -> Telegram Bot API endpoint.
 
 By default, the bot uses Telegram's cloud Bot API endpoint. Setting `TELEGRAM_API_BASE_URL` switches the client to the configured cloud-compatible or local endpoint. When this variable is present, the bot constructs aiogram's local API server configuration with `TelegramAPIServer.from_base(..., is_local=True)` and uses the configured request timeout.
 
@@ -37,6 +37,11 @@ DownloadService normalizes the URL, detects its platform, selects a registered M
 
 ## Provider layer
 Each provider owns URL recognition, metadata retrieval, media acquisition, and provider-specific quirks.
+
+The YouTube provider delegates extraction to yt-dlp. For YouTube JavaScript challenge
+solving, yt-dlp uses yt-dlp-ejs and the pinned Deno runtime provided by the bot Docker
+image. This runtime support is separate from provider logic, FFmpeg media processing,
+and Telegram Bot API transport.
 
 Providers report which output modes are supported: video with audio, video only, and audio only. They also expose selectable quality options when the platform allows them to be enumerated. Quality identifiers are provider-specific and opaque to the application and Telegram layers; each option also has a user-facing label.
 

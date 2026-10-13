@@ -1,7 +1,13 @@
+FROM denoland/deno:2.9.7 AS deno-runtime
 
 FROM python:3.13-slim
 
 WORKDIR /app
+
+# yt-dlp uses Deno for YouTube JavaScript challenge solving.
+COPY --from=deno-runtime /usr/bin/deno /usr/local/bin/deno
+
+RUN deno --version
 
 # Устанавливаем системный FFmpeg для объединения аудио и видео
 RUN apt-get update \

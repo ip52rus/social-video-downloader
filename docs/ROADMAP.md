@@ -17,8 +17,11 @@ Implement URL -> download -> result without advertising or monetization.
 - Complete: validated settings, application logging, and minimal aiogram polling entry point.
 - Complete: /start and text-based URL intake with deterministic handler tests.
 - Complete: provider-selection service, YouTube download orchestration, safe domain-error messages, temporary workspace cleanup, deterministic media-preparation tests, and delivery as Telegram video messages with streaming support.
+- Complete: Docker bot image includes pinned Deno for yt-dlp YouTube JavaScript challenge
+  solving, and containerized metadata/simulation validation confirms yt-dlp and the
+  project metadata path can use it.
 - Live evidence: a short video and an MP4 file of approximately 414.7 MB were delivered through the Local Bot API Server; the large file arrived and was confirmed playable. This is limited evidence for the tested scenario, not proof of support for every client, codec, deployment, or files up to 2 GB.
-- Remaining gate: make the live Telegram checks repeatable, verify upload failures and recovery, validate restart behavior, verify Dockerized/container extraction behavior, rehearse cloud/local migration and local-to-cloud rollback with a separate test bot, document operational limits, and record the full test-bot setup and end-to-end procedure.
+- Remaining gate: make the live Telegram checks repeatable, verify upload failures and recovery, validate restart behavior, rehearse cloud/local migration and local-to-cloud rollback with a separate test bot, document operational limits, and record the full test-bot setup and end-to-end procedure.
 - Instagram and TikTok are recognized but do not have download providers yet.
 
 Gate: complete core user flow works in a test bot, including relevant user-facing error cases. Deterministic tests alone do not satisfy the live Telegram end-to-end gate.

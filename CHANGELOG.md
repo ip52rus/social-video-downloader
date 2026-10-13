@@ -4,7 +4,9 @@
 - Add Docker Compose configuration for the bot and Local Bot API Server, keeping the API endpoint on the internal Compose network.
 - Add Docker build-context protection with `.dockerignore` so local secrets, runtime data, caches, and generated media are excluded while `.env.example` remains available.
 - Add environment examples for Telegram API application credentials, optional local Bot API endpoint, and configurable local API request timeout.
-- Synchronize project documentation with the local-first development policy, Local Bot API deployment layout, security requirements, and remaining Dockerized extraction verification gap.
+- Add pinned Deno 2.9.7 to the Docker bot image for yt-dlp YouTube JavaScript challenge solving.
+- Record containerized metadata/simulation validation confirming yt-dlp detects and uses Deno.
+- Synchronize project documentation with the local-first development policy, Local Bot API deployment layout, and security requirements.
 - Avoid unnecessary H.264/AAC re-encoding by attempting verified FFmpeg stream-copy remux for compatible non-MP4 input; retain H.264/AAC transcode fallback when streams are incompatible or remux does not verify.
 - Record deterministic coverage and synthetic real-FFmpeg validation for MP4 passthrough, H.264/AAC MKV-to-MP4 stream-copy remux, and incompatible-source transcode fallback.
 - Deliver prepared media as Telegram video messages with streaming support rather than generic documents.
@@ -33,4 +35,5 @@
 - GitHub Actions run [37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474) passed lint, format, and deterministic tests for Telegram download orchestration and file-delivery handling.
 - Live YouTube evidence is limited to a small set of public URLs and does not establish broad platform reliability.
 - A real Telegram flow through the Local Bot API Server was verified with a short video and an MP4 file of approximately 414.7 MB. The large file was H.264/AAC, 1920x1080, approximately 1649 seconds long, arrived in Telegram, and was confirmed playable. This is a limited scenario, not validated support for files up to 2000 MB.
-- Additional Telegram client checks, failure/recovery scenarios, Dockerized extraction verification, restart and rollback rehearsal, and justified larger-file testing remain outstanding. Community-membership access control is a separate planned phase.
+- Containerized metadata/simulation validation confirmed the Docker bot image exposes Deno 2.9.7 to yt-dlp and that yt-dlp uses Deno for JavaScript challenge solving on a controlled public URL.
+- Additional Telegram client checks, failure/recovery scenarios, restart and rollback rehearsal, and justified larger-file testing remain outstanding. Community-membership access control is a separate planned phase.
