@@ -170,10 +170,39 @@ tool-location check. Current safe validation:
 A Compose configuration check does not prove polling, download, extraction, upload, or
 large-file behavior.
 
-Known runtime verification gap: the validated YouTube extraction path depends on
-Deno/yt-dlp JavaScript challenge support, but the current Dockerfile does not install
-Deno. Containerized YouTube extraction must be verified with the actual image or the
-image must be updated deliberately in a separate technical change.
+Containerized YouTube runtime validation:
+
+Previous diagnostic state:
+
+- The bot image had yt-dlp 2026.8.19 and yt-dlp-ejs 0.8.0, but no Deno, Node, Bun, or
+  QuickJS executable.
+- Raw yt-dlp verbose output reported `JS runtimes: none`.
+- A controlled metadata simulation for
+  `https://www.youtube.com/watch?v=dQw4w9WgXcQ` still succeeded.
+- yt-dlp warned that YouTube extraction without a supported JavaScript runtime is
+  deprecated and may have reduced format availability.
+- The diagnostic result was classified as a confirmed degraded gap.
+
+After adding Deno:
+
+- The bot image installs pinned Deno 2.9.7 at `/usr/local/bin/deno`.
+- Runtime checks found Deno 2.9.7 in the final image; Node, Bun, and QuickJS remained
+  absent.
+- Raw yt-dlp verbose simulation reported `JS runtimes: deno-2.9.7`.
+- yt-dlp reported `[jsc:deno]` challenge solving using Deno.
+- The previous missing-JavaScript-runtime warning was absent.
+- Controlled `yt-dlp --verbose --simulate` for
+  `https://www.youtube.com/watch?v=dQw4w9WgXcQ` succeeded without a full media download
+  and selected format `401+251`.
+- `YouTubeProvider.extract_metadata()` succeeded inside the container through the
+  existing metadata-only `extract_info(..., download=False, process=False)` path while
+  using the configured `js_runtimes={"deno": {}}`.
+- A disposable Compose `bot` service container exposed the same Deno-enabled runtime.
+
+This validation used one controlled public YouTube URL and metadata/simulation only. It
+did not download complete YouTube media, upload to Telegram, prove broad YouTube
+reliability, prove resilience to future YouTube platform changes, or benchmark VPS
+throughput.
 
 ## Operational and recovery tests
 
