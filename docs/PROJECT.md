@@ -12,6 +12,18 @@ The product is focused on downloading. Video editing and manipulation inside Tel
 ## Current product strategy
 The current priority is building a useful downloader product with a strong Telegram experience and broader platform coverage. Access restrictions are intentionally deferred while the core downloader product is still maturing.
 
+The Telegram UX should be capability-driven: minimum steps, provider-specific
+capabilities, and consistent visual language. The bot should show only meaningful options
+supported by the current platform and content. YouTube may expose Video/Audio and
+video-quality choices, while Instagram, TikTok, or future platforms should skip audio or
+quality screens when the provider/content has no useful choice.
+
+Product analytics should exist to improve UX and technical decisions, but the privacy
+principle is to collect product and technical statistics rather than users' viewing
+history. Analytics should not store source URLs, video titles, channel or author names,
+Telegram usernames, message text, or unnecessary personal data. Pseudonymous or anonymous
+identity is sufficient for aggregate usage statistics.
+
 ## Monetization direction
 Monetization and access control are future business-model decisions. A Telegram community-membership gate, an advertising gateway, optional paid/free models, or other access restrictions may be investigated later after the service has useful mature functionality. Advertising must remain modular and must not be coupled into provider implementations.
 

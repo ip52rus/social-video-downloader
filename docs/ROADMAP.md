@@ -39,23 +39,70 @@ This phase closure does not mean production readiness. It does not close restart
 Instagram and TikTok URLs are recognized but do not have download providers yet.
 
 ## Phase 4 - Download UX and YouTube Options
-Expose the capabilities already supported by the provider architecture through a polished Telegram interaction flow.
+Expose useful provider/content capabilities through a polished Telegram interaction flow.
+
+Core UX rule: minimum steps + provider-specific capabilities + consistent visual language.
+The bot must not force identical options on every provider or add an extra click when
+there is no meaningful choice.
 
 Planned work:
 
-- design the complete Telegram interaction flow;
+- define the provider/content capability model used by Telegram UX;
+- design the complete Telegram interaction and state flow;
+- define exact Low, Medium, and High quality semantics for YouTube before implementation;
+- design a privacy-conscious analytics event model;
+- implement an application-level analytics abstraction and storage only after the design is accepted;
 - define the inline keyboard and state model;
-- support video with audio, video only, and audio only;
-- expose quality selection where the provider supports it;
+- expose only meaningful options supported by the current platform/content;
 - retain automatic/best-option selection;
+- implement YouTube Video/Audio UX;
+- implement YouTube quality choice for video;
 - design loading, progress, and status behavior where justified;
 - define cancellation and retry behavior if appropriate;
 - review all user-facing messages;
 - define consistent error messages;
 - keep the UX minimal and fast;
-- avoid unnecessary steps.
+- validate UX and analytics;
+- use collected evidence later to simplify choices if users overwhelmingly prefer one option.
 
-The current provider architecture already exposes modes and quality options. This phase should primarily connect those capabilities to Telegram UX instead of redesigning provider internals without evidence.
+Target YouTube UX:
+
+- first choice: `🎬 Видео` or `🎵 Аудио`;
+- after Video: `Низкое`, `Среднее`, `Высокое`;
+- Audio starts without additional quality selection unless later evidence justifies it;
+- video-without-audio is not exposed as a normal user option.
+
+Target Instagram UX:
+
+- normally download video directly;
+- no audio-only option by default;
+- no quality-selection step unless a future provider proves useful selectable variants.
+
+Target TikTok UX:
+
+- direct video download by default;
+- no unnecessary audio or quality screen.
+
+For future platforms, UX derives from provider/content capabilities rather than a fixed
+global options flow.
+
+YouTube quality semantics:
+
+- Low means lower bandwidth/resolution;
+- Medium means approximately 720p class;
+- High means approximately 1080p class or best reasonable Telegram-oriented quality;
+- High must not mean unlimited 4K/8K automatically;
+- final resolution selection should gracefully use the nearest useful available format.
+
+Analytics should improve UX and technical decisions without collecting users' viewing
+history. Track product and technical statistics, not source URLs, video titles,
+channel/author names, Telegram usernames, message text, or unnecessary personal data.
+Use pseudonymous or anonymous user identity sufficient for aggregate usage statistics.
+Analytics must distinguish `option unavailable` from `option available but not selected`.
+
+The current provider architecture already exposes modes and quality options. This phase
+should connect those capabilities to Telegram UX, add only the capability modeling needed
+for product choices, and avoid redesigning provider internals without evidence.
 
 ## Phase 5 - Instagram Provider
 Do not promise implementation before feasibility validation.

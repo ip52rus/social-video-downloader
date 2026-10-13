@@ -23,6 +23,12 @@ Environment-based settings are validated before starting the application. The Te
 ## Telegram layer
 The aiogram router owns commands and text intake, user-facing validation responses, and result delivery. It does not contain provider-specific download logic. Membership/access control is deferred to a future monetization or business-model layer and is not part of the current implementation. The /start response describes current platform support. Text messages are validated against supported platform domains. YouTube URLs are passed to the application service; Instagram and TikTok URLs are recognized but receive an explicit message that downloading is not yet available.
 
+Future option UX is capability-driven. Telegram should show only meaningful choices for
+the current platform/content and keep a consistent visual language without forcing every
+provider into the same option tree. YouTube is expected to expose Video/Audio and
+video-quality choices in Phase 4; Instagram and TikTok should normally use direct video
+download unless future provider evidence proves useful selectable variants.
+
 The synchronous download and media-preparation operations run in worker threads so yt-dlp and FFmpeg do not block the aiogram event loop. Before delivery, the Telegram layer probes media with ffprobe and prepares the downloaded media through this pipeline:
 
 1. MP4 files already containing H.264 video and AAC audio pass through unchanged, without an FFmpeg re-encode.
@@ -35,6 +41,19 @@ The remux path is an optimization for compatible streams when only the container
 ## Application layer
 DownloadService normalizes the URL, detects its platform, selects a registered MediaProvider, and returns the provider's transport-neutral DownloadedMedia result. The default registry contains the YouTube provider. A recognized platform without a registered provider raises a domain-level UnsupportedPlatformError. The service does not depend on Telegram.
 
+Future product analytics should be owned by the Telegram/application flow, not by
+providers. Conceptually:
+
+Telegram/application flow -> analytics events -> analytics storage.
+
+Analytics events should support product, UX, content-characteristic, and technical
+statistics while avoiding source URLs, video titles, channel/author names, Telegram
+usernames, message text, and unnecessary personal data. The event model must distinguish
+`option unavailable` from `option available but not selected`. Initial storage may later
+be SQLite if a separate implementation design confirms it is sufficient, but no database,
+event table, external analytics SaaS, queue, or other analytics infrastructure exists in
+the current architecture.
+
 ## Provider layer
 Each provider owns URL recognition, metadata retrieval, media acquisition, and provider-specific quirks.
 
@@ -44,6 +63,12 @@ image. This runtime support is separate from provider logic, FFmpeg media proces
 and Telegram Bot API transport.
 
 Providers report which output modes are supported: video with audio, video only, and audio only. They also expose selectable quality options when the platform allows them to be enumerated. Quality identifiers are provider-specific and opaque to the application and Telegram layers; each option also has a user-facing label.
+
+Provider capabilities are technical inputs, not a command to expose every possible mode
+to users. The Telegram/application layer decides which supported capabilities are
+meaningful product choices for the current provider/content. For example, YouTube
+video-only remains a provider capability but is not planned as a normal user-facing
+option in Phase 4.
 
 A missing quality selection means automatic selection of the best available quality. If a provider cannot enumerate quality options, it may return an empty list, but it must still use the best available quality for an automatic download. Providers reject unsupported output modes and invalid quality identifiers through domain errors.
 

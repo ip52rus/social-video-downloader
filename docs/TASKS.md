@@ -71,18 +71,41 @@ The automated checks for provider selection and the mocked Telegram download/del
 This closure does not mean production readiness. Additional client checks, upload failure/recovery behavior, restart/recovery validation, cloud/local rollback rehearsal, justified larger-file tests, monitoring/resource limits, and a reproducible end-to-end procedure were not verified here; they are tracked under Phase 9, Production Reliability. Instagram and TikTok links are recognized but their download providers are not implemented.
 
 ## Phase 4 - Download UX and YouTube Options
-- [ ] Design the complete Telegram interaction flow for download options.
-- [ ] Define the inline keyboard and state model.
-- [ ] Expose video-with-audio, video-only, and audio-only choices.
-- [ ] Expose provider quality selection where available.
-- [ ] Preserve automatic/best-option selection.
+- [ ] Define the provider/content capability model for Telegram UX.
+- [ ] Design the Telegram interaction and state flow.
+- [ ] Define exact Low, Medium, and High quality semantics for YouTube.
+- [ ] Design a privacy-conscious analytics event model.
+- [ ] Implement an application-level analytics abstraction and storage only after the analytics design is accepted.
+- [ ] Implement YouTube Video/Audio UX with `🎬 Видео` and `🎵 Аудио`.
+- [ ] Implement YouTube video quality choice with `Низкое`, `Среднее`, and `Высокое`.
+- [ ] Keep YouTube audio direct unless later evidence justifies audio quality selection.
+- [ ] Do not expose video-without-audio as a normal user option.
+- [ ] Preserve automatic/best-option selection where no user choice is needed.
 - [ ] Design loading, progress, and status behavior where justified.
 - [ ] Define cancellation and retry behavior if appropriate.
 - [ ] Review and standardize user-facing messages.
 - [ ] Define consistent error messages.
 - [ ] Keep the YouTube options UX minimal and fast.
+- [ ] Validate UX and analytics.
+- [ ] Use collected evidence later to simplify choices if users overwhelmingly prefer one option.
 
-The current provider architecture already exposes modes and quality options. Phase 4 should connect these capabilities to Telegram UX before redesigning provider internals.
+The current provider architecture already exposes modes and quality options. Phase 4
+should connect these capabilities to Telegram UX before redesigning provider internals.
+The capability-driven UX rule is: minimum steps + provider-specific capabilities +
+consistent visual language. Do not force identical options on every provider, and never
+add an extra click when there is no meaningful choice.
+
+Analytics requirements for this phase:
+
+- [ ] Track product statistics: total downloads, unique/returning users, downloads per user, platform usage, video vs audio, quality selected, and option availability vs option selected.
+- [ ] Track content characteristics where technically available: short-form vs regular/long-form, duration buckets, source resolution, result resolution, and file-size buckets.
+- [ ] Track technical statistics: success/failure, error category, passthrough/remux/transcode, download time, preparation time, Telegram upload time, total processing time, and useful source/result codec/container data.
+- [ ] Track UX statistics: video selected, audio selected, quality selected, retries, and cancellations where implemented.
+- [ ] Distinguish `option unavailable` from `option available but not selected`.
+- [ ] Avoid storing source URLs, video titles, channel/author names, Telegram usernames, message text, or unnecessary personal data.
+- [ ] Use pseudonymous or anonymous user identity sufficient for aggregate usage statistics.
+- [ ] Keep product analytics in the Telegram/application flow and out of provider implementations.
+- [ ] Do not introduce SQLite tables, external analytics SaaS, ClickHouse, Kafka, Redis, or other analytics infrastructure without a separate design stage.
 
 ## Phase 5 - Instagram Provider
 - [ ] Run a technical spike.
