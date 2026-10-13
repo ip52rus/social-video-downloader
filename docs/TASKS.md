@@ -49,8 +49,15 @@ The Phase 2 gate is satisfied by the combined live matrix and deterministic fail
 - [x] Add deterministic handler tests for /start, valid YouTube/Instagram/TikTok URLs, invalid links, and unsupported domains.
 - [x] Connect URL normalization and provider selection through the transport-independent DownloadService.
 - [x] Add deterministic tests for YouTube handler orchestration, safe domain-error responses, file delivery calls, and temporary workspace cleanup; CI passed.
-- [x] Add deterministic media-compatibility tests for H.264/AAC MP4 passthrough, incompatible-codec transcoding, output verification, and processing failures.
+- [x] Add deterministic media-compatibility tests for H.264/AAC MP4 passthrough,
+  compatible non-MP4 stream-copy remux, remux-failure fallback, incompatible-codec
+  transcoding, output verification, and processing failures.
 - [x] Deliver prepared MP4 output through Telegram video messages with streaming support instead of generic documents.
+- [x] Validate real local stream-copy remux with synthetic H.264/AAC MKV input and
+  confirm the prepared MP4 preserves encoded video/audio packet payloads, preserves
+  decoded video content, avoids `libx264`, and verifies as H.264/AAC MP4.
+- [x] Validate real local incompatible-source fallback transcode with synthetic MPEG-4
+  video input and confirm the prepared output verifies as H.264/AAC MP4.
 - [x] Verify live delivery through the Local Bot API Server with a short video.
 - [x] Verify live delivery through the Local Bot API Server with an MP4 file of approximately 414.7 MB; confirm the large file arrives and plays. The tested file was H.264/AAC, 1920x1080, and approximately 1649 seconds long.
 - [ ] Test additional Telegram clients, including iPhone, and record the exact clients tested.
@@ -61,7 +68,7 @@ The Phase 2 gate is satisfied by the combined live matrix and deterministic fail
 - [ ] Increase test-file sizes cautiously and document actual limits; do not claim support up to 2 GB based on the current 414.7 MB test.
 - [ ] Document the full test-bot setup and end-to-end procedure.
 
-The automated checks for provider selection and the mocked Telegram download/delivery flow passed in [GitHub Actions run 37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474). A live Local Bot API Server test adds real-delivery evidence: a short video and an MP4 file of approximately 414.7 MB were delivered, and the large file was confirmed playable. This does not close all Phase 3 criteria: additional client checks, upload failure/recovery behavior, restart/recovery validation, cloud/local rollback rehearsal, Dockerized extraction verification, justified larger-file tests, and a reproducible end-to-end procedure remain outstanding. Instagram and TikTok links are recognized but their download providers are not implemented.
+The automated checks for provider selection and the mocked Telegram download/delivery flow passed in [GitHub Actions run 37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474). PR #27 media-preparation validation adds deterministic coverage for verified stream-copy remux and remux-failure fallback plus real local FFmpeg evidence using synthetic media: compatible MP4 passthrough, H.264/AAC MKV-to-MP4 stream-copy remux without `libx264`, and incompatible-source transcode fallback all passed. The remux check confirmed encoded H.264 and AAC packet payload hashes and decoded video hashes matched; exact decoded AAC checksum differed because of container/timestamp/priming interpretation. A live Local Bot API Server test adds real-delivery evidence: a short video and an MP4 file of approximately 414.7 MB were delivered, and the large file was confirmed playable. This does not close all Phase 3 criteria: additional client checks, upload failure/recovery behavior, restart/recovery validation, cloud/local rollback rehearsal, Dockerized extraction verification, justified larger-file tests, and a reproducible end-to-end procedure remain outstanding. Instagram and TikTok links are recognized but their download providers are not implemented.
 
 ## Access control — separate Phase 4
 - [ ] Define required Telegram community.

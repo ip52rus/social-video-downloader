@@ -5,9 +5,10 @@
 - Add Docker build-context protection with `.dockerignore` so local secrets, runtime data, caches, and generated media are excluded while `.env.example` remains available.
 - Add environment examples for Telegram API application credentials, optional local Bot API endpoint, and configurable local API request timeout.
 - Synchronize project documentation with the local-first development policy, Local Bot API deployment layout, security requirements, and remaining Dockerized extraction verification gap.
-- Prepare Telegram video uploads as H.264/AAC MP4 when source codecs or container are incompatible; verify converted output and preserve already-compatible MP4 files without re-encoding.
+- Avoid unnecessary H.264/AAC re-encoding by attempting verified FFmpeg stream-copy remux for compatible non-MP4 input; retain H.264/AAC transcode fallback when streams are incompatible or remux does not verify.
+- Record deterministic coverage and synthetic real-FFmpeg validation for MP4 passthrough, H.264/AAC MKV-to-MP4 stream-copy remux, and incompatible-source transcode fallback.
 - Deliver prepared media as Telegram video messages with streaming support rather than generic documents.
-- Add deterministic compatibility tests for passthrough, transcoding, output verification, and processing failures.
+- Add deterministic compatibility tests for passthrough, stream-copy remux, transcode fallback, output verification, and processing failures.
 - Connect Telegram YouTube URL intake to the provider-selection download service and deliver prepared media as Telegram video messages.
 - Add safe user-facing download and upload error messages, non-blocking download execution, and per-request temporary-file cleanup.
 - Add deterministic tests for provider selection, URL normalization, Telegram download orchestration, error responses, and cleanup.
