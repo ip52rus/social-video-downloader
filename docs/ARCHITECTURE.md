@@ -29,6 +29,22 @@ provider into the same option tree. YouTube is expected to expose Video/Audio an
 video-quality choices in Phase 4; Instagram and TikTok should normally use direct video
 download unless future provider evidence proves useful selectable variants.
 
+Phase 4 should use the existing provider contract as the minimum capability model rather
+than introduce a second independent capability system. Providers expose technical
+capabilities for a specific URL through `get_supported_modes(url)` and
+`get_available_qualities(url, mode)`, using the existing `DownloadMode` and
+`QualityOption` types. The Telegram/application layer applies product policy on top of
+those technical capabilities and decides which choices are useful enough to show. The
+primary design reference is [Phase 4 Capability Model](PHASE4_CAPABILITY_MODEL.md).
+
+For YouTube, the provider may technically report `VIDEO_WITH_AUDIO`, `VIDEO_ONLY`,
+`AUDIO_ONLY`, and multiple quality options. The normal user-facing policy is `Видео` and
+`Аудио`; `VIDEO_ONLY` is hidden from the ordinary flow; quality selection is offered only
+for `Видео`. For future Instagram and TikTok providers, do not hard-code capabilities
+before the provider spike. If a provider/content combination only has normal video and no
+meaningful quality alternatives, Telegram should start the download directly without
+audio or quality screens.
+
 The synchronous download and media-preparation operations run in worker threads so yt-dlp and FFmpeg do not block the aiogram event loop. Before delivery, the Telegram layer probes media with ffprobe and prepares the downloaded media through this pipeline:
 
 1. MP4 files already containing H.264 video and AAC audio pass through unchanged, without an FFmpeg re-encode.
@@ -41,6 +57,13 @@ The remux path is an optimization for compatible streams when only the container
 ## Application layer
 DownloadService normalizes the URL, detects its platform, selects a registered MediaProvider, and returns the provider's transport-neutral DownloadedMedia result. The default registry contains the YouTube provider. A recognized platform without a registered provider raises a domain-level UnsupportedPlatformError. The service does not depend on Telegram.
 
+Future Phase 4 option planning may add application-layer helpers that derive a Telegram
+interaction plan from provider capabilities and product policy. Such helpers should be a
+thin mapping over the existing provider contract: inspect supported modes and available
+qualities, decide whether a user choice is meaningful, and finally produce
+`DownloadOptions` for `DownloadService`. They should not duplicate provider extraction
+logic or invent a parallel source of truth for platform capabilities.
+
 Future product analytics should be owned by the Telegram/application flow, not by
 providers. Conceptually:
 
@@ -49,10 +72,11 @@ Telegram/application flow -> analytics events -> analytics storage.
 Analytics events should support product, UX, content-characteristic, and technical
 statistics while avoiding source URLs, video titles, channel/author names, Telegram
 usernames, message text, and unnecessary personal data. The event model must distinguish
-`option unavailable` from `option available but not selected`. Initial storage may later
-be SQLite if a separate implementation design confirms it is sufficient, but no database,
-event table, external analytics SaaS, queue, or other analytics infrastructure exists in
-the current architecture.
+`option unavailable`, `option available but hidden by product policy`, and
+`option available but not selected`. Initial storage may later be SQLite if a separate
+implementation design confirms it is sufficient, but no database, event table, external
+analytics SaaS, queue, or other analytics infrastructure exists in the current
+architecture.
 
 ## Provider layer
 Each provider owns URL recognition, metadata retrieval, media acquisition, and provider-specific quirks.
@@ -69,6 +93,10 @@ to users. The Telegram/application layer decides which supported capabilities ar
 meaningful product choices for the current provider/content. For example, YouTube
 video-only remains a provider capability but is not planned as a normal user-facing
 option in Phase 4.
+
+This distinction keeps providers focused on factual extraction capability. Product/UX
+policy belongs above the provider layer and may vary by platform, content type, and
+evidence from real usage.
 
 A missing quality selection means automatic selection of the best available quality. If a provider cannot enumerate quality options, it may return an empty list, but it must still use the best available quality for an automatic download. Providers reject unsupported output modes and invalid quality identifiers through domain errors.
 

@@ -71,7 +71,10 @@ The automated checks for provider selection and the mocked Telegram download/del
 This closure does not mean production readiness. Additional client checks, upload failure/recovery behavior, restart/recovery validation, cloud/local rollback rehearsal, justified larger-file tests, monitoring/resource limits, and a reproducible end-to-end procedure were not verified here; they are tracked under Phase 9, Production Reliability. Instagram and TikTok links are recognized but their download providers are not implemented.
 
 ## Phase 4 - Download UX and YouTube Options
-- [ ] Define the provider/content capability model for Telegram UX.
+- [ ] Review and accept [the Phase 4 capability model](PHASE4_CAPABILITY_MODEL.md) before implementation.
+- [ ] Define how Telegram UX interprets existing provider/content capabilities without creating a second independent capability system.
+- [ ] Reuse existing `DownloadMode`, `QualityOption`, `get_supported_modes()`, and `get_available_qualities()` as the provider capability source of truth.
+- [ ] Define the product/UX policy layer that maps technical capabilities to user-facing choices.
 - [ ] Design the Telegram interaction and state flow.
 - [ ] Define exact Low, Medium, and High quality semantics for YouTube.
 - [ ] Design a privacy-conscious analytics event model.
@@ -93,7 +96,9 @@ The current provider architecture already exposes modes and quality options. Pha
 should connect these capabilities to Telegram UX before redesigning provider internals.
 The capability-driven UX rule is: minimum steps + provider-specific capabilities +
 consistent visual language. Do not force identical options on every provider, and never
-add an extra click when there is no meaningful choice.
+add an extra click when there is no meaningful choice. Do not hard-code Instagram,
+TikTok, or future-platform capabilities before their provider spikes prove what the
+platform/content can actually offer.
 
 Analytics requirements for this phase:
 
@@ -101,7 +106,7 @@ Analytics requirements for this phase:
 - [ ] Track content characteristics where technically available: short-form vs regular/long-form, duration buckets, source resolution, result resolution, and file-size buckets.
 - [ ] Track technical statistics: success/failure, error category, passthrough/remux/transcode, download time, preparation time, Telegram upload time, total processing time, and useful source/result codec/container data.
 - [ ] Track UX statistics: video selected, audio selected, quality selected, retries, and cancellations where implemented.
-- [ ] Distinguish `option unavailable` from `option available but not selected`.
+- [ ] Distinguish `option unavailable`, `option available but hidden by product policy`, and `option available but not selected`.
 - [ ] Avoid storing source URLs, video titles, channel/author names, Telegram usernames, message text, or unnecessary personal data.
 - [ ] Use pseudonymous or anonymous user identity sufficient for aggregate usage statistics.
 - [ ] Keep product analytics in the Telegram/application flow and out of provider implementations.
