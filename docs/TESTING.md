@@ -1,49 +1,139 @@
 # Testing Strategy
 
-## Unit tests
-Fast deterministic tests for URL normalization, provider detection, filename sanitization, configuration parsing, logging configuration, bot/dispatcher construction, handler behavior, and error mapping.
+## Deterministic tests
 
-## Integration tests
-Provider metadata extraction, media download, video/audio merging, and temporary workspace cleanup. External tests must not require personal credentials.
+Fast deterministic tests cover URL normalization, provider detection, filename
+sanitization, configuration parsing, logging configuration, bot/dispatcher construction,
+handler behavior, media preparation, upload-parameter extraction, and error mapping.
 
-## End-to-end tests
-Use only where they provide meaningful coverage, including Telegram URL submission, access control, delivery, and failure handling.
+Current deterministic coverage includes:
 
-## Quality gates
+- `tests/test_config.py` for required token handling, defaults, normalization, invalid
+  values, token redaction in the settings repr, and immutability.
+- `tests/test_bot.py` for bot and dispatcher construction, including default cloud Bot
+  API and optional local API endpoint configuration.
+- `tests/test_handlers.py` for `/start`, invalid links, unsupported domains, non-YouTube
+  platform messaging, mocked download/delivery, safe error responses, and temporary
+  workspace cleanup.
+- `tests/test_download_service.py` for provider selection, URL normalization, delegation,
+  and recognized platforms without configured providers.
+- `tests/test_telegram_media.py` for compatible MP4 passthrough, AV1/Opus transcoding to
+  H.264/AAC, non-MP4 conversion, post-conversion verification, rotation-aware upload
+  dimensions, missing audio, and FFmpeg failure mapping.
 
-A phase cannot be marked complete only because the happy path works. Relevant negative cases and resource/error boundaries must be covered.
+Audit fallback checks in the Codex environment:
 
-## External platforms
+- `PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest -q -p no:cacheprovider`: 189 passed, 1 skipped.
+- `.venv/bin/ruff check . --no-cache`: passed.
+- `.venv/bin/ruff format --check . --no-cache`: 50 files already formatted.
 
-Distinguish application regressions, provider/platform changes, and temporary network failures. Record external changes before modifying unrelated code.
+These fallback commands were used because `uv` was not available in the default PATH of
+the Codex shell during the audit. This was an environment/tool discovery issue, not a
+test failure.
 
-### Current YouTube verification snapshot
+Current preferred checks after locating `uv` at `/Users/user/.local/bin/uv`:
+
+- `/Users/user/.local/bin/uv run pytest -q`: 189 passed, 1 skipped.
+- `/Users/user/.local/bin/uv run ruff check .`: passed.
+- `/Users/user/.local/bin/uv run ruff format --check .`: 50 files already formatted.
+
+When `uv` is available in PATH, the standard project commands are:
+
+```bash
+uv run pytest -q
+uv run ruff check .
+uv run ruff format --check .
+```
+
+## YouTube external/live tests
+
+External YouTube tests are opt-in and must not run without an explicit URL.
+
+Set `YOUTUBE_LIVE_TEST_URL` only when intentionally running real YouTube downloads:
+
+```bash
+YOUTUBE_LIVE_TEST_URL="https://www.youtube.com/watch?v=..." uv run pytest tests/integration/test_youtube_live_matrix.py
+```
+
+Current YouTube verification snapshot:
 
 - GitHub Actions run [37966225469](https://github.com/ip52rus/social-video-downloader/actions/runs/37966225469) passed 131 tests on merge commit f27051fded257b5f39056c45333b4fa8c50075a3; Ruff lint and format checks passed.
-- Real regular-video downloads were verified in VIDEO_WITH_AUDIO, VIDEO_ONLY, and AUDIO_ONLY modes.
-- Live matrix run on 2026-10-09 for https://www.youtube.com/watch?v=dQw4w9WgXcQ passed in 140.06 seconds. It verified combined video/audio MP4, selected-quality video-only output, and audio-only outputs in two distinct containers using ffprobe.
-- Shorts were verified in all three modes; additional successful Shorts smoke tests were recorded for VF_MOfnz7OY and osrN3A_Rdiw.
-- A duplicate audio format ID issue was reproduced and fixed; selector 251-0/251 successfully downloaded Opus audio.
+- Real regular-video downloads were verified in `VIDEO_WITH_AUDIO`, `VIDEO_ONLY`, and
+  `AUDIO_ONLY` modes.
+- Live matrix run on 2026-10-09 for `https://www.youtube.com/watch?v=dQw4w9WgXcQ` passed
+  in 140.06 seconds. It verified combined video/audio MP4, selected-quality video-only
+  output, and audio-only outputs in two distinct containers using ffprobe.
+- Shorts were verified in all three modes; additional successful Shorts smoke tests were
+  recorded for `VF_MOfnz7OY` and `osrN3A_Rdiw`.
+- A duplicate audio format ID issue was reproduced and fixed; selector `251-0/251`
+  successfully downloaded Opus audio.
 
-The Phase 2 acceptance gate is satisfied by the live output-mode/container matrix, recorded Shorts and regular-video smoke tests, and deterministic error-boundary/format-layout tests. This is targeted evidence, not proof of broad reliability across all YouTube content and platform conditions.
+This is targeted evidence, not proof of broad YouTube reliability across all content and
+platform conditions.
 
-### Telegram playback compatibility tests
+## Telegram cloud/live tests
 
-- `tests/test_telegram_media.py` covers compatible MP4 passthrough, AV1/Opus transcoding to H.264/AAC, conversion of non-MP4 containers, post-conversion verification, missing audio, and FFmpeg failure mapping.
-- `tests/test_handlers.py` verifies video-message delivery with streaming support and temporary workspace cleanup.
-- These deterministic tests do not prove playback on every Telegram client. After deployment, repeat a live test on desktop and iPhone.
+The default bot configuration uses Telegram's cloud Bot API when `TELEGRAM_API_BASE_URL`
+is unset. Deterministic tests do not exercise a real Telegram cloud upload or polling
+session.
 
-### Telegram deterministic tests
+Cloud live checks should cover:
 
-- `tests/test_config.py` covers required token handling, defaults, normalization, invalid values, token redaction in the settings repr, and immutability.
-- `tests/test_logging_config.py` verifies that the configured level and fixed log format are passed to the logging setup without including the bot token.
-- `tests/test_bot.py` verifies bot and dispatcher construction, including default cloud Bot API and optional local API endpoint configuration.
-- `tests/test_handlers.py` covers /start, invalid links, unsupported domains, non-YouTube platform messaging, successful mocked download/delivery, safe error responses, and temporary workspace cleanup.
-- `tests/test_download_service.py` covers provider selection, URL normalization, delegation, and recognized platforms without configured providers.
-- GitHub Actions run [37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474) passed lint, format, and the deterministic test suite for this implementation.
+- bot polling;
+- a small public YouTube URL;
+- user-facing error behavior;
+- playback on relevant Telegram clients;
+- behavior when cloud upload limits are reached.
 
-These deterministic tests do not exercise a real YouTube download from the Telegram process, Telegram network upload, or polling against Telegram. A manual test-bot end-to-end check remains outstanding and is required before Phase 3 can be accepted.
+## Telegram Local Bot API live tests
 
-### Local Bot API Server rollout gate
+The Local Bot API path has limited live evidence:
 
-The optional endpoint is unit-tested, but it is not enabled by default and does not mean a Local Bot API Server has been deployed. Before switching the live bot, verify server installation and private network reachability, bot polling against the local endpoint, uploads below and above 50 MB, a file close to the intended maximum, restart behavior, and rollback to the cloud endpoint.
+- Local Telegram Bot API Server was started.
+- The bot ran and polled through the Local Bot API endpoint.
+- A short vertical YouTube video completed the live download -> Telegram delivery flow.
+- An approximately 414.7 MB MP4 was delivered to Telegram and was playable.
+- The large tested file was H.264/AAC, 1920x1080, and approximately 1649 seconds long.
+
+This verifies only the observed scenario. It does not prove project support for arbitrary
+files up to Telegram's official Local Bot API Server upload ceiling of 2000 MB.
+Different Telegram clients may render previews differently, so preview behavior is not a
+fully controlled application guarantee.
+
+## Docker/runtime tests
+
+Docker/Compose checks should include:
+
+```bash
+docker compose config --quiet
+docker compose build bot
+```
+
+Docker was found at `/Applications/Docker.app/Contents/Resources/bin/docker` during the
+tool-location check. Current safe validation:
+
+- `/Applications/Docker.app/Contents/Resources/bin/docker compose config --quiet`: passed.
+
+A Compose configuration check does not prove polling, download, extraction, upload, or
+large-file behavior.
+
+Known runtime verification gap: the validated YouTube extraction path depends on
+Deno/yt-dlp JavaScript challenge support, but the current Dockerfile does not install
+Deno. Containerized YouTube extraction must be verified with the actual image or the
+image must be updated deliberately in a separate technical change.
+
+## Operational and recovery tests
+
+A phase cannot be marked complete only because the happy path works. Remaining
+operational checks include:
+
+- restart behavior for the bot and Local Bot API Server;
+- temporary Local Bot API/network failure recovery;
+- upload failures and user-facing error behavior;
+- cloud-to-local migration rehearsal with a separate test bot;
+- local-to-cloud rollback rehearsal with a separate test bot;
+- documented limits and resource observations for larger files when justified.
+
+Telegram documents cloud-to-local migration with `logOut`, and documents `close` for
+moving between Local Bot API Servers. Do not treat `close` as an officially documented
+local-to-cloud rollback procedure.
