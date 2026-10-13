@@ -49,6 +49,7 @@ class QualityOption:
     mode: DownloadMode
     height: int | None = None
     bitrate_kbps: int | None = None
+    width: int | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.id, str) or not self.id.strip():
@@ -64,6 +65,11 @@ class QualityOption:
             isinstance(self.height, bool) or not isinstance(self.height, int) or self.height <= 0
         ):
             raise ValueError("Quality height must be a positive integer.")
+
+        if self.width is not None and (
+            isinstance(self.width, bool) or not isinstance(self.width, int) or self.width <= 0
+        ):
+            raise ValueError("Quality width must be a positive integer.")
 
         if self.bitrate_kbps is not None and (
             isinstance(self.bitrate_kbps, bool)

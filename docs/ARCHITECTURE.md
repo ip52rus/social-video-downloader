@@ -57,12 +57,14 @@ The remux path is an optimization for compatible streams when only the container
 ## Application layer
 DownloadService normalizes the URL, detects its platform, selects a registered MediaProvider, and returns the provider's transport-neutral DownloadedMedia result. The default registry contains the YouTube provider. A recognized platform without a registered provider raises a domain-level UnsupportedPlatformError. The service does not depend on Telegram.
 
-Future Phase 4 option planning may add application-layer helpers that derive a Telegram
-interaction plan from provider capabilities and product policy. Such helpers should be a
-thin mapping over the existing provider contract: inspect supported modes and available
-qualities, decide whether a user choice is meaningful, and finally produce
-`DownloadOptions` for `DownloadService`. They should not duplicate provider extraction
-logic or invent a parallel source of truth for platform capabilities.
+Phase 4 option planning has an application-layer quality-tier foundation that maps
+provider `QualityOption` values to transport-independent Low, Medium, and High choices.
+The helper uses the existing provider contract, keeps provider `quality_id` values opaque,
+and exposes whether there is more than one distinct quality choice so Telegram can later
+skip unnecessary screens. It does not call Telegram APIs, duplicate provider extraction
+logic, or invent a parallel source of truth for platform capabilities. Future Telegram
+flow code should consume this helper and finally produce `DownloadOptions` for
+`DownloadService`.
 
 Future product analytics should be owned by the Telegram/application flow, not by
 providers. Conceptually:
@@ -86,7 +88,7 @@ solving, yt-dlp uses yt-dlp-ejs and the pinned Deno runtime provided by the bot 
 image. This runtime support is separate from provider logic, FFmpeg media processing,
 and Telegram Bot API transport.
 
-Providers report which output modes are supported: video with audio, video only, and audio only. They also expose selectable quality options when the platform allows them to be enumerated. Quality identifiers are provider-specific and opaque to the application and Telegram layers; each option also has a user-facing label.
+Providers report which output modes are supported: video with audio, video only, and audio only. They also expose selectable quality options when the platform allows them to be enumerated. Quality identifiers are provider-specific and opaque to the application and Telegram layers; each option also has a user-facing label. Video quality options may include both `width` and `height` so application policy can classify resolution consistently across landscape, portrait, and square videos.
 
 Provider capabilities are technical inputs, not a command to expose every possible mode
 to users. The Telegram/application layer decides which supported capabilities are

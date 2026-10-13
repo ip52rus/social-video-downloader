@@ -164,20 +164,20 @@ avoids treating portrait 1080x1920 as a 1920-class or 4K-like option.
 
 ### `QualityOption` shape
 
-The current `QualityOption` stores `height` and optional `bitrate_kbps`, but not `width`.
-That is not enough for orientation-independent YouTube tier mapping at the
-application/UX policy layer.
+`QualityOption` stores `height`, optional `width`, and optional `bitrate_kbps`. Keeping
+both dimensions lets the application/UX policy layer perform orientation-independent
+YouTube tier mapping while provider-specific quality IDs remain opaque.
 
-Recommended minimal model change for implementation:
+Implemented foundation:
 
-- add optional `width: int | None` to `QualityOption`;
-- keep existing `height: int | None`;
+- `QualityOption.width: int | None = None` is available and validated like `height`;
+- the YouTube provider preserves width and height from yt-dlp format metadata in video
+  quality options where those dimensions are available;
 - compute `quality_resolution = min(width, height)` when both are available;
 - keep provider-specific `quality_id` values opaque to application/Telegram code.
 
-The YouTube provider already reads both `width` and `height` from yt-dlp format metadata
-while building quality labels. Phase 4 should preserve both dimensions in `QualityOption`
-instead of discarding `width`.
+The download selector behavior remains height-based inside the YouTube provider; the
+application mapping only selects an existing provider `quality_id`.
 
 ### Missing or partial metadata
 
@@ -221,6 +221,14 @@ For each tier target `T`:
    - if only one distinct useful quality remains, skip the quality screen entirely;
    - if two distinct mappings remain, show only those meaningful choices rather than
      three misleading buttons.
+
+If multiple tiers resolve to the same underlying provider `QualityOption`, keep the tier
+whose target is semantically closest to the actual `quality_resolution`. For example, if
+both Low and Medium would resolve to a 720-class option, keep Medium and do not show a
+duplicate Low button for the same provider quality. The implemented application helper
+uses a deterministic tie-break when a quality is exactly between two tier targets: prefer
+the tier whose target is not below the actual quality resolution, then fall back to fixed
+Low / Medium / High order.
 
 This policy intentionally prefers `highest available <= target` rather than nearest
 available. It respects the user's bandwidth/resolution intent: Medium should not jump to
@@ -334,7 +342,6 @@ other infrastructure during this documentation stage.
 
 Phase 4 capability design does not:
 
-- change the provider interface before there is an implementation need;
 - create a second capability system independent from `DownloadMode`, `QualityOption`, and
   provider capability methods;
 - move product analytics into providers;
@@ -345,7 +352,27 @@ Phase 4 capability design does not:
 - rank formats by bitrate, estimated size, codec, or network conditions in product
   policy;
 - implement analytics storage, database tables, queues, or external analytics services;
-- implement product code, tests, or Telegram UI in this documentation stage.
+- implement Telegram UI in the quality-tier foundation stage.
+
+## Implementation Progress
+
+Implemented and covered by deterministic tests:
+
+- `QualityOption.width` model support and validation;
+- YouTube video quality options preserve extracted width and height metadata;
+- transport-independent Low / Medium / High mapping in the application services layer;
+- orientation-independent resolution classification for landscape, portrait, and square
+  video;
+- deterministic handling for missing exact targets, all-below/all-above cases,
+  one-dimension fallback, unclassifiable options, duplicate tier collapse, and input
+  ordering.
+
+Not implemented yet:
+
+- Telegram buttons/state for Video/Audio or quality selection;
+- analytics events or storage;
+- file-size prediction, bitrate scoring, 4K/Maximum policy, or provider-specific
+  branching in handlers.
 
 ## Implementation Sequence
 
@@ -385,6 +412,7 @@ Phase 4 should be considered ready for implementation only after:
 
 - the capability interpretation layer is designed against the existing provider contract;
 - YouTube Low/Medium/High mapping rules are defined;
+- the Low/Medium/High foundation is implemented and verified in the application layer;
 - Telegram state transitions are specified;
 - analytics events are defined with privacy limits;
 - direct-download behavior for providers with no meaningful choices is specified;

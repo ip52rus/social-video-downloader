@@ -28,6 +28,7 @@ VIDEO_INFO: dict[str, Any] = {
         {
             "format_id": "18",
             "ext": "mp4",
+            "width": 640,
             "height": 360,
             "vcodec": "avc1",
             "acodec": "mp4a",
@@ -36,6 +37,7 @@ VIDEO_INFO: dict[str, Any] = {
         {
             "format_id": "137",
             "ext": "mp4",
+            "width": 1920,
             "height": 1080,
             "vcodec": "avc1",
             "acodec": "none",
@@ -44,6 +46,7 @@ VIDEO_INFO: dict[str, Any] = {
         {
             "format_id": "136",
             "ext": "mp4",
+            "width": 1280,
             "height": 720,
             "vcodec": "avc1",
             "acodec": "none",
@@ -270,6 +273,7 @@ def test_lists_video_qualities_from_available_formats(
 
     assert [quality.id for quality in qualities] == ["height-1080", "height-720"]
     assert [quality.height for quality in qualities] == [1080, 720]
+    assert [quality.width for quality in qualities] == [1920, 1280]
     assert all(quality.mode is DownloadMode.VIDEO_ONLY for quality in qualities)
 
 
@@ -301,6 +305,10 @@ def test_quality_labels_distinguish_portrait_and_landscape() -> None:
     assert [(item.label, item.height) for item in qualities] == [
         ("720×1280 (max)", 1280),
         ("1080p (max)", 1080),
+    ]
+    assert [(item.width, item.height) for item in qualities] == [
+        (720, 1280),
+        (1920, 1080),
     ]
 
 

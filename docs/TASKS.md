@@ -73,10 +73,10 @@ This closure does not mean production readiness. Additional client checks, uploa
 ## Phase 4 - Download UX and YouTube Options
 - [ ] Review and accept [the Phase 4 capability model](PHASE4_CAPABILITY_MODEL.md) before implementation.
 - [ ] Define how Telegram UX interprets existing provider/content capabilities without creating a second independent capability system.
-- [ ] Reuse existing `DownloadMode`, `QualityOption`, `get_supported_modes()`, and `get_available_qualities()` as the provider capability source of truth.
-- [ ] Define the product/UX policy layer that maps technical capabilities to user-facing choices.
+- [x] Reuse existing `DownloadMode`, `QualityOption`, `get_supported_modes()`, and `get_available_qualities()` as the provider capability source of truth for the Low/Medium/High foundation.
+- [x] Define the product/UX policy foundation that maps video `QualityOption` values to Low/Medium/High tier choices without Telegram transport coupling.
 - [ ] Design the Telegram interaction and state flow.
-- [ ] Implement the documented Low, Medium, and High quality semantics for YouTube.
+- [x] Implement the documented Low, Medium, and High quality-tier mapping semantics for YouTube foundation code. Telegram UI integration remains open.
 - [ ] Design a privacy-conscious analytics event model.
 - [ ] Implement an application-level analytics abstraction and storage only after the analytics design is accepted.
 - [ ] Implement YouTube Video/Audio UX with `🎬 Видео` and `🎵 Аудио`.
@@ -99,6 +99,24 @@ consistent visual language. Do not force identical options on every provider, an
 add an extra click when there is no meaningful choice. Do not hard-code Instagram,
 TikTok, or future-platform capabilities before their provider spikes prove what the
 platform/content can actually offer.
+
+Low/Medium/High foundation implemented in application services:
+
+- `QualityOption.width` is available and validated like `height`.
+- The YouTube provider preserves extracted video width and height in `QualityOption`
+  values without changing yt-dlp selectors, codec/container preference, or download
+  behavior.
+- `build_quality_tier_plan()` maps video qualities to Low 480, Medium 720, and High 1080
+  targets using `min(width, height)` when both dimensions exist, a documented
+  one-dimension fallback when only one dimension exists, and no tier mapping for
+  unclassifiable options.
+- Duplicate tier mappings collapse to one underlying provider quality, preserving the
+  semantically closest tier and exposing when only one distinct quality remains so a
+  future UI can skip the quality screen.
+- Verification: deterministic unit tests cover model validation, landscape/portrait/square
+  1080-class classification, exact and missing targets, all-below/all-above cases,
+  one-dimension fallback, unclassifiable options, duplicate collapse, one-choice plans,
+  and input-order determinism.
 
 Analytics requirements for this phase:
 
