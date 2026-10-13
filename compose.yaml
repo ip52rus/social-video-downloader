@@ -1,0 +1,28 @@
+services:
+  telegram-bot-api:
+    image: aiogram/telegram-bot-api:10.3@sha256:5d743d5c93b9e50ba5d3bc438350d9d78c1368587723aebbf0e353032f0865d1
+    restart: unless-stopped
+    environment:
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID:?Set TELEGRAM_API_ID in .env}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH:?Set TELEGRAM_API_HASH in .env}
+      TELEGRAM_LOCAL: "1"
+    volumes:
+      - telegram-bot-api-data:/var/lib/telegram-bot-api
+    expose:
+      - "8081"
+
+  bot:
+    build:
+      context: .
+    restart: unless-stopped
+    depends_on:
+      - telegram-bot-api
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?Set TELEGRAM_BOT_TOKEN in .env}
+      APP_ENV: development
+      LOG_LEVEL: INFO
+      TELEGRAM_API_BASE_URL: http://telegram-bot-api:8081
+      TELEGRAM_API_TIMEOUT_SECONDS: "1800"
+
+volumes:
+  telegram-bot-api-data:

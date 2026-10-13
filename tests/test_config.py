@@ -9,6 +9,8 @@ def test_settings_load_required_token_and_defaults():
     assert settings.telegram_bot_token == "test-token"
     assert settings.app_env == "development"
     assert settings.log_level == "INFO"
+    assert settings.telegram_api_base_url is None
+    assert settings.telegram_api_timeout_seconds == 1800
 
 
 def test_settings_normalizes_app_env_and_log_level():
@@ -23,6 +25,58 @@ def test_settings_normalizes_app_env_and_log_level():
     assert settings.telegram_bot_token == "test-token"
     assert settings.app_env == "test"
     assert settings.log_level == "WARNING"
+
+
+def test_settings_normalizes_optional_telegram_api_base_url():
+    settings = Settings.from_env(
+        {
+            "TELEGRAM_BOT_TOKEN": "test-token",
+            "TELEGRAM_API_BASE_URL": " http://127.0.0.1:8081/ ",
+        }
+    )
+
+    assert settings.telegram_api_base_url == "http://127.0.0.1:8081"
+
+
+def test_settings_ignores_blank_optional_telegram_api_base_url():
+    settings = Settings.from_env({"TELEGRAM_BOT_TOKEN": "test-token", "TELEGRAM_API_BASE_URL": " "})
+
+    assert settings.telegram_api_base_url is None
+
+
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "localhost:8081",
+        "ftp://127.0.0.1:8081",
+        "http://",
+        "http://user:password@127.0.0.1:8081",
+        "http://127.0.0.1:8081?token=secret",
+        "http://127.0.0.1:8081#fragment",
+    ],
+)
+def test_settings_rejects_invalid_telegram_api_base_url(base_url):
+    with pytest.raises(ConfigurationError, match="TELEGRAM_API_BASE_URL"):
+        Settings.from_env({"TELEGRAM_BOT_TOKEN": "test-token", "TELEGRAM_API_BASE_URL": base_url})
+
+
+def test_settings_accepts_custom_api_timeout():
+    settings = Settings.from_env(
+        {
+            "TELEGRAM_BOT_TOKEN": "test-token",
+            "TELEGRAM_API_TIMEOUT_SECONDS": "2400",
+        }
+    )
+
+    assert settings.telegram_api_timeout_seconds == 2400
+
+
+@pytest.mark.parametrize("timeout", ["", "abc", "0", "-1", "86401"])
+def test_settings_rejects_invalid_api_timeout(timeout):
+    with pytest.raises(ConfigurationError, match="TELEGRAM_API_TIMEOUT_SECONDS"):
+        Settings.from_env(
+            {"TELEGRAM_BOT_TOKEN": "test-token", "TELEGRAM_API_TIMEOUT_SECONDS": timeout}
+        )
 
 
 @pytest.mark.parametrize("token", ["", " ", "\n"])

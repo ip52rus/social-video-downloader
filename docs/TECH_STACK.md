@@ -10,8 +10,22 @@
 
 - aiogram 3.x is the Telegram framework.
 - yt-dlp is the initial media acquisition engine.
-- Deno + yt-dlp-ejs are required for the validated YouTube extraction path.
-- FFmpeg is required where downloaded video and audio streams must be assembled.
+- Deno + yt-dlp-ejs are required for the validated YouTube extraction path used in live
+  provider testing.
+- FFmpeg is required where downloaded video and audio streams must be assembled or media
+  must be converted to a Telegram-compatible MP4.
+- ffprobe is used to inspect media streams, duration, dimensions, and upload parameters.
+
+## Local runtime and deployment
+
+- Docker is used to build a bot image with Python dependencies and FFmpeg.
+- Docker Compose is used for the local bot + Local Telegram Bot API Server setup.
+- Telegram Local Bot API Server can be used as an optional Bot API endpoint for larger
+  upload workflows.
+- The current Dockerfile does not install Deno. Containerized YouTube extraction therefore
+  has a deployment verification gap: either the image must include the required JavaScript
+  runtime, or containerized extraction must be tested and documented with the actual
+  working mechanism.
 
 ## Development quality
 
