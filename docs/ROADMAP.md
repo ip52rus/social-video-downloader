@@ -40,6 +40,7 @@ Instagram and TikTok URLs are recognized but do not have download providers yet.
 
 ## Phase 4 - Download UX and YouTube Options
 Expose useful provider/content capabilities through a polished Telegram interaction flow.
+The primary capability design is [Phase 4 Capability Model](PHASE4_CAPABILITY_MODEL.md).
 
 Core UX rule: minimum steps + provider-specific capabilities + consistent visual language.
 The bot must not force identical options on every provider or add an extra click when
@@ -47,7 +48,9 @@ there is no meaningful choice.
 
 Planned work:
 
-- define the provider/content capability model used by Telegram UX;
+- define the provider/content capability interpretation used by Telegram UX, reusing the
+  existing `DownloadMode`, `QualityOption`, `get_supported_modes()`, and
+  `get_available_qualities()` provider contract;
 - design the complete Telegram interaction and state flow;
 - define exact Low, Medium, and High quality semantics for YouTube before implementation;
 - design a privacy-conscious analytics event model;
@@ -84,7 +87,9 @@ Target TikTok UX:
 - no unnecessary audio or quality screen.
 
 For future platforms, UX derives from provider/content capabilities rather than a fixed
-global options flow.
+global options flow. Do not hard-code Instagram, TikTok, or other future-provider
+capabilities before the provider spike proves what each platform/content type can
+actually offer.
 
 YouTube quality semantics:
 
@@ -99,10 +104,13 @@ history. Track product and technical statistics, not source URLs, video titles,
 channel/author names, Telegram usernames, message text, or unnecessary personal data.
 Use pseudonymous or anonymous user identity sufficient for aggregate usage statistics.
 Analytics must distinguish `option unavailable` from `option available but not selected`.
+It should also distinguish technically available options hidden by product policy from
+options shown to the user.
 
 The current provider architecture already exposes modes and quality options. This phase
 should connect those capabilities to Telegram UX, add only the capability modeling needed
-for product choices, and avoid redesigning provider internals without evidence.
+for product choices, and avoid redesigning provider internals or creating a second
+capability source of truth without evidence.
 
 ## Phase 5 - Instagram Provider
 Do not promise implementation before feasibility validation.
