@@ -253,6 +253,7 @@ class YouTubeProvider:
                         label=label,
                         mode=mode,
                         height=height,
+                        width=width,
                     )
                 )
             return tuple(options)

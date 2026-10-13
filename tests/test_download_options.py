@@ -66,12 +66,14 @@ def test_quality_option_describes_available_quality(
         mode=mode,
         height=height,
         bitrate_kbps=bitrate_kbps,
+        width=1920 if height else None,
     )
 
     assert option.id == "provider-specific-id"
     assert option.mode is mode
     assert option.height == height
     assert option.bitrate_kbps == bitrate_kbps
+    assert option.width == (1920 if height else None)
 
 
 @pytest.mark.parametrize(
@@ -94,6 +96,17 @@ def test_quality_option_rejects_nonpositive_height(height: int) -> None:
             label="720p",
             mode=DownloadMode.VIDEO_ONLY,
             height=height,
+        )
+
+
+@pytest.mark.parametrize("width", [0, -1, True])
+def test_quality_option_rejects_nonpositive_width(width: int | bool) -> None:
+    with pytest.raises(ValueError, match="width"):
+        QualityOption(
+            id="video-720",
+            label="720p",
+            mode=DownloadMode.VIDEO_ONLY,
+            width=width,
         )
 
 
