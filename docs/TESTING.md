@@ -17,8 +17,9 @@ Current deterministic coverage includes:
   workspace cleanup.
 - `tests/test_download_service.py` for provider selection, URL normalization, delegation,
   and recognized platforms without configured providers.
-- `tests/test_telegram_media.py` for compatible MP4 passthrough, AV1/Opus transcoding to
-  H.264/AAC, non-MP4 conversion, post-conversion verification, rotation-aware upload
+- `tests/test_telegram_media.py` for compatible MP4 passthrough, H.264/AAC stream-copy
+  remux for compatible non-MP4 input, remux-failure fallback to transcode, AV1/Opus
+  transcoding to H.264/AAC, post-conversion verification, rotation-aware upload
   dimensions, missing audio, and FFmpeg failure mapping.
 
 Audit fallback checks in the Codex environment:
@@ -33,7 +34,7 @@ test failure.
 
 Current preferred checks after locating `uv` at `/Users/user/.local/bin/uv`:
 
-- `/Users/user/.local/bin/uv run pytest -q`: 189 passed, 1 skipped.
+- `/Users/user/.local/bin/uv run pytest -q`: 190 passed, 1 skipped.
 - `/Users/user/.local/bin/uv run ruff check .`: passed.
 - `/Users/user/.local/bin/uv run ruff format --check .`: 50 files already formatted.
 
@@ -44,6 +45,58 @@ uv run pytest -q
 uv run ruff check .
 uv run ruff format --check .
 ```
+
+## PR #27 media-preparation validation
+
+Deterministic automated coverage:
+
+- Mock/runner tests confirm compatible non-MP4 H.264/AAC input uses FFmpeg stream-copy
+  remux with `-c copy`.
+- Deterministic coverage verifies remux command failure falls back to the transcode path.
+- Focused media tests: `tests/test_telegram_media.py` passed with 12 tests.
+- Full branch suite: 190 passed, 1 skipped.
+
+Real local FFmpeg validation used `/usr/local/bin/ffmpeg` and
+`/usr/local/bin/ffprobe`, version 9.0.2. All media was synthetic and created outside the
+repository. These checks did not perform a YouTube network request, Telegram upload,
+VPS/server benchmark, large-file validation, or 2 GB validation.
+
+Case A - compatible MP4 passthrough:
+
+- Input: MP4, H.264/AAC, 640x360, 8.0 seconds.
+- `prepare_telegram_video()` returned the original file.
+- Only ffprobe was invoked; there was no preparation FFmpeg invocation.
+- The source file remained unchanged.
+- Result: pass.
+
+Case B - compatible MKV stream-copy remux:
+
+- Input: Matroska, H.264/AAC, 640x360, 8.021 seconds.
+- Output: MP4, H.264/AAC, 640x360, 8.0 seconds.
+- The preparation command used stream mapping for the first video/audio streams,
+  metadata mapping, `-c copy`, and `-movflags +faststart`.
+- Exactly one preparation FFmpeg invocation ran; `libx264` was not invoked.
+- Dimensions were preserved and the duration delta was approximately 0.021 seconds.
+- Encoded H.264 packet payload hashes matched 240/240.
+- Encoded AAC packet payload hashes matched 376/376.
+- Decoded video framemd5 hashes matched 240/240.
+- Exact decoded AAC checksum did not match because MKV and MP4 produced different AAC
+  priming, timestamp, or frame-boundary interpretation.
+- Result: pass for the intended stream-copy behavior, with the decoded AAC caveat above.
+
+Case C - incompatible source fallback transcode:
+
+- Input: Matroska, MPEG-4 video, AAC audio, 320x180, 5.021 seconds.
+- Output: MP4, H.264/AAC, 320x180, 5.013 seconds.
+- The original incompatible source was not returned.
+- The real preparation command used `libx264`.
+- The existing transcode path still worked.
+- Result: pass.
+
+The real validation does not prove whole-file byte identity, decoded audio bit identity,
+lossless decoded audio equivalence, large-file behavior, or production performance. Real
+FFmpeg remux-failure injection was not repeated; that fallback is covered by the
+deterministic remux-failure test.
 
 ## YouTube external/live tests
 

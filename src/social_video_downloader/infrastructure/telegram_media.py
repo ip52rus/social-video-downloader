@@ -162,6 +162,51 @@ def prepare_telegram_video(path: Path, runner: Runner | None = None) -> Path:
             return source
 
         output = source.with_name(f"{source.stem}.telegram-compatible.mp4")
+
+        # If the streams are already compatible, try a stream-copy remux first.
+        # This avoids expensive lossy re-encoding for files such as MKV containers
+        # that already contain H.264 video and AAC audio.
+        if video_codec == _COMPATIBLE_VIDEO_CODEC and audio_codec == _COMPATIBLE_AUDIO_CODEC:
+            try:
+                execute(
+                    [
+                        "ffmpeg",
+                        "-hide_banner",
+                        "-loglevel",
+                        "error",
+                        "-y",
+                        "-i",
+                        str(source),
+                        "-map",
+                        "0:v:0",
+                        "-map",
+                        "0:a:0",
+                        "-map_metadata",
+                        "0",
+                        "-c",
+                        "copy",
+                        "-movflags",
+                        "+faststart",
+                        str(output),
+                    ],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                if output.is_file() and output.stat().st_size > 0:
+                    remuxed_video, remuxed_audio = _probe_streams(output, execute)
+                    if (
+                        output.suffix.lower() == ".mp4"
+                        and remuxed_video == _COMPATIBLE_VIDEO_CODEC
+                        and remuxed_audio == _COMPATIBLE_AUDIO_CODEC
+                    ):
+                        return output
+            except (OSError, subprocess.SubprocessError, MediaProcessingError):
+                # Some otherwise compatible streams cannot be copied into MP4.
+                # Fall back to transcoding rather than failing the download.
+                pass
+            output.unlink(missing_ok=True)
+
         execute(
             [
                 "ffmpeg",

@@ -166,20 +166,49 @@ def test_incompatible_codecs_are_transcoded_and_verified(tmp_path: Path) -> None
     assert [call[0] for call in calls] == ["ffprobe", "ffmpeg", "ffprobe"]
 
 
-def test_non_mp4_with_compatible_codecs_is_remuxed_to_mp4(tmp_path: Path) -> None:
+def test_non_mp4_with_compatible_codecs_is_remuxed_without_transcoding(tmp_path: Path) -> None:
     source = tmp_path / "source.mkv"
     source.write_bytes(b"source")
     probes = iter([_probe("h264", "aac"), _probe("h264", "aac")])
+    ffmpeg_commands = []
 
     def runner(command, **kwargs):
         if command[0] == "ffprobe":
             return next(probes)
+        ffmpeg_commands.append(command)
         Path(command[-1]).write_bytes(b"remuxed")
         return SimpleNamespace(stdout="")
 
     result = prepare_telegram_video(source, runner=runner)
     assert result.suffix == ".mp4"
     assert result.read_bytes() == b"remuxed"
+    assert len(ffmpeg_commands) == 1
+    assert "-c" in ffmpeg_commands[0]
+    assert ffmpeg_commands[0][ffmpeg_commands[0].index("-c") + 1] == "copy"
+    assert "libx264" not in ffmpeg_commands[0]
+
+
+def test_remux_failure_falls_back_to_transcoding(tmp_path: Path) -> None:
+    source = tmp_path / "source.mkv"
+    source.write_bytes(b"source")
+    probes = iter([_probe("h264", "aac"), _probe("h264", "aac")])
+    ffmpeg_commands = []
+
+    def runner(command, **kwargs):
+        if command[0] == "ffprobe":
+            return next(probes)
+        ffmpeg_commands.append(command)
+        if "-c" in command and command[command.index("-c") + 1] == "copy":
+            raise subprocess.CalledProcessError(1, command, stderr="remux unsupported")
+        Path(command[-1]).write_bytes(b"transcoded")
+        return SimpleNamespace(stdout="")
+
+    result = prepare_telegram_video(source, runner=runner)
+    assert result.suffix == ".mp4"
+    assert result.read_bytes() == b"transcoded"
+    assert len(ffmpeg_commands) == 2
+    assert ffmpeg_commands[0][ffmpeg_commands[0].index("-c") + 1] == "copy"
+    assert "libx264" in ffmpeg_commands[1]
 
 
 def test_ffmpeg_failure_is_mapped_to_media_processing_error(tmp_path: Path) -> None:

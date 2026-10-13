@@ -12,9 +12,15 @@
 - yt-dlp is the initial media acquisition engine.
 - Deno + yt-dlp-ejs are required for the validated YouTube extraction path used in live
   provider testing.
-- FFmpeg is required where downloaded video and audio streams must be assembled or media
-  must be converted to a Telegram-compatible MP4.
-- ffprobe is used to inspect media streams, duration, dimensions, and upload parameters.
+- ffprobe is used to inspect media streams, container, duration, dimensions, and upload
+  parameters.
+- FFmpeg is required where downloaded video and audio streams must be assembled, where
+  compatible H.264/AAC streams need stream-copy remuxing to MP4, or where incompatible
+  media must be transcoded to a Telegram-compatible H.264/AAC MP4.
+- FFmpeg stream-copy remux is used as an optimization when the streams are already
+  compatible and only container conversion is needed.
+- FFmpeg H.264/AAC transcoding remains the compatibility fallback when streams are
+  incompatible or a remux fails or does not verify.
 
 ## Local runtime and deployment
 
