@@ -204,17 +204,18 @@ did not download complete YouTube media, upload to Telegram, prove broad YouTube
 reliability, prove resilience to future YouTube platform changes, or benchmark VPS
 throughput.
 
-## Operational and recovery tests
+## Production Reliability tests
 
-A phase cannot be marked complete only because the happy path works. Remaining
-operational checks include:
+The Phase 3 functional Telegram MVP is complete, but production reliability is a later
+phase and cannot be inferred from the happy path. Remaining operational checks include:
 
 - restart behavior for the bot and Local Bot API Server;
 - temporary Local Bot API/network failure recovery;
 - upload failures and user-facing error behavior;
 - cloud-to-local migration rehearsal with a separate test bot;
 - local-to-cloud rollback rehearsal with a separate test bot;
-- documented limits and resource observations for larger files when justified.
+- documented limits and resource observations for larger files when justified;
+- monitoring, resource, and deployment limits when the deployment model is defined.
 
 Telegram documents cloud-to-local migration with `logOut`, and documents `close` for
 moving between Local Bot API Servers. Do not treat `close` as an officially documented
