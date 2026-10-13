@@ -23,12 +23,22 @@ This file defines the operating rules for AI agents working on the Social Video 
 - If documentation cannot be updated or a check remains outstanding, state this explicitly and do not represent the stage as fully complete.
 
 ## Git
+- Treat the local repository as the active development source of truth while work is in
+  progress. GitHub is the synchronized remote history and checkpoint after a verified
+  stage, not the place to infer uncommitted local state.
 - Keep main working.
 - Use focused branches for non-trivial changes.
 - Make atomic commits.
 - Use Conventional Commit prefixes: feat, fix, refactor, test, docs, chore, build, ci, perf.
 - Review the exact diff and changed-file list before every commit.
+- Commit only after implementation/config changes, documentation synchronization, tests and
+  quality checks, and security review have been completed or explicitly documented.
+- After pushing, verify the remote branch state and CI result.
+- Never lose unrelated local work. Preserve unrelated local files and changes unless the
+  user explicitly asks for a destructive operation.
 - Never rewrite published history unless explicitly requested.
+- AI agents must not independently run destructive Git operations such as reset, restore,
+  checkout, clean, rebase, or force-push.
 
 ## Security
 Never commit tokens, API keys, passwords, cookies, session files, private keys, user media, user identifiers, personal contact data, .env files, or machine-specific private paths.

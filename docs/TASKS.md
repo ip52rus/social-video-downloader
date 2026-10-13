@@ -51,10 +51,17 @@ The Phase 2 gate is satisfied by the combined live matrix and deterministic fail
 - [x] Add deterministic tests for YouTube handler orchestration, safe domain-error responses, file delivery calls, and temporary workspace cleanup; CI passed.
 - [x] Add deterministic media-compatibility tests for H.264/AAC MP4 passthrough, incompatible-codec transcoding, output verification, and processing failures.
 - [x] Deliver prepared MP4 output through Telegram video messages with streaming support instead of generic documents.
-- [ ] Perform a manual test-bot end-to-end flow after deploying the compatibility fix; confirm playback on desktop and iPhone and check upload-limit/failure behavior.
-- [ ] Document the full test-bot setup and end-to-end run.
+- [x] Verify live delivery through the Local Bot API Server with a short video.
+- [x] Verify live delivery through the Local Bot API Server with an MP4 file of approximately 414.7 MB; confirm the large file arrives and plays. The tested file was H.264/AAC, 1920x1080, and approximately 1649 seconds long.
+- [ ] Test additional Telegram clients, including iPhone, and record the exact clients tested.
+- [ ] Test upload failures and recovery; record relevant Telegram errors and user-facing behavior.
+- [ ] Rehearse restart and recovery behavior for the bot and Local Bot API Server.
+- [ ] Rehearse cloud-to-local migration and local-to-cloud rollback with a separate test bot; do not treat `close` as an official local-to-cloud rollback procedure.
+- [ ] Verify Dockerized YouTube extraction, including whether the container has the required Deno/JavaScript runtime path or another documented working mechanism.
+- [ ] Increase test-file sizes cautiously and document actual limits; do not claim support up to 2 GB based on the current 414.7 MB test.
+- [ ] Document the full test-bot setup and end-to-end procedure.
 
-The automated checks for the provider-selection and mocked Telegram download/delivery flow passed in [GitHub Actions run 37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474). This verifies deterministic behavior only; the real Telegram end-to-end acceptance gate remains open. The compatibility change adds conditional H.264/AAC MP4 preparation and switches delivery to Telegram video messages; live playback still needs confirmation after merge and restart of the local bot. Instagram and TikTok links are recognized but their download providers are not implemented.
+The automated checks for provider selection and the mocked Telegram download/delivery flow passed in [GitHub Actions run 37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474). A live Local Bot API Server test adds real-delivery evidence: a short video and an MP4 file of approximately 414.7 MB were delivered, and the large file was confirmed playable. This does not close all Phase 3 criteria: additional client checks, upload failure/recovery behavior, restart/recovery validation, cloud/local rollback rehearsal, Dockerized extraction verification, justified larger-file tests, and a reproducible end-to-end procedure remain outstanding. Instagram and TikTok links are recognized but their download providers are not implemented.
 
 ## Access control — separate Phase 4
 - [ ] Define required Telegram community.

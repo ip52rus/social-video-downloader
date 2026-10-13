@@ -29,11 +29,10 @@ RUN pip cache purge || true
 
 COPY . .
 
+RUN uv sync --frozen --no-dev
+
 RUN python -c 'import sys; print("Python:", sys.version[:20]); print("PATH:", __import__("os").environ.get("PATH","")[:80])' && \
     python -c 'import site; print("site-packages:", site.getsitepackages())'
 
-ENV DATA_DIR=/app/data
-RUN mkdir -p /app/data && chmod 777 /app/data
-RUN chown -R 1000:1000 /app/data || true
 
 CMD ["/opt/venv/bin/python", "bot.py"]

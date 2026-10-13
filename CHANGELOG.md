@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Add Docker Compose configuration for the bot and Local Bot API Server, keeping the API endpoint on the internal Compose network.
+- Add Docker build-context protection with `.dockerignore` so local secrets, runtime data, caches, and generated media are excluded while `.env.example` remains available.
+- Add environment examples for Telegram API application credentials, optional local Bot API endpoint, and configurable local API request timeout.
+- Synchronize project documentation with the local-first development policy, Local Bot API deployment layout, security requirements, and remaining Dockerized extraction verification gap.
 - Prepare Telegram video uploads as H.264/AAC MP4 when source codecs or container are incompatible; verify converted output and preserve already-compatible MP4 files without re-encoding.
 - Deliver prepared media as Telegram video messages with streaming support rather than generic documents.
 - Add deterministic compatibility tests for passthrough, transcoding, output verification, and processing failures.
@@ -26,4 +30,6 @@
 - GitHub Actions run [37966225469](https://github.com/ip52rus/social-video-downloader/actions/runs/37966225469) passed 131 tests and Ruff lint/format checks on merge commit f27051fded257b5f39056c45333b4fa8c50075a3.
 - Opt-in live matrix passed locally on 2026-10-09 for https://www.youtube.com/watch?v=dQw4w9WgXcQ in 140.06 seconds. It verified combined MP4, selected-quality video-only output, and audio-only output in two containers using ffprobe.
 - GitHub Actions run [37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474) passed lint, format, and deterministic tests for Telegram download orchestration and file-delivery handling.
-- Live YouTube evidence is limited to a small set of public URLs and does not establish broad platform reliability. The real Telegram test-bot download/upload flow remains unverified; access control is a separate planned phase.
+- Live YouTube evidence is limited to a small set of public URLs and does not establish broad platform reliability.
+- A real Telegram flow through the Local Bot API Server was verified with a short video and an MP4 file of approximately 414.7 MB. The large file was H.264/AAC, 1920x1080, approximately 1649 seconds long, arrived in Telegram, and was confirmed playable. This is a limited scenario, not validated support for files up to 2000 MB.
+- Additional Telegram client checks, failure/recovery scenarios, Dockerized extraction verification, restart and rollback rehearsal, and justified larger-file testing remain outstanding. Community-membership access control is a separate planned phase.

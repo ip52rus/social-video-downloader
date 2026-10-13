@@ -4,7 +4,7 @@ Free Telegram bot-service for downloading media from popular social platforms.
 
 ## Project status
 
-The downloader core and YouTube provider are implemented, and the YouTube validation gate has passed with documented limits. Phase 3 (Telegram MVP) is in progress: the bot recognizes supported URLs, downloads individual YouTube videos through the existing provider, and attempts to send the resulting file in Telegram. Deterministic tests, lint, and formatting passed in [GitHub Actions run 37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474); a real Telegram test-bot end-to-end run remains outstanding. Instagram and TikTok links are recognized but their download providers are not implemented.
+The downloader core and YouTube provider are implemented, and the YouTube validation gate has passed within the documented test scope. Phase 3 (Telegram MVP) is in progress: the bot accepts supported URLs, downloads YouTube media, prepares Telegram-compatible video when necessary, and sends it as a video message. Automated tests cover deterministic download orchestration, media preparation, error handling, and cleanup. A real Telegram flow through the Local Bot API Server has been verified with a short video and an MP4 file of approximately 414.7 MB; the large file arrived in Telegram and was confirmed to open and play. Telegram documents a Local Bot API Server upload ceiling of 2000 MB, but this project does not claim validated 2 GB support. The current evidence is limited to the tested scenario, not all file sizes, codecs, clients, or deployment conditions. See [the changelog](CHANGELOG.md) and [testing strategy](docs/TESTING.md) for the recorded evidence and its limits. Instagram and TikTok URLs are recognized, but download providers for those platforms are not implemented.
 
 The project is not production-ready. Telegram community-membership access control is a separate planned Phase 4. See [the roadmap](docs/ROADMAP.md), [task checklist](docs/TASKS.md), and [testing strategy](docs/TESTING.md).
 
@@ -22,8 +22,8 @@ By default, the bot uses Telegram's cloud Bot API. To point it at a separately r
 
 Local API requests use a configurable timeout of 1800 seconds by default. Set `TELEGRAM_API_TIMEOUT_SECONDS` to an integer from 1 to 86400 if your deployment needs a different request timeout. This setting is applied only when a custom/local API endpoint is configured; the cloud Bot API retains aiogram's default session behavior.
 
-This setting only configures the bot client; it does not install, start, or secure the Local Bot API Server. See [the setup and rollout notes](docs/LOCAL_BOT_API.md) before enabling it. Do not expose an unauthenticated Bot API endpoint to the public internet.
+The repository includes a Docker Compose configuration for the bot and Local Bot API Server. See [the setup and rollout notes](docs/LOCAL_BOT_API.md) before using it. The Compose configuration requires `TELEGRAM_BOT_TOKEN`, `TELEGRAM_API_ID`, and `TELEGRAM_API_HASH` in the local environment or `.env` file. Never commit `.env`. Do not expose an unauthenticated Bot API endpoint to the public internet.
 
 ## Verification status
 
-Automated tests use mocked providers and Telegram message methods; they do not prove that a live Telegram upload succeeds. Complete the test-bot end-to-end check before treating the Telegram MVP acceptance gate as passed.
+The current evidence covers automated tests, a limited live YouTube provider matrix, and real Telegram delivery through the Local Bot API Server. These are separate verification categories and do not establish full production readiness. Still outstanding are additional Telegram client checks, failure and recovery scenarios, restart and rollback rehearsal, Dockerized extraction verification, and justified larger-file testing. A successful upload of a 414.7 MB file does not establish support for files up to 2 GB.
