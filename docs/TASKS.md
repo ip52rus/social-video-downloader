@@ -91,6 +91,12 @@ This closure does not mean production readiness. Additional client checks, uploa
 - [ ] Implement an application-level analytics abstraction and storage only after the analytics design is accepted.
 - [x] Implement YouTube Video/Audio UX with `🎬 Видео` and `🎵 Аудио`.
 - [x] Implement YouTube video quality choice with `Низкое`, `Среднее`, and `Высокое`.
+- [x] Prefer native AAC/M4A for automatic YouTube audio and guarantee verified M4A/AAC
+  before Telegram delivery through passthrough, stream-copy remux, or required transcode.
+- [x] Supply reliable positive audio duration to Telegram, reusing preparation probes
+  when source metadata is missing/invalid and omitting unknown duration safely.
+- [ ] Revalidate M4A audio delivery/playback and displayed duration in a real Telegram
+  client after deployment; current verification is deterministic/local synthetic only.
 - [ ] Keep YouTube audio direct unless later evidence justifies audio quality selection.
 - [ ] Do not expose video-without-audio as a normal user option.
 - [ ] Preserve automatic/best-option selection where no user choice is needed.
@@ -211,6 +217,20 @@ Focused callback resilience implemented on 2026-10-15:
   of cancellation/programming errors. Full quality-check results are in TESTING.md.
 - This is a bounded reliability fix, not Phase 4 completion or production-readiness
   evidence. The running Compose stack has not been rebuilt with this change.
+
+Focused M4A audio/duration implementation (2026-10-15):
+
+- Automatic audio selection prefers the best ranked native AAC/M4A with best-audio
+  fallback; explicit quality IDs, video selectors and product choices are unchanged.
+- Telegram audio preparation verifies actual streams/container, reuses native M4A,
+  stream-copies AAC where possible, and encodes incompatible audio only when required.
+- Duration uses reliable existing metadata or the same probes needed for compatibility;
+  invalid/unknown values are omitted. No duration-only conversion/probe was added.
+- `uv run pytest`: 357 passed, 1 skipped (opt-in YouTube live matrix). This includes four
+  real local synthetic-media tests with FFmpeg, unchanged video tests, and callback
+  resilience regressions. Quality checks and performance-gate evidence are in TESTING.md.
+- No live YouTube/Telegram request, Compose rebuild/restart, new dependency, or
+  production-performance benchmark was performed. Phase 4 remains open.
 
 Analytics requirements for this phase:
 

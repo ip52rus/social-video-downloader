@@ -9,7 +9,11 @@ from aiogram.exceptions import TelegramBadRequest, TelegramNetworkError
 from aiogram.methods import AnswerCallbackQuery, EditMessageReplyMarkup, SendMessage
 
 import social_video_downloader.handlers as handlers
-from social_video_downloader.domain.errors import DownloadFailedError, MetadataExtractionError
+from social_video_downloader.domain.errors import (
+    DownloadFailedError,
+    MediaProcessingError,
+    MetadataExtractionError,
+)
 from social_video_downloader.domain.models import (
     DownloadedMedia,
     DownloadMode,
@@ -18,6 +22,7 @@ from social_video_downloader.domain.models import (
     QualityOption,
 )
 from social_video_downloader.handlers import handle_choice_callback, handle_start, handle_text
+from social_video_downloader.infrastructure.telegram_audio import PreparedAudio
 from social_video_downloader.services.choice_model import (
     ChoicePlan,
     ChoicePlanState,
@@ -50,13 +55,22 @@ def message():
     return result
 
 
+@pytest.fixture(autouse=True)
+def audio_preparation(monkeypatch):
+    # Handler fakes write placeholder bytes; real FFmpeg is exercised separately.
+    prepare = MagicMock(side_effect=lambda path, duration: PreparedAudio(path, None))
+    monkeypatch.setattr(handlers, "prepare_telegram_audio", prepare)
+    return prepare
+
+
 class FakeDownloadService:
-    def __init__(self, plan: ChoicePlan | None = None, error=None, plan_error=None):
+    def __init__(self, plan: ChoicePlan | None = None, error=None, plan_error=None, duration=None):
         self.plan = plan or direct_plan()
         self.error = error
         self.plan_error = plan_error
         self.calls = []
         self.plan_calls = []
+        self.duration = duration
 
     def create_choice_plan(self, url: str) -> ChoicePlan:
         self.plan_calls.append(url)
@@ -85,6 +99,7 @@ class FakeDownloadService:
                 title="Example video",
                 source_url=url,
                 platform=handlers.Platform.YOUTUBE,
+                duration_seconds=self.duration,
             ),
         )
 
@@ -1043,3 +1058,62 @@ async def test_error_notification_does_not_hide_cancellation_or_programming_erro
 
     with pytest.raises(failure):
         await handlers._notify_download_error(message, MetadataExtractionError("test failure"))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("prepared_duration", [73, None])
+async def test_audio_delivery_uses_prepared_file_and_duration(
+    message, monkeypatch, audio_preparation, prepared_duration
+):
+    service = FakeDownloadService(duration=72.534)
+    monkeypatch.setattr(handlers, "download_service", service)
+    prepared_paths = []
+
+    def prepare(path, duration):
+        assert duration == 72.534
+        output = path.with_name("prepared.m4a")
+        output.write_bytes(b"prepared audio")
+        prepared_paths.append(output)
+        return PreparedAudio(output, prepared_duration)
+
+    audio_preparation.side_effect = prepare
+
+    async def receive_audio(file, **parameters):
+        assert Path(file.path) == prepared_paths[0]
+        assert Path(file.path).read_bytes() == b"prepared audio"
+        assert parameters == {
+            "caption": "Example video",
+            **({"duration": prepared_duration} if prepared_duration else {}),
+        }
+
+    message.answer_audio.side_effect = receive_audio
+    await handlers._download_and_deliver_media(
+        message,
+        "https://www.youtube.com/watch?v=abc",
+        DownloadOptions(mode=DownloadMode.AUDIO_ONLY),
+    )
+
+    audio_preparation.assert_called_once()
+    message.answer_audio.assert_awaited_once()
+    message.answer_video.assert_not_awaited()
+    assert not prepared_paths[0].parent.exists()
+
+
+@pytest.mark.asyncio
+async def test_audio_preparation_failure_is_safe_and_cleans_workspace(
+    message, monkeypatch, audio_preparation
+):
+    service = FakeDownloadService()
+    monkeypatch.setattr(handlers, "download_service", service)
+    audio_preparation.side_effect = MediaProcessingError("private preparation details")
+
+    await handlers._download_and_deliver_media(
+        message,
+        "https://www.youtube.com/watch?v=abc",
+        DownloadOptions(mode=DownloadMode.AUDIO_ONLY),
+    )
+
+    message.answer_audio.assert_not_awaited()
+    message.answer_video.assert_not_awaited()
+    assert "private" not in message.answer.await_args.args[0]
+    assert not service.calls[0][1].exists()

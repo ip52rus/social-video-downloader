@@ -75,6 +75,56 @@ tests. Existing containers were not rebuilt/restarted; real-client revalidation 
 changed code remains outstanding. No claim of Phase 4 completion or production
 reliability follows from this bounded fix.
 
+## M4A audio and duration (2026-10-15)
+
+Network-free tests in `tests/test_telegram_audio.py`, `tests/test_youtube_provider.py`
+and `tests/test_handlers.py` cover:
+
+- Real yt-dlp selector evaluation against synthetic formats: native AAC/M4A preference,
+  best ranked native choice, best-audio fallback and rejection of a codec-mislabelled
+  native preference. Explicit audio IDs and existing video selectors remain covered.
+- Native AAC/M4A passthrough, AAC stream-copy remux, incompatible-codec transcode,
+  remux-failure fallback, actual container/codec verification rather than extension-only
+  detection, invalid/corrupt input, FFmpeg failure and partial-output cleanup.
+- Positive metadata duration; missing, zero, negative, boolean, NaN/infinite and
+  out-of-range duration; container/stream and source/output probe fallback; omission
+  when unknown; correct prepared path/duration sent through `answer_audio`.
+- Safe preparation failure and request-workspace cleanup. Existing video delivery and
+  PR #39 callback fault/concurrency tests remain passing.
+
+`tests/integration/test_audio_preparation.py` adds four real local checks, using 0.35 s
+synthetic tones or deliberately corrupt bytes exclusively in pytest temporary storage:
+
+1. Native AAC/M4A: original file/hash preserved; exactly one ffprobe, zero preparation
+   FFmpeg calls.
+2. AAC/Matroska: one stream-copy FFmpeg call; output verified AAC/M4A; all encoded AAC
+   packet SHA-256 hashes match the input. This does not claim decoded/timestamp identity.
+3. Opus/WebM: one AAC encoding FFmpeg call; output verified AAC/M4A. Bitrate is capped
+   without implying improved quality over the source.
+4. Corrupt M4A: safe rejection, no output file.
+
+Performance gate: native audio is neither remuxed nor transcoded. Successful conversions
+use one input probe and one output verification, with duration in those same probes only
+when needed. Failed remux recovery may require another FFmpeg call/output verification.
+There is no large passthrough copy or standalone duration probe. Encoding caps are
+128 kbps/stereo-or-other, 64 kbps/mono, limited by known source bitrate; unknown bitrate
+uses the cap. Real encoding adds CPU/latency and may lose quality. Throughput, concurrency
+and production latency were not benchmarked.
+
+Verification:
+
+- `uv run pytest`: 357 passed, 1 skipped. All four synthetic FFmpeg tests ran locally;
+  they skip explicitly when FFmpeg/ffprobe are absent. The external YouTube test skipped.
+- `uv run ruff check .`: passed.
+- `uv run ruff format --check .`: 60 files already formatted.
+- `docker compose config --quiet`: passed, without rendering configuration.
+- `git diff --check`: passed.
+
+No live YouTube download, Telegram API call, running-stack rebuild/restart or long
+transcoding benchmark was performed. M4A playback and displayed duration still require
+real-client revalidation after deployment. These results do not close Phase 4 or establish
+production reliability.
+
 ## PR #27 media-preparation validation
 
 Deterministic automated coverage:

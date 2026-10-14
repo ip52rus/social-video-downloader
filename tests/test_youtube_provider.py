@@ -560,6 +560,7 @@ def test_missing_final_media_file_maps_to_media_processing_error(tmp_path: Path)
         ),
         "140-0/140",
         "251-0/251",
+        "ba[ext=m4a][acodec~='^(mp4a|aac)']/ba",
     ],
 )
 def test_format_selectors_compile_with_installed_yt_dlp(
@@ -571,3 +572,62 @@ def test_format_selectors_compile_with_installed_yt_dlp(
         selector = ydl.build_format_selector(format_spec)
 
     assert callable(selector)
+
+
+@pytest.mark.parametrize(
+    ("formats", "expected"),
+    [
+        (VIDEO_INFO["formats"], "140"),
+        (
+            VIDEO_INFO["formats"]
+            + [
+                {
+                    "format_id": "better-aac",
+                    "ext": "m4a",
+                    "vcodec": "none",
+                    "acodec": "mp4a.40.2",
+                    "abr": 192,
+                },
+            ],
+            "better-aac",
+        ),
+        ([f for f in VIDEO_INFO["formats"] if f["ext"] != "m4a"], "251"),
+        (
+            [f for f in VIDEO_INFO["formats"] if f["ext"] != "m4a"]
+            + [
+                {
+                    "format_id": "mislabelled",
+                    "ext": "m4a",
+                    "vcodec": "none",
+                    "acodec": "opus",
+                    "abr": 32,
+                },
+            ],
+            "251",
+        ),
+    ],
+)
+def test_automatic_audio_prefers_best_native_aac_with_best_audio_fallback(formats, expected):
+    import yt_dlp
+
+    with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True}) as ydl:
+        info = {"formats": [dict(item, url="https://media.invalid/audio") for item in formats]}
+        ydl.sort_formats(info)
+        select = ydl.build_format_selector(
+            YouTubeProvider._format_selector(DownloadMode.AUDIO_ONLY, None)
+        )
+        selected = list(select({**info, "incomplete_formats": False, "has_merged_format": False}))
+
+    assert [item["format_id"] for item in selected] == [expected]
+
+
+def test_automatic_audio_download_installs_native_preference(tmp_path):
+    factory = FakeYoutubeDLFactory(download_extension="m4a")
+    provider = YouTubeProvider(ydl_factory=factory)
+
+    provider.download(
+        "https://youtu.be/abc123", tmp_path, DownloadOptions(mode=DownloadMode.AUDIO_ONLY)
+    )
+
+    assert factory.instances[-1].params["format"] == "ba[ext=m4a][acodec~='^(mp4a|aac)']/ba"
+    assert "merge_output_format" not in factory.instances[-1].params

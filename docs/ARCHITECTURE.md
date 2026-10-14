@@ -74,6 +74,42 @@ The synchronous download and media-preparation operations run in worker threads 
 
 The remux path is an optimization for compatible streams when only the container needs conversion; it is not a claim that all media can be remuxed. The transcode path remains the compatibility fallback. No scaling filter is applied, and FFmpeg autorotation is retained. The bot sends the prepared file as a Telegram video with streaming support. A per-request temporary directory holds the media while Telegram uploads it, and is removed after delivery or failure. Telegram upload errors and expected downloader errors are mapped to safe user-facing messages; detailed source exceptions are not sent to the user.
 
+### Audio compatibility
+
+Normal Telegram audio delivery requires verified AAC in M4A because the previous
+automatic `ba` selection could deliver WebM and leave duration unspecified. Source
+selection remains in the YouTube provider; a small `telegram_audio` helper alongside
+the video helper prepares transport-compatible audio without changing provider
+contracts or the video pipeline.
+
+- Automatic AUDIO_ONLY selection uses `ba[ext=m4a][acodec~='^(mp4a|aac)']/ba`: yt-dlp
+  ranks the matching native AAC/M4A formats rather than using a fixed format ID. Best
+  audio remains the fallback. Explicit provider quality IDs retain their semantics;
+  video selectors are unchanged. The provider may return a source WebM on fallback,
+  but the Telegram handler never sends it without audio preparation.
+- One input ffprobe checks the actual container, codec and streams. A native M4A with
+  one AAC audio stream and no video is reused unchanged, with no FFmpeg invocation.
+- AAC in another container first attempts `-c:a copy` into M4A. The result is re-probed;
+  a failed or unverifiable remux falls back to AAC encoding. Incompatible codecs go
+  directly to AAC encoding. Every converted output is checked for M4A/AAC and audio-only
+  streams; invalid output causes a safe `MediaProcessingError`, never an extension-only
+  or incompatible fallback upload.
+- Encoding uses at most 128 kbps (64 kbps for mono), capped at a known source bitrate.
+  Unknown source bitrate uses that default; it does not imply restored source quality.
+  Transcoding is lossy and adds CPU/latency; native passthrough and stream-copy avoid it.
+- Reliable positive finite `MediaMetadata.duration_seconds` takes precedence for
+  `answer_audio(duration=...)`. Otherwise duration is read in the existing codec/container
+  probes: final output first, then source/container or audio-stream duration. Seconds
+  are rounded to a positive Telegram integer; unknown/invalid values are omitted.
+  Reliable metadata skips duration fields, and no separate duration-only probe runs.
+
+Preparation runs in the existing worker-thread path. Partial failed conversions are
+removed and all source/output files remain inside the per-request temporary workspace.
+Passthrough introduces no media copy; remux/transcode create only their necessary output.
+This adds no queues, persistence, dependencies, audio-format screen, or upload retries.
+Real Telegram client revalidation is outstanding; Phase 4/production reliability remain
+open.
+
 ## Application layer
 DownloadService normalizes the URL, detects its platform, selects a registered MediaProvider, and returns the provider's transport-neutral DownloadedMedia result. The default registry contains the YouTube provider. A recognized platform without a registered provider raises a domain-level UnsupportedPlatformError. The service does not depend on Telegram.
 
