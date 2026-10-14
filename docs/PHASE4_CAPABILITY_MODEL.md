@@ -652,11 +652,18 @@ Implemented and covered by deterministic tests:
 - `QualityOption.width` model support and validation;
 - YouTube video quality options preserve extracted width and height metadata;
 - transport-independent Low / Medium / High mapping in the application services layer;
+- immutable `ChoicePlan`, `ModeChoice`, and `QualityChoice` application models;
+- `DownloadService.create_choice_plan(url)` using the existing provider
+  normalization/selection path;
+- direct-download, mode-selection, quality-selection, and blocked plan states with
+  concrete `DownloadOptions` for every terminal path;
 - orientation-independent resolution classification for landscape, portrait, and square
   video;
 - deterministic handling for missing exact targets, all-below/all-above cases,
   one-dimension fallback, unclassifiable options, duplicate tier collapse, and input
-  ordering.
+  ordering;
+- deterministic planning for hidden `VIDEO_ONLY`, audio direct options, legitimate
+  single-path automatic provider behavior, and unsafe unclassifiable video qualities.
 
 Not implemented yet:
 
@@ -703,6 +710,7 @@ Phase 4 should be considered ready for implementation only after:
 - the capability interpretation layer is designed against the existing provider contract;
 - YouTube Low/Medium/High mapping rules are defined;
 - the Low/Medium/High foundation is implemented and verified in the application layer;
+- the application choice-model foundation is implemented and verified without Telegram UI;
 - Telegram state transitions are specified;
 - analytics events are defined with privacy limits;
 - direct-download behavior for providers with no meaningful choices is specified;
