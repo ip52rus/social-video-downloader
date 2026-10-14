@@ -289,6 +289,37 @@ class InMemoryPendingInteractionStore:
                 interaction=updated,
             )
 
+    def set_message_id(
+        self,
+        interaction_id: str,
+        *,
+        owner_user_id: int,
+        chat_id: int,
+        message_id: int,
+    ) -> PendingInteractionResult:
+        """Record the Telegram message that carries this interaction's buttons."""
+        with self._lock:
+            result = self._validated_result(
+                interaction_id,
+                owner_user_id=owner_user_id,
+                chat_id=chat_id,
+                message_id=None,
+                now=self._clock(),
+            )
+            if result.status is not PendingInteractionStatus.FOUND:
+                return result
+
+            interaction = result.interaction
+            if interaction is None:
+                raise RuntimeError("found interaction result without interaction.")
+
+            updated = replace(interaction, message_id=message_id)
+            self._interactions[interaction_id] = updated
+            return PendingInteractionResult(
+                status=PendingInteractionStatus.FOUND,
+                interaction=updated,
+            )
+
     def consume_terminal(
         self,
         interaction_id: str,

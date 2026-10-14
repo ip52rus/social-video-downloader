@@ -79,10 +79,12 @@ This closure does not mean production readiness. Additional client checks, uploa
 - [x] Design the Telegram interaction and state flow.
 - [x] Implement the pending-interaction store and callback-data helpers without Telegram UX wiring.
 - [x] Implement the documented Low, Medium, and High quality-tier mapping semantics for YouTube foundation code. Telegram UI integration remains open.
+- [x] Wire Telegram URL intake and callbacks to `ChoicePlan` for direct download, mode
+  choice, quality choice, and blocked states.
 - [ ] Design a privacy-conscious analytics event model.
 - [ ] Implement an application-level analytics abstraction and storage only after the analytics design is accepted.
-- [ ] Implement YouTube Video/Audio UX with `🎬 Видео` and `🎵 Аудио`.
-- [ ] Implement YouTube video quality choice with `Низкое`, `Среднее`, and `Высокое`.
+- [x] Implement YouTube Video/Audio UX with `🎬 Видео` and `🎵 Аудио`.
+- [x] Implement YouTube video quality choice with `Низкое`, `Среднее`, and `Высокое`.
 - [ ] Keep YouTube audio direct unless later evidence justifies audio quality selection.
 - [ ] Do not expose video-without-audio as a normal user option.
 - [ ] Preserve automatic/best-option selection where no user choice is needed.
@@ -172,8 +174,22 @@ Telegram pending-interaction foundation implemented in `social_video_downloader.
   callback parsing and rejection, callback payload size and URL exclusion, ownership,
   expiry boundary, lazy removal, selected mode persistence, unknown and consumed states,
   and single-process double-consume protection.
-- Telegram buttons, callback handlers, user-facing callback messages, and download-flow
-  integration remain open.
+
+Telegram choice wiring implemented in `social_video_downloader.handlers`:
+
+- YouTube URL intake now calls `DownloadService.create_choice_plan(url)` before deciding
+  direct download, mode choice, quality choice, or blocked handling.
+- Direct-download plans reuse the existing media download/preparation/probing/delivery
+  path with `plan.automatic_options` and create no pending interaction.
+- Mode and quality choice plans create in-memory pending interactions and render inline
+  keyboards from application-provided choices only.
+- Callback handling parses compact callback payloads, validates ownership/staleness,
+  resolves selections against the stored `ChoicePlan`, atomically consumes terminal
+  interactions, and passes exact stored `DownloadOptions` to the shared delivery path.
+- Verification: deterministic handler tests cover direct, mode, quality, blocked,
+  terminal mode choices, mode-to-quality transition, exact quality resolution, invalid
+  indexes, malformed/unknown/expired/wrong-owner/wrong-chat/consumed callbacks,
+  double-click protection, and callback policy-boundary behavior.
 
 Analytics requirements for this phase:
 
