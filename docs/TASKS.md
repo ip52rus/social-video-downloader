@@ -77,6 +77,7 @@ This closure does not mean production readiness. Additional client checks, uploa
 - [x] Define the product/UX policy foundation that maps video `QualityOption` values to Low/Medium/High tier choices without Telegram transport coupling.
 - [x] Implement immutable application choice-plan models and `DownloadService.create_choice_plan(url)` without Telegram transport coupling.
 - [x] Design the Telegram interaction and state flow.
+- [x] Implement the pending-interaction store and callback-data helpers without Telegram UX wiring.
 - [x] Implement the documented Low, Medium, and High quality-tier mapping semantics for YouTube foundation code. Telegram UI integration remains open.
 - [ ] Design a privacy-conscious analytics event model.
 - [ ] Implement an application-level analytics abstraction and storage only after the analytics design is accepted.
@@ -156,6 +157,23 @@ Telegram interaction state-flow design added to `docs/PHASE4_CAPABILITY_MODEL.md
   terminal downloads to avoid double-click duplicates.
 - Documented direct download, mode choice, quality choice, blocked, stale, expired,
   wrong-owner, consumed, restart, and download-error behavior.
+
+Telegram pending-interaction foundation implemented in `social_video_downloader.telegram_interactions`:
+
+- Added immutable pending-interaction state with user/chat ownership, optional message
+  validation, source URL stored only in memory, immutable `ChoicePlan`, 15-minute TTL,
+  active step, selected mode index, and consumed state.
+- Added a lock-protected in-memory store for create, lookup, mode-to-quality transition,
+  atomic terminal consume, lazy expiry, and explicit removal.
+- Added opaque interaction ID generation and callback serialization/parsing for
+  `dl:v1:<interaction_id>:m:<mode_index>` and
+  `dl:v1:<interaction_id>:q:<quality_index>`.
+- Verification: deterministic unit tests cover creation, ID shape and uniqueness,
+  callback parsing and rejection, callback payload size and URL exclusion, ownership,
+  expiry boundary, lazy removal, selected mode persistence, unknown and consumed states,
+  and single-process double-consume protection.
+- Telegram buttons, callback handlers, user-facing callback messages, and download-flow
+  integration remain open.
 
 Analytics requirements for this phase:
 

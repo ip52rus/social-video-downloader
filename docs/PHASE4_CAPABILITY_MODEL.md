@@ -908,14 +908,17 @@ Implemented and covered by deterministic tests:
   one-dimension fallback, unclassifiable options, duplicate tier collapse, and input
   ordering;
 - deterministic planning for hidden `VIDEO_ONLY`, audio direct options, legitimate
-  single-path automatic provider behavior, and unsafe unclassifiable video qualities.
+  single-path automatic provider behavior, and unsafe unclassifiable video qualities;
 - Telegram interaction state-flow design for rendering `ChoicePlan`, pending callback
-  state, ownership checks, stale handling, TTL, and double-click safety.
+  state, ownership checks, stale handling, TTL, and double-click safety;
+- Telegram pending-interaction foundation with an in-memory store, opaque ID generation,
+  callback serialization/parsing, ownership and expiry outcomes, mode-to-quality
+  transition state, and single-process atomic terminal consume.
 
 Not implemented yet:
 
 - Telegram buttons/state for Video/Audio or quality selection;
-- pending-interaction store and callback handlers;
+- Telegram callback handlers and wiring to the download flow;
 - analytics events or storage;
 - file-size prediction, bitrate scoring, 4K/Maximum policy, or provider-specific
   branching in handlers.
