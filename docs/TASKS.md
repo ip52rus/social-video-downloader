@@ -72,7 +72,7 @@ This closure does not mean production readiness. Additional client checks, uploa
 
 ## Phase 4 - Download UX and YouTube Options
 - [ ] Review and accept [the Phase 4 capability model](PHASE4_CAPABILITY_MODEL.md) before implementation.
-- [ ] Define how Telegram UX interprets existing provider/content capabilities without creating a second independent capability system.
+- [x] Define how Telegram UX interprets existing provider/content capabilities without creating a second independent capability system at the application choice-model level.
 - [x] Reuse existing `DownloadMode`, `QualityOption`, `get_supported_modes()`, and `get_available_qualities()` as the provider capability source of truth for the Low/Medium/High foundation.
 - [x] Define the product/UX policy foundation that maps video `QualityOption` values to Low/Medium/High tier choices without Telegram transport coupling.
 - [ ] Design the Telegram interaction and state flow.
@@ -117,6 +117,17 @@ Low/Medium/High foundation implemented in application services:
   1080-class classification, exact and missing targets, all-below/all-above cases,
   one-dimension fallback, unclassifiable options, duplicate collapse, one-choice plans,
   and input-order determinism.
+
+Application choice-model design added to `docs/PHASE4_CAPABILITY_MODEL.md`:
+
+- Proposed immutable `ChoicePlan`, `ModeChoice`, and `QualityChoice` concepts that map
+  provider capabilities to product policy and final `DownloadOptions`; hidden modes use a
+  simple mode/reason field rather than a separate capability model.
+- Recommended `DownloadService.create_choice_plan(url)` as the minimal service boundary so
+  normalization and provider selection are not duplicated in Telegram handlers or a second
+  planning service.
+- Documented YouTube Video/Audio behavior, quality-screen skipping rules, direct
+  one-choice provider flow, no-choice/error distinction, and analytics boundaries.
 
 Analytics requirements for this phase:
 

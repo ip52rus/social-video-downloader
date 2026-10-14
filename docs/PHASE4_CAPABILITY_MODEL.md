@@ -101,6 +101,297 @@ Examples:
 The interpretation layer may track hidden options and reasons for analytics, but hidden
 technical capabilities should not become user-facing buttons.
 
+## Application Choice Model
+
+The next Phase 4 step should add a minimal application-level choice model between provider
+capabilities and the future Telegram UI:
+
+provider capabilities -> product policy -> transport rendering -> `DownloadOptions`
+
+This model must be transient and immutable. It should not become a second provider
+capability system, and it should not contain Telegram button text, callback-data formats,
+FSM state, analytics storage, or provider/media-engine selection logic.
+
+### Concrete models/API
+
+Use existing primitives as the source of truth:
+
+- technical modes come from `DownloadMode`;
+- selectable technical qualities come from `QualityOption`;
+- final execution options are `DownloadOptions`;
+- Low / Medium / High video tier decisions come from `QualityTierPlan`.
+
+Minimal concrete application API:
+
+```python
+class ChoicePlanState(StrEnum):
+    DIRECT_DOWNLOAD = "direct_download"
+    CHOOSE_MODE = "choose_mode"
+    CHOOSE_QUALITY = "choose_quality"
+    BLOCKED = "blocked"
+
+
+class UserChoiceKind(StrEnum):
+    VIDEO = "video"
+    AUDIO = "audio"
+
+
+@dataclass(frozen=True, slots=True)
+class QualityChoice:
+    tier: QualityTier
+    quality: QualityOption
+    final_options: DownloadOptions
+
+
+@dataclass(frozen=True, slots=True)
+class ModeChoice:
+    kind: UserChoiceKind
+    mode: DownloadMode
+    final_options: DownloadOptions | None
+    quality_choices: tuple[QualityChoice, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class ChoicePlan:
+    state: ChoicePlanState
+    technical_modes: tuple[DownloadMode, ...]
+    hidden_modes: tuple[tuple[DownloadMode, str], ...]
+    unavailable_choices: tuple[tuple[UserChoiceKind, str], ...]
+    mode_choices: tuple[ModeChoice, ...] = ()
+    quality_choices: tuple[QualityChoice, ...] = ()
+    automatic_options: DownloadOptions | None = None
+    blocked_reason: str | None = None
+```
+
+Invariants:
+
+- `DIRECT_DOWNLOAD` means `automatic_options` is present and can be passed directly to
+  `DownloadService.download()`.
+- `CHOOSE_MODE` means `mode_choices` contains at least two user-facing choices. Selecting
+  a `ModeChoice` either yields its concrete `final_options` or its concrete
+  `quality_choices`.
+- `CHOOSE_QUALITY` means the only useful mode is already implied and `quality_choices`
+  contains at least two final choices.
+- `BLOCKED` means no safe product path can produce `DownloadOptions`; `blocked_reason`
+  explains why.
+- Every terminal `ModeChoice`, `QualityChoice`, and automatic path carries concrete
+  `DownloadOptions`. Telegram handlers must render and resolve these objects, not
+  reinterpret provider capabilities.
+
+`QualityChoice.final_options` must include the exact provider `quality_id` from the
+underlying `QualityOption`. If tier collapse leaves exactly one distinct `QualityOption`,
+the quality screen is skipped, but the automatic video path must still use
+`DownloadOptions(mode=VIDEO_WITH_AUDIO, quality_id=<that exact quality_id>)`. It must not
+be converted to `quality_id=None`, because that would ask the provider to choose a
+possibly different automatic/best quality.
+
+The same rule applies to any future automatic path created from a specific provider
+option: preserve that provider option's identity in `DownloadOptions`.
+
+Do not add a separate "platform capability" enum that mirrors `DownloadMode`. User-facing
+semantics such as `video` and `audio` are product choices layered over `DownloadMode`, not
+new provider facts.
+
+`HiddenCapability` is not required for the first implementation. A simpler
+`hidden_modes: tuple[tuple[DownloadMode, str], ...]` is enough for the known policy case of hiding
+YouTube `VIDEO_ONLY`, and avoids a generic capability wrapper before hidden non-mode
+capabilities exist. If future policy hides individual qualities, add a focused field for
+hidden quality IDs rather than widening the provider capability model.
+
+Conceptual API:
+
+```python
+class DownloadService:
+    def create_choice_plan(self, url: str) -> ChoicePlan: ...
+```
+
+`DownloadService.create_choice_plan()` should reuse the same normalization, platform
+detection, and provider selection path as `download()`. Internally it can delegate product
+policy to a small pure helper, but handler code should not perform provider lookup itself.
+This avoids duplicating URL/provider resolution while keeping `DownloadService.download()`
+as the only execution path.
+
+A separate planning service is only justified if provider lookup is first extracted into a
+shared application component used by both services. Creating an independent planning
+service with its own provider registry would duplicate routing logic and should be
+avoided.
+
+### Responsibilities
+
+Provider responsibilities stay factual:
+
+- report `get_supported_modes(url)`;
+- report `get_available_qualities(url, mode)`;
+- reject unsupported `DownloadOptions`;
+- keep extraction, selector, codec, and container behavior inside the provider/media
+  pipeline.
+
+Application policy responsibilities:
+
+- decide which technical modes are meaningful user-facing choices;
+- hide technical modes that should not appear in normal UX;
+- decide whether a quality screen is useful after a selected semantic mode;
+- map quality tiers to existing provider `QualityOption` values;
+- produce exact `DownloadOptions` for every final path;
+- expose enough non-persistent facts for future analytics to know what was technically
+  available, hidden, shown, and selected.
+
+Transport responsibilities:
+
+- render the `ChoicePlan` in Telegram;
+- preserve user selection state between steps;
+- pass the selected `DownloadOptions` back to `DownloadService.download()`;
+- choose localized button text outside domain/provider models.
+
+### Flow
+
+Future handler flow:
+
+1. Receive URL.
+2. Call `DownloadService.create_choice_plan(url)`.
+3. If the plan has no useful path, send an explicit unsupported/error response.
+4. If `state` is `DIRECT_DOWNLOAD`, call `DownloadService.download(url, output_dir,
+   plan.automatic_options)` immediately.
+5. If `state` is `CHOOSE_MODE`, render `plan.mode_choices`.
+6. If the selected `ModeChoice.final_options` is present, download with it.
+7. If the selected `ModeChoice.quality_choices` has multiple entries, render those quality
+   choices.
+8. If `state` is `CHOOSE_QUALITY`, render `plan.quality_choices` immediately because the
+   mode is already implied.
+9. Resolve the final user selection to the stored `DownloadOptions`.
+10. Call the existing `DownloadService.download()` execution path.
+
+No Telegram state machine is implemented by this model. The model only defines what the
+state machine will need to render and resolve.
+
+### YouTube example
+
+If YouTube reports:
+
+- `VIDEO_WITH_AUDIO`;
+- `VIDEO_ONLY`;
+- `AUDIO_ONLY`;
+- classifiable video qualities for `VIDEO_WITH_AUDIO`;
+
+application policy should produce:
+
+- shown mode choices:
+  - semantic `video`, technical `VIDEO_WITH_AUDIO`;
+  - semantic `audio`, technical `AUDIO_ONLY`;
+- hidden capability:
+  - technical `VIDEO_ONLY`, reason `hidden_by_normal_youtube_policy`;
+- audio final options:
+  - `DownloadOptions(mode=AUDIO_ONLY, quality_id=None)`;
+- video quality plan:
+  - build `QualityTierPlan` from `get_available_qualities(url, VIDEO_WITH_AUDIO)`;
+  - if one distinct tier remains, skip the quality screen and use that tier's
+    exact `quality_id` in a concrete `DownloadOptions`;
+  - if two or three distinct tiers remain, show only those tier choices;
+  - final video options are
+    `DownloadOptions(mode=VIDEO_WITH_AUDIO, quality_id=<tier quality_id>)`.
+
+If no video quality can be classified, do not show fake Low / Medium / High choices. The
+plan should record `(VIDEO, "safe_quality_mapping_unavailable")` in `unavailable_choices`
+or, if no other useful path remains, `state=BLOCKED` with the same reason. Because
+`quality_id=None` currently means provider automatic/best for YouTube and may exceed the
+High approximately 1080-class product policy, an empty or unclassifiable `QualityTierPlan`
+must not silently become
+`DownloadOptions(mode=VIDEO_WITH_AUDIO, quality_id=None)` as normal High/default
+behavior.
+
+Later implementation may add a safe provider-level approximately 1080-class ceiling
+fallback. Until that exists, the choice model must keep "safe tier mapping unavailable"
+distinct from ordinary automatic provider selection.
+
+### One-choice provider example
+
+For a future provider/content item that reports only `VIDEO_WITH_AUDIO` and no meaningful
+selectable quality:
+
+- shown mode choices: none;
+- hidden capabilities: none unless policy intentionally hides something;
+- automatic options: `DownloadOptions(mode=VIDEO_WITH_AUDIO, quality_id=None)`;
+- quality plan: none;
+- handler behavior: start download immediately with no mode or quality screen.
+
+This rule is provider-independent. Do not hard-code Instagram or TikTok branches before
+their provider spikes prove what capabilities they expose.
+
+This direct automatic path is different from the YouTube unclassifiable-quality case. The
+future provider example has no meaningful selectable quality to preserve, so
+`quality_id=None` is the provider's factual automatic path. YouTube with available but
+unclassifiable qualities has selectable provider options that cannot yet be safely mapped
+to product tiers, so treating `quality_id=None` as High would be misleading.
+
+### Relationship to `DownloadOptions`
+
+The choice model is only a planning layer. Every terminal choice must resolve to an exact
+`DownloadOptions` instance:
+
+- direct automatic video -> `DownloadOptions(mode=VIDEO_WITH_AUDIO, quality_id=None)`;
+- YouTube audio -> `DownloadOptions(mode=AUDIO_ONLY, quality_id=None)`;
+- YouTube video tier -> `DownloadOptions(mode=VIDEO_WITH_AUDIO,
+  quality_id=<provider quality_id>)`.
+
+The application model must preserve the underlying `QualityOption` or exact
+provider-owned `quality_id`. It must not invent provider format identifiers, parse
+quality labels as identity, or encode selector logic in product policy.
+
+The handler's job is mechanical: render the choices already present in the plan and submit
+the selected choice's stored `DownloadOptions`. It must not decide whether `VIDEO_ONLY` is
+hidden, whether one quality should collapse, whether a quality screen is needed, or
+whether `quality_id=None` is a safe default.
+
+### Analytics boundary
+
+The choice model may expose non-persistent planning facts useful for analytics:
+
+- technically available modes and quality IDs;
+- technically unavailable product choices inferred from absent modes;
+- modes hidden by policy and stable reasons;
+- user-facing mode choices shown;
+- quality tiers shown;
+- product choices unavailable because safe mapping is unavailable;
+- final selected semantic choice and final `DownloadOptions`.
+
+It must not implement analytics storage, retention, pseudonymous identifiers, event
+delivery, or database schema. It must also avoid storing source URLs, titles, authors,
+Telegram usernames, message text, or other unnecessary personal data in analytics events.
+
+### Error/no-choice state
+
+A no-choice plan is different from an automatic plan:
+
+- automatic plan means one useful path exists and can immediately produce
+  `DownloadOptions`;
+- no-choice plan means no supported provider capability can produce a meaningful product
+  path for this URL/content item.
+
+Examples of no-choice states:
+
+- provider supports the URL but reports no supported modes;
+- only modes unsupported by current product policy are available;
+- quality selection is required for the chosen product path but no classifiable or safe
+  fallback mapping is available.
+
+The first implementation should prefer explicit unsupported/error user messaging for
+no-choice plans rather than silently downloading an unbounded automatic quality.
+
+Normal "needs user choice" states are not errors and should not be represented with
+exceptions. Use `ChoicePlanState.CHOOSE_MODE` or `ChoicePlanState.CHOOSE_QUALITY`.
+Provider extraction failures and unsupported platform errors may still use existing domain
+errors before a plan can be built.
+
+### Unresolved decisions for implementation
+
+- Whether `blocked_reason`, `hidden_modes` reasons, and `unavailable_choices` reasons
+  should be free strings or small enums in the first code implementation.
+- Whether the first implementation allows a safe automatic video fallback when YouTube
+  quality metadata is insufficient, and what explicit evidence is required.
+- How much of the future analytics event shape should be defined before Telegram UI work.
+- Whether to extract a shared provider resolver later if planning grows beyond a single
+  `DownloadService.create_choice_plan()` method.
+
 ## YouTube Policy
 
 YouTube can technically expose:
@@ -378,21 +669,20 @@ Not implemented yet:
 
 Recommended Phase 4 implementation order:
 
-1. Define the application-layer capability interpretation helper against the existing
-   provider contract.
-2. Preserve width and height in `QualityOption` or otherwise expose both dimensions to
-   application policy.
-3. Define Telegram interaction/state flow from the helper output.
-4. Implement Low/Medium/High mapping rules for YouTube video.
-5. Define privacy-conscious analytics events, including available, hidden, shown, and
+1. Implement `DownloadService.create_choice_plan()` and immutable application choice
+   models against the existing provider contract.
+2. Reuse the implemented Low/Medium/High `QualityTierPlan` foundation for video quality
+   decisions.
+3. Define Telegram interaction/state flow from the choice-plan output.
+4. Implement YouTube Video/Audio UX from `ChoicePlan`.
+5. Implement YouTube video quality choice from `QualityTierPlan`.
+6. Define privacy-conscious analytics events, including available, hidden, shown, and
    selected option states.
-6. Design and implement analytics abstraction/storage only after the event model is
+7. Design and implement analytics abstraction/storage only after the event model is
    accepted.
-7. Implement YouTube Video/Audio UX.
-8. Implement YouTube video quality choice.
-9. Validate provider capability combinations, policy decisions, UX flow, and analytics
+8. Validate provider capability combinations, policy decisions, UX flow, and analytics
    events.
-10. Use real usage evidence later to remove or simplify choices that users do not need.
+9. Use real usage evidence later to remove or simplify choices that users do not need.
 
 ## Unresolved Decisions
 
