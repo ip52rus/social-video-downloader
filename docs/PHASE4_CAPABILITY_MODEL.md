@@ -202,8 +202,7 @@ Conceptual API:
 
 ```python
 class DownloadService:
-    def create_choice_plan(self, url: str) -> ChoicePlan:
-        ...
+    def create_choice_plan(self, url: str) -> ChoicePlan: ...
 ```
 
 `DownloadService.create_choice_plan()` should reuse the same normalization, platform
