@@ -913,15 +913,18 @@ Implemented and covered by deterministic tests:
   state, ownership checks, stale handling, TTL, and double-click safety;
 - Telegram pending-interaction foundation with an in-memory store, opaque ID generation,
   callback serialization/parsing, ownership and expiry outcomes, mode-to-quality
-  transition state, and single-process atomic terminal consume.
+  transition state, and single-process atomic terminal consume;
+- Telegram choice wiring that calls `DownloadService.create_choice_plan(url)`, renders
+  mode and quality buttons from the stored plan, resolves callbacks to exact stored
+  `DownloadOptions`, and reuses the existing download/delivery path.
 
 Not implemented yet:
 
-- Telegram buttons/state for Video/Audio or quality selection;
-- Telegram callback handlers and wiring to the download flow;
 - analytics events or storage;
 - file-size prediction, bitrate scoring, 4K/Maximum policy, or provider-specific
-  branching in handlers.
+  branching in handlers;
+- polished Telegram copy, progress UI, retry/cancellation UX, and callback-flow
+  end-to-end validation against real Telegram clients.
 
 ## Implementation Sequence
 
