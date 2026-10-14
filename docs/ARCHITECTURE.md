@@ -57,14 +57,20 @@ The remux path is an optimization for compatible streams when only the container
 ## Application layer
 DownloadService normalizes the URL, detects its platform, selects a registered MediaProvider, and returns the provider's transport-neutral DownloadedMedia result. The default registry contains the YouTube provider. A recognized platform without a registered provider raises a domain-level UnsupportedPlatformError. The service does not depend on Telegram.
 
-Phase 4 option planning has an application-layer quality-tier foundation that maps
-provider `QualityOption` values to transport-independent Low, Medium, and High choices.
-The helper uses the existing provider contract, keeps provider `quality_id` values opaque,
-and exposes whether there is more than one distinct quality choice so Telegram can later
-skip unnecessary screens. It does not call Telegram APIs, duplicate provider extraction
-logic, or invent a parallel source of truth for platform capabilities. Future Telegram
-flow code should consume this helper and finally produce `DownloadOptions` for
-`DownloadService`.
+`DownloadService.create_choice_plan(url)` reuses the same normalization and provider
+selection path to build an immutable application-level choice plan before any Telegram UI
+is rendered. The plan maps provider capabilities into product choices with concrete
+`DownloadOptions` for every terminal path. It hides `VIDEO_ONLY` from normal product UX,
+uses the Low/Medium/High tier foundation for video quality choices, preserves exact
+provider `quality_id` values when a quality screen is skipped, and blocks unsafe
+unclassifiable video-quality mappings rather than treating provider automatic/best as
+product High.
+
+The choice model uses the existing provider contract and keeps provider `quality_id`
+values opaque. It does not call Telegram APIs, duplicate provider extraction logic, or
+invent a parallel source of truth for platform capabilities. Future Telegram flow code
+should render the plan and pass its stored `DownloadOptions` back to
+`DownloadService.download()`.
 
 Future product analytics should be owned by the Telegram/application flow, not by
 providers. Conceptually:

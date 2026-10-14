@@ -75,6 +75,7 @@ This closure does not mean production readiness. Additional client checks, uploa
 - [x] Define how Telegram UX interprets existing provider/content capabilities without creating a second independent capability system at the application choice-model level.
 - [x] Reuse existing `DownloadMode`, `QualityOption`, `get_supported_modes()`, and `get_available_qualities()` as the provider capability source of truth for the Low/Medium/High foundation.
 - [x] Define the product/UX policy foundation that maps video `QualityOption` values to Low/Medium/High tier choices without Telegram transport coupling.
+- [x] Implement immutable application choice-plan models and `DownloadService.create_choice_plan(url)` without Telegram transport coupling.
 - [ ] Design the Telegram interaction and state flow.
 - [x] Implement the documented Low, Medium, and High quality-tier mapping semantics for YouTube foundation code. Telegram UI integration remains open.
 - [ ] Design a privacy-conscious analytics event model.
@@ -128,6 +129,21 @@ Application choice-model design added to `docs/PHASE4_CAPABILITY_MODEL.md`:
   planning service.
 - Documented YouTube Video/Audio behavior, quality-screen skipping rules, direct
   one-choice provider flow, no-choice/error distinction, and analytics boundaries.
+
+Application choice-model foundation implemented in application services:
+
+- `ChoicePlanState`, `UserChoiceKind`, `ChoicePlan`, `ModeChoice`, and `QualityChoice`
+  model direct download, mode selection, quality selection, and blocked states.
+- `DownloadService.create_choice_plan(url)` reuses existing URL normalization and provider
+  selection before reading provider capabilities.
+- Terminal and automatic paths carry concrete `DownloadOptions`; skipped one-quality
+  video paths preserve the exact provider `quality_id`.
+- Unsafe unclassifiable video-quality mappings remain distinct from legitimate
+  single-path provider automatic behavior.
+- Verification: deterministic unit tests cover direct automatic video, Video/Audio mode
+  selection, hidden `VIDEO_ONLY`, concrete audio options, three/two/one quality-tier
+  outcomes, unsafe unclassifiable quality blocking, no useful modes, deterministic mode
+  ordering, and actionable terminal options.
 
 Analytics requirements for this phase:
 
