@@ -1,12 +1,15 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from aiogram.exceptions import TelegramBadRequest, TelegramNetworkError
+from aiogram.methods import AnswerCallbackQuery, EditMessageReplyMarkup, SendMessage
 
 import social_video_downloader.handlers as handlers
-from social_video_downloader.domain.errors import DownloadFailedError
+from social_video_downloader.domain.errors import DownloadFailedError, MetadataExtractionError
 from social_video_downloader.domain.models import (
     DownloadedMedia,
     DownloadMode,
@@ -815,3 +818,228 @@ async def test_double_click_starts_only_one_download(monkeypatch):
     await handle_choice_callback(second)
 
     download.assert_awaited_once()
+
+
+def telegram_failure(error_type, operation):
+    methods = {
+        "ack": AnswerCallbackQuery(callback_query_id="test-callback"),
+        "edit": EditMessageReplyMarkup(chat_id=456, message_id=789),
+        "notify": SendMessage(chat_id=456, text="test response"),
+    }
+    return error_type(method=methods[operation], message="sensitive diagnostic details")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("error_type", [TelegramNetworkError, TelegramBadRequest])
+@pytest.mark.parametrize("failure_stage", ["ack", "edit", "both"])
+@pytest.mark.parametrize("flow", ["audio", "video", "quality"])
+async def test_terminal_api_failures_preserve_exact_download_once(
+    monkeypatch, caplog, error_type, failure_stage, flow
+):
+    plan = choose_quality_plan() if flow == "quality" else terminal_video_mode_plan()
+    interaction = await create_pending_interaction(monkeypatch, plan)
+    if flow == "quality":
+        payload = build_quality_callback_data(interaction.interaction_id, 1)
+        options = plan.quality_choices[1].final_options
+    else:
+        index = 1 if flow == "audio" else 0
+        payload = build_mode_callback_data(interaction.interaction_id, index)
+        options = plan.mode_choices[index].final_options
+    callback = callback_query(payload)
+    if failure_stage in {"ack", "both"}:
+        callback.answer.side_effect = telegram_failure(error_type, "ack")
+    if failure_stage in {"edit", "both"}:
+        callback.message.edit_reply_markup.side_effect = telegram_failure(error_type, "edit")
+    download = AsyncMock()
+    monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
+    service = MagicMock()
+    monkeypatch.setattr(handlers, "download_service", service)
+
+    await handle_choice_callback(callback)
+    second = callback_query(payload)
+    await handle_choice_callback(second)
+
+    download.assert_awaited_once_with(callback.message, interaction.url, options)
+    assert download.await_args.args[2] is options
+    callback.answer.assert_awaited_once_with("Начинаю скачивание…")
+    callback.message.edit_reply_markup.assert_awaited_once_with(reply_markup=None)
+    second.answer.assert_awaited_once_with(handlers._STALE_CALLBACK_MESSAGE)
+    service.create_choice_plan.assert_not_called()
+    assert error_type.__name__ in caplog.text
+    assert "sensitive diagnostic details" not in caplog.text
+    assert all(record.exc_info is None for record in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_concurrent_terminal_callbacks_with_ack_failure_download_once(monkeypatch):
+    interaction = await create_pending_interaction(monkeypatch, terminal_video_mode_plan())
+    payload = build_mode_callback_data(interaction.interaction_id, 0)
+    first, second = callback_query(payload), callback_query(payload)
+
+    async def fail_after_yield(*args):
+        await asyncio.sleep(0)
+        raise telegram_failure(TelegramNetworkError, "ack")
+
+    first.answer.side_effect = fail_after_yield
+    download = AsyncMock()
+    monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
+
+    await asyncio.gather(handle_choice_callback(first), handle_choice_callback(second))
+
+    download.assert_awaited_once()
+    second.answer.assert_awaited_once_with(handlers._STALE_CALLBACK_MESSAGE)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("flow", ["audio", "video"])
+async def test_callback_api_failures_do_not_repeat_media_upload(monkeypatch, flow):
+    interaction = await create_pending_interaction(monkeypatch, terminal_video_mode_plan())
+    service = FakeDownloadService()
+    monkeypatch.setattr(handlers, "download_service", service)
+    monkeypatch.setattr(handlers, "prepare_telegram_video", lambda path: path)
+    monkeypatch.setattr(
+        handlers,
+        "inspect_telegram_video",
+        lambda path: {"streams": [{"codec_type": "video", "width": 640, "height": 360}]},
+    )
+    payload = build_mode_callback_data(interaction.interaction_id, 1 if flow == "audio" else 0)
+    callback = callback_query(payload)
+    callback.answer.side_effect = telegram_failure(TelegramNetworkError, "ack")
+    callback.message.edit_reply_markup.side_effect = telegram_failure(TelegramBadRequest, "edit")
+
+    await handle_choice_callback(callback)
+    await handle_choice_callback(callback_query(payload))
+
+    assert len(service.calls) == 1
+    expected = callback.message.answer_audio if flow == "audio" else callback.message.answer_video
+    other = callback.message.answer_video if flow == "audio" else callback.message.answer_audio
+    expected.assert_awaited_once()
+    other.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_failed_terminal_consume_never_downloads(monkeypatch):
+    interaction = await create_pending_interaction(monkeypatch, terminal_video_mode_plan())
+    store = handlers.pending_interaction_store
+    original_consume = store.consume_terminal
+
+    def competing_consume(*args, **kwargs):
+        original_consume(*args, **kwargs)
+        return original_consume(*args, **kwargs)
+
+    monkeypatch.setattr(store, "consume_terminal", competing_consume)
+    download = AsyncMock()
+    monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
+    callback = callback_query(build_mode_callback_data(interaction.interaction_id, 0))
+
+    await handle_choice_callback(callback)
+
+    download.assert_not_awaited()
+    callback.answer.assert_awaited_once_with("Запрос уже обрабатывается.")
+    callback.message.edit_reply_markup.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("error_type", [TelegramNetworkError, TelegramBadRequest])
+@pytest.mark.parametrize("failure_stage", ["ack", "edit", "both"])
+async def test_quality_transition_api_failure_keeps_recoverable_state(
+    monkeypatch, caplog, error_type, failure_stage
+):
+    interaction = await create_pending_interaction(monkeypatch, choose_mode_plan())
+    payload = build_mode_callback_data(interaction.interaction_id, 0)
+    callback = callback_query(payload)
+    if failure_stage in {"ack", "both"}:
+        callback.answer.side_effect = telegram_failure(error_type, "ack")
+    if failure_stage in {"edit", "both"}:
+        callback.message.edit_reply_markup.side_effect = telegram_failure(error_type, "edit")
+    download = AsyncMock()
+    monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
+
+    await handle_choice_callback(callback)
+
+    result = handlers.pending_interaction_store.lookup(
+        interaction.interaction_id, owner_user_id=123, chat_id=456, message_id=789
+    )
+    assert result.status is PendingInteractionStatus.FOUND
+    assert result.interaction.consumed is False
+    assert result.interaction.active_step is PendingInteractionStep.QUALITY
+    assert result.interaction.selected_mode_index == 0
+    download.assert_not_awaited()
+    callback.message.edit_reply_markup.assert_awaited_once()
+    assert "sensitive diagnostic details" not in caplog.text
+
+    # The old mode button can retry, while an already-applied edit is valid too.
+    if failure_stage in {"edit", "both"}:
+        retry = callback_query(payload)
+        await handle_choice_callback(retry)
+        retry.message.edit_reply_markup.assert_awaited_once()
+        download.assert_not_awaited()
+    quality = callback_query(build_quality_callback_data(interaction.interaction_id, 1))
+    await handle_choice_callback(quality)
+    download.assert_awaited_once_with(
+        quality.message,
+        interaction.url,
+        interaction.plan.mode_choices[0].quality_choices[1].final_options,
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("error_type", [TelegramNetworkError, TelegramBadRequest])
+@pytest.mark.parametrize("phase", ["planning", "download"])
+async def test_metadata_error_notification_failure_is_safe(
+    message, monkeypatch, caplog, error_type, phase
+):
+    original = MetadataExtractionError("private source details")
+    service = FakeDownloadService(
+        plan_error=original if phase == "planning" else None,
+        error=original if phase == "download" else None,
+    )
+    monkeypatch.setattr(handlers, "download_service", service)
+    message.answer.side_effect = telegram_failure(error_type, "notify")
+    message.text = "https://www.youtube.com/watch?v=abc"
+
+    if phase == "planning":
+        await handle_text(message)
+        assert len(service.plan_calls) == 1
+        assert not service.calls
+    else:
+        await handlers._download_and_deliver_media(message, message.text, DownloadOptions())
+        assert len(service.calls) == 1
+
+    message.answer.assert_awaited_once_with(handlers._download_error_message(original))
+    assert "original_error=MetadataExtractionError" in caplog.text
+    assert "telegram_error=" + error_type.__name__ in caplog.text
+    assert "private source details" not in caplog.text
+    assert "sensitive diagnostic details" not in caplog.text
+    assert all(record.exc_info is None for record in caplog.records)
+    message.answer_video.assert_not_awaited()
+    message.answer_audio.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", [asyncio.CancelledError, RuntimeError])
+@pytest.mark.parametrize("stage", ["terminal_ack", "terminal_edit", "mode_ack", "mode_edit"])
+async def test_callback_cancellation_and_programming_errors_propagate(monkeypatch, failure, stage):
+    plan = choose_mode_plan() if stage.startswith("mode") else terminal_video_mode_plan()
+    interaction = await create_pending_interaction(monkeypatch, plan)
+    callback = callback_query(build_mode_callback_data(interaction.interaction_id, 0))
+    target = callback.answer if stage.endswith("ack") else callback.message.edit_reply_markup
+    target.side_effect = failure()
+    download = AsyncMock()
+    monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
+
+    with pytest.raises(failure):
+        await handle_choice_callback(callback)
+
+    download.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", [asyncio.CancelledError, RuntimeError])
+async def test_error_notification_does_not_hide_cancellation_or_programming_errors(
+    message, failure
+):
+    message.answer.side_effect = failure()
+
+    with pytest.raises(failure):
+        await handlers._notify_download_error(message, MetadataExtractionError("test failure"))

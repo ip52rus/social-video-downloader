@@ -54,6 +54,17 @@ terminal download starts so double-clicks cannot launch duplicate downloads. Bot
 makes pending buttons stale; persistent recovery and multi-instance coordination are
 deferred to production reliability work.
 
+After successful atomic terminal consumption, callback acknowledgement and keyboard
+cleanup are best-effort Telegram operations: expected `TelegramAPIError` failures are
+logged by operation and exception class without preventing the one selected download.
+The stored URL and `DownloadOptions` remain authoritative; neither policy nor media
+upload is retried. Cancellation and unrelated programming errors still propagate.
+For nonterminal mode-to-quality transitions, acknowledgement failure does not prevent
+the keyboard edit. An edit failure retains the unconsumed quality state because Telegram
+may have applied the edit before losing the response; an old mode button can retry the
+same transition. Domain download-error notifications are also best-effort, preserving
+the original domain error category when the notification fails.
+
 The synchronous download and media-preparation operations run in worker threads so yt-dlp and FFmpeg do not block the aiogram event loop. Before delivery, the Telegram layer probes media with ffprobe and prepares the downloaded media through this pipeline:
 
 1. MP4 files already containing H.264 video and AAC audio pass through unchanged, without an FFmpeg re-encode.
