@@ -28,6 +28,7 @@ from social_video_downloader.domain.errors import (
 )
 from social_video_downloader.domain.models import DownloadMode, DownloadOptions, Platform
 from social_video_downloader.domain.urls import detect_platform, normalize_media_url
+from social_video_downloader.infrastructure.telegram_audio import prepare_telegram_audio
 from social_video_downloader.infrastructure.telegram_media import (
     inspect_telegram_video,
     prepare_telegram_video,
@@ -236,9 +237,18 @@ async def _download_and_deliver_media(
                 raise MediaProcessingError("The downloader returned a missing output file.")
 
             if options.mode is DownloadMode.AUDIO_ONLY:
+                audio = await asyncio.to_thread(
+                    prepare_telegram_audio,
+                    downloaded.file_path,
+                    downloaded.metadata.duration_seconds,
+                )
+                audio_parameters = (
+                    {"duration": audio.duration} if audio.duration is not None else {}
+                )
                 await message.answer_audio(
-                    FSInputFile(downloaded.file_path),
+                    FSInputFile(audio.file_path),
                     caption=downloaded.metadata.title[:1024],
+                    **audio_parameters,
                 )
                 return
 

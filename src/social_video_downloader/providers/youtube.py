@@ -340,7 +340,7 @@ class YouTubeProvider:
         """Translate a validated quality choice into a yt-dlp format selector."""
         if mode is DownloadMode.AUDIO_ONLY:
             if quality is None:
-                return "ba"
+                return "ba[ext=m4a][acodec~='^(mp4a|aac)']/ba"
             format_id = quality.id.removeprefix("audio:")
             return f"{format_id}-0/{format_id}"
 
