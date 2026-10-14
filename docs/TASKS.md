@@ -81,6 +81,12 @@ This closure does not mean production readiness. Additional client checks, uploa
 - [x] Implement the documented Low, Medium, and High quality-tier mapping semantics for YouTube foundation code. Telegram UI integration remains open.
 - [x] Wire Telegram URL intake and callbacks to `ChoicePlan` for direct download, mode
   choice, quality choice, and blocked states.
+- [x] Prevent expected Telegram acknowledgement/keyboard failures from losing an
+  atomically accepted terminal download; preserve exact stored options and single consume.
+- [x] Keep mode-to-quality transitions recoverable after Telegram API failures and
+  handle secondary domain-error notification failures without an unhandled traceback.
+- [ ] Revalidate this callback-resilience fix in a real Telegram client after deployment;
+  deterministic fault tests do not establish live network-failure recovery.
 - [ ] Design a privacy-conscious analytics event model.
 - [ ] Implement an application-level analytics abstraction and storage only after the analytics design is accepted.
 - [x] Implement YouTube Video/Audio UX with `🎬 Видео` and `🎵 Аудио`.
@@ -190,6 +196,21 @@ Telegram choice wiring implemented in `social_video_downloader.handlers`:
   terminal mode choices, mode-to-quality transition, exact quality resolution, invalid
   indexes, malformed/unknown/expired/wrong-owner/wrong-chat/consumed callbacks,
   double-click protection, and callback policy-boundary behavior.
+
+Focused callback resilience implemented on 2026-10-15:
+
+- Expected Telegram API/network failures during terminal acknowledgement or keyboard
+  cleanup no longer prevent the accepted download. Atomic consume still admits only
+  one execution, using the original URL/options, with no media-upload retry.
+- Nonterminal transition failures retain unconsumed state; an old mode button can retry
+  the same quality keyboard. No replacement interaction or persistence was added.
+- Failed domain-error notifications log the original error category and Telegram
+  exception class without logging exception contents, source URLs, or user identifiers.
+- Deterministic handler/store verification: 94 passed, including fault injection,
+  concurrent duplicate callbacks, exact options, single media upload, and propagation
+  of cancellation/programming errors. Full quality-check results are in TESTING.md.
+- This is a bounded reliability fix, not Phase 4 completion or production-readiness
+  evidence. The running Compose stack has not been rebuilt with this change.
 
 Analytics requirements for this phase:
 

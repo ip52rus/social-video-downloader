@@ -101,6 +101,18 @@ def _download_error_message(error: DownloaderError) -> str:
     return "Не удалось обработать эту ссылку. Проверь её и попробуй ещё раз."
 
 
+async def _notify_download_error(message: Message, error: DownloaderError) -> None:
+    """Attempt an error response without replacing the original domain failure."""
+    try:
+        await message.answer(_download_error_message(error))
+    except TelegramAPIError as notification_error:
+        logger.warning(
+            "Download error notification failed: original_error=%s telegram_error=%s",
+            type(error).__name__,
+            type(notification_error).__name__,
+        )
+
+
 @router.message(CommandStart())
 async def handle_start(message: Message) -> None:
     """Explain current capabilities and how to submit a link."""
@@ -146,7 +158,7 @@ async def handle_text(message: Message) -> None:
         plan = download_service.create_choice_plan(normalized_url)
     except DownloaderError as error:
         logger.warning("Media planning failed: %s", type(error).__name__)
-        await message.answer(_download_error_message(error))
+        await _notify_download_error(message, error)
         return
     except Exception:
         logger.exception("Unexpected failure while planning media download")
@@ -291,7 +303,7 @@ async def _download_and_deliver_media(
         await message.answer("Не удалось отправить файл в Telegram. Попробуй ещё раз позже.")
     except DownloaderError as error:
         logger.warning("Media download failed: %s", type(error).__name__)
-        await message.answer(_download_error_message(error))
+        await _notify_download_error(message, error)
     except Exception:
         logger.exception("Unexpected failure while downloading or delivering media")
         await message.answer("Произошла внутренняя ошибка. Попробуй ещё раз позже.")
@@ -370,14 +382,22 @@ async def _handle_mode_callback(
         await callback.answer(_callback_status_message(transition.status))
         return
 
-    await callback.answer()
+    try:
+        await callback.answer()
+    except TelegramAPIError as error:
+        logger.warning("Quality transition acknowledgement failed: %s", type(error).__name__)
     if callback.message is not None:
-        await callback.message.edit_reply_markup(
-            reply_markup=_quality_keyboard(
-                interaction.interaction_id,
-                transition.interaction.plan.mode_choices[mode_index].quality_choices,
+        try:
+            await callback.message.edit_reply_markup(
+                reply_markup=_quality_keyboard(
+                    interaction.interaction_id,
+                    transition.interaction.plan.mode_choices[mode_index].quality_choices,
+                )
             )
-        )
+        except TelegramAPIError as error:
+            # Keep the state: the edit may have reached Telegram despite a lost response.
+            # An old mode button can safely retry this same nonterminal transition.
+            logger.warning("Quality keyboard edit failed: %s", type(error).__name__)
 
 
 async def _handle_quality_callback(
@@ -413,9 +433,15 @@ async def _consume_and_download(
         return
 
     pending_interaction_store.remove(interaction.interaction_id)
-    await callback.answer("Начинаю скачивание…")
+    try:
+        await callback.answer("Начинаю скачивание…")
+    except TelegramAPIError as error:
+        logger.warning("Terminal callback acknowledgement failed: %s", type(error).__name__)
     if callback.message is not None:
-        await callback.message.edit_reply_markup(reply_markup=None)
+        try:
+            await callback.message.edit_reply_markup(reply_markup=None)
+        except TelegramAPIError as error:
+            logger.warning("Terminal keyboard cleanup failed: %s", type(error).__name__)
         await _download_and_deliver_media(callback.message, interaction.url, options)
 
 

@@ -46,6 +46,35 @@ uv run ruff check .
 uv run ruff format --check .
 ```
 
+## Focused Telegram callback resilience (2026-10-15)
+
+Deterministic fault-injection coverage in `tests/test_handlers.py` verifies:
+
+- Network/API failures during terminal acknowledgement and keyboard cleanup, separately
+  and together, still start exactly one download with the exact stored URL/options.
+- Repeated and concurrent terminal callbacks cannot start a second download; a failed
+  atomic consume never starts one. Audio/video delivery is not retried.
+- Mode-to-quality acknowledgement failure still attempts the keyboard edit; edit failure
+  preserves unconsumed state and permits retrying the old mode button or using a quality
+  keyboard whose edit reached Telegram before the response was lost.
+- Metadata/domain-error notification failures do not rerun planning/download and log
+  only original/Telegram exception categories. Cancellation and unrelated programming
+  errors propagate through the new handlers.
+
+Verification for this fix:
+
+- Handler/store tests: 94 passed.
+- `uv run pytest`: 303 passed, 1 skipped (opt-in external YouTube live matrix).
+- `uv run ruff check .`: passed.
+- `uv run ruff format --check .`: 57 files already formatted.
+- `docker compose config --quiet`: passed; rendered configuration was not printed.
+- `git diff --check`: passed.
+
+These are unit and deterministic integration checks, not real Telegram network-failure
+tests. Existing containers were not rebuilt/restarted; real-client revalidation of the
+changed code remains outstanding. No claim of Phase 4 completion or production
+reliability follows from this bounded fix.
+
 ## PR #27 media-preparation validation
 
 Deterministic automated coverage:

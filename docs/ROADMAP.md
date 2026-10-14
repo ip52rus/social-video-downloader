@@ -46,6 +46,14 @@ Core UX rule: minimum steps + provider-specific capabilities + consistent visual
 The bot must not force identical options on every provider or add an extra click when
 there is no meaningful choice.
 
+Focused reliability progress (2026-10-15): terminal callback acknowledgement/keyboard
+API failures no longer block an atomically accepted download; nonterminal quality
+transitions retain recoverable state, and domain-error notification failures are handled
+locally. Deterministic fault tests cover this bounded fix. Next gate for this change is
+real Telegram client revalidation after an explicitly approved Compose deployment.
+The current running stack has not been rebuilt. Phase 4 and production reliability
+remain open; this change adds no global Telegram or media-upload retries.
+
 Planned work:
 
 - define the provider/content capability interpretation used by Telegram UX, reusing the
