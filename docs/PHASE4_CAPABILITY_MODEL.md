@@ -392,6 +392,251 @@ errors before a plan can be built.
 - Whether to extract a shared provider resolver later if planning grows beyond a single
   `DownloadService.create_choice_plan()` method.
 
+## Telegram Interaction State Flow
+
+Telegram should be a renderer and executor for `ChoicePlan`, not a second product-policy
+engine. The handler must call `DownloadService.create_choice_plan(url)`, render the
+choices already present in the plan, store only the temporary interaction context needed
+for callbacks, and eventually call the existing download/delivery flow with the stored
+`DownloadOptions`.
+
+The Telegram layer must not:
+
+- call provider capability methods directly;
+- decide whether `VIDEO_ONLY` should be hidden;
+- compute Low / Medium / High tiers;
+- reinterpret `quality_id=None` as High, best, or fallback policy;
+- parse `QualityOption.label` or provider format IDs;
+- store Telegram labels, callback syntax, or message text in application models.
+
+### State storage approach
+
+Use a small dedicated in-memory pending-interaction store for the first implementation.
+
+Reasons:
+
+- the current project does not already use aiogram FSM/state storage;
+- a dedicated store keeps callback resolution easy to test without Telegram transport;
+- no Redis, database, queue, or persistence is justified for a short-lived interaction;
+- in-memory state makes restart behavior explicit: pending buttons become stale and safe.
+
+Aiogram FSM can be reconsidered later if broader multi-step bot flows need one shared
+state mechanism. Redis or database-backed state belongs to a later reliability stage only
+if measured deployment requirements justify persistence or multi-instance coordination.
+
+### Pending interaction model
+
+The Telegram adapter should create one pending interaction only when the plan requires a
+button response: `CHOOSE_MODE` or `CHOOSE_QUALITY`.
+
+Minimal transient state:
+
+- `interaction_id`: short opaque random ID, for example 128 bits encoded with URL-safe
+  characters;
+- `owner_user_id`: Telegram user ID that created the interaction;
+- `chat_id`: chat where the interaction was shown;
+- `message_id`: bot message containing the buttons, recorded after send/edit where
+  available;
+- `url`: source URL needed later to call `DownloadService.download()`; storing the
+  validated user-submitted URL is sufficient because the service normalizes again;
+- `plan`: the immutable `ChoicePlan` returned by the application service;
+- `created_at` and `expires_at`;
+- `consumed`: boolean set atomically before starting a terminal download;
+- optional `active_step`: `mode` or `quality`, useful for validating callback type;
+- optional `selected_mode_index`: set only when a mode selection opens that
+  `ModeChoice`'s quality choices, so later quality callbacks resolve against the exact
+  stored `ModeChoice.quality_choices`.
+
+The pending state may temporarily contain the URL because callback handling needs it for
+download. The URL must not be placed in callback data, intentionally logged, emitted to
+analytics, or persisted.
+
+The store key is `interaction_id`. Ownership checks use `owner_user_id` and `chat_id`.
+`message_id` is not a security boundary by itself, but it helps reject callbacks from a
+different message if Telegram supplies it and helps clean up stale button messages.
+
+### Callback payload
+
+Callback data should be compact and opaque:
+
+- mode selection: `dl:v1:<interaction_id>:m:<mode_index>`;
+- quality selection: `dl:v1:<interaction_id>:q:<quality_index>`.
+
+Rules:
+
+- `interaction_id` is the only lookup key in callback data;
+- callback data contains no source URL, title, author/channel, provider format ID, or
+  Telegram label text;
+- callback data must fit Telegram's 64-byte callback-data limit; with a 128-bit URL-safe
+  interaction ID, payloads such as `dl:v1:<interaction_id>:m:<mode_index>` remain well
+  below that limit;
+- `mode_index` indexes `plan.mode_choices`;
+- `quality_index` indexes either `plan.mode_choices[selected_mode_index].quality_choices`
+  or `plan.quality_choices`, depending on the current step;
+- indices are validated against the stored plan before any download starts;
+- callback payload parsing errors are treated as invalid callbacks, not domain errors.
+
+The handler may map choices to user-facing labels while rendering:
+
+- `UserChoiceKind.VIDEO` -> `🎬 Видео`;
+- `UserChoiceKind.AUDIO` -> `🎵 Аудио`;
+- `QualityTier.LOW` -> `Низкое`;
+- `QualityTier.MEDIUM` -> `Среднее`;
+- `QualityTier.HIGH` -> `Высокое`.
+
+These labels belong only to Telegram presentation code.
+
+### Ownership and stale behavior
+
+Callback handling must validate:
+
+- payload parses as the expected version and action type;
+- `interaction_id` exists;
+- pending interaction has not expired;
+- `consumed` is false;
+- callback user ID equals `owner_user_id`;
+- callback chat ID equals `chat_id`;
+- optional callback message ID matches `message_id` when available;
+- selected index exists for the stored step.
+
+Safe behavior:
+
+- invalid callback payload: answer callback with a short generic error and do not
+  download;
+- unknown interaction: tell the user the selection is no longer available and ask them to
+  send the link again;
+- expired interaction: delete the pending state lazily, tell the user to send the link
+  again, and do not download;
+- callback from another user: answer callback privately that the buttons belong to
+  another user and do not download;
+- already consumed interaction: answer that the request is already being processed and do
+  not start another download;
+- download error after valid selection: use the existing safe download-error handling.
+
+Do not expose internal `blocked_reason`, provider errors, callback parse details, or debug
+state to the user.
+
+### Multiple interactions and replacement
+
+When a user sends a new URL while older buttons still exist, the simplest safe behavior is
+to keep the old pending interaction until it expires or is consumed. Each callback remains
+bound to its own `interaction_id`, user, and chat, so older buttons cannot resolve to a
+newer URL.
+
+The first implementation may optionally expire existing pending interactions for the same
+`owner_user_id` and `chat_id` when a new URL creates a new pending interaction. This is a
+UX cleanup choice, not a correctness requirement. If replacement is implemented, old
+buttons should produce the normal stale/expired response.
+
+### TTL and cleanup
+
+Use a short interaction TTL, for example 15 minutes.
+
+Cleanup rules:
+
+- terminal callback selection: set `consumed=True` atomically, remove the pending entry
+  before or immediately after starting the download task;
+- expired access: remove the pending entry lazily and report stale interaction;
+- optional replacement: remove prior pending entries for the same user/chat;
+- bot restart: in-memory store is empty, so existing buttons become unknown/stale.
+
+No background cleanup worker is required initially. Lazy expiration on lookup and on new
+interaction creation is enough for a single-process MVP. Production recovery and
+multi-instance coordination remain Phase 9 concerns.
+
+### Double-click and concurrency
+
+A terminal callback must atomically consume the pending interaction before starting the
+download. A second click on the same terminal choice should see `consumed=True` or a
+missing interaction and must not start another download.
+
+For a non-terminal mode callback that opens a quality screen, the interaction remains
+pending and moves to the quality step. If the user clicks the same mode twice quickly, the
+handler should either edit/show the same quality choices idempotently or answer that the
+interaction is already on the quality step. It must not create multiple independent
+pending entries for the same original plan.
+
+Single-process locking around the in-memory store is sufficient for this stage. Do not
+design distributed locks or cross-process coordination now.
+
+### Flow details
+
+`DIRECT_DOWNLOAD`:
+
+1. Handler receives URL.
+2. Handler calls `create_choice_plan(url)`.
+3. Handler calls existing download/delivery flow immediately with
+   `plan.automatic_options`.
+4. No pending interaction is created.
+
+`CHOOSE_MODE`:
+
+1. Handler receives URL and creates a plan.
+2. Handler creates a pending interaction with the plan and source URL.
+3. Handler renders one button per `plan.mode_choices`.
+4. Audio terminal choice resolves directly to its stored `ModeChoice.final_options`.
+5. Video terminal choice resolves directly to its stored `ModeChoice.final_options`.
+6. Video with `ModeChoice.quality_choices` records the selected mode index, moves the
+   same pending interaction to the quality step, and renders only those stored quality
+   choices.
+7. Handler never computes tiers or mode policy during callback processing.
+
+`CHOOSE_QUALITY`:
+
+1. Handler receives URL and creates a plan.
+2. Handler creates a pending interaction with `plan.quality_choices`.
+3. Handler renders only meaningful `QualityChoice` values already present in the plan.
+4. Callback resolves by index to the exact stored `QualityChoice.final_options`.
+
+`BLOCKED`:
+
+1. Handler receives URL and creates a plan.
+2. Handler sends a concise user-facing message that no safe download option is available.
+3. Handler does not create pending interaction state and does not start download.
+
+### Current application API sufficiency
+
+The current `ChoicePlan` API is sufficient for the first Telegram interaction
+implementation:
+
+- `ModeChoice.final_options` identifies terminal mode choices;
+- `ModeChoice.quality_choices` identifies the next quality step after mode selection;
+- `ChoicePlan.quality_choices` supports an immediately implied quality-selection state;
+- every `QualityChoice.final_options` already contains the exact `DownloadOptions`;
+- `ChoicePlan.automatic_options` supports direct download;
+- `ChoicePlan.blocked_reason` and `unavailable_choices` support safe blocked messaging and
+  later analytics facts.
+
+No application-model extension is required before implementing Telegram handlers. If
+later Telegram code needs stable non-index identifiers for choices, add display-layer
+tokens in the pending store rather than changing provider or domain models.
+
+### Telegram interaction implementation sequence
+
+1. Add an in-memory pending-interaction store with TTL, ownership checks, and atomic
+   consume.
+2. Add callback-data parsing/building helpers for versioned mode and quality callbacks.
+3. Update URL intake to call `DownloadService.create_choice_plan(url)`.
+4. Route `DIRECT_DOWNLOAD` to the existing download/delivery flow.
+5. Render mode buttons for `CHOOSE_MODE`.
+6. Render quality buttons for `CHOOSE_QUALITY` and mode-selected quality steps.
+7. Resolve callbacks to stored `DownloadOptions` and call existing download/delivery.
+8. Add deterministic tests for direct, mode, quality, blocked, stale, expired,
+   wrong-owner, consumed, and double-click paths.
+
+### Telegram interaction non-goals
+
+This design does not implement:
+
+- Telegram buttons, handlers, callbacks, or FSM;
+- Redis/database-backed interaction state;
+- analytics events, storage, or retention policy;
+- progress UI;
+- cancellation;
+- persistent recovery after bot restart;
+- multi-instance coordination;
+- monetization or access control.
+
 ## YouTube Policy
 
 YouTube can technically expose:
@@ -643,7 +888,7 @@ Phase 4 capability design does not:
 - rank formats by bitrate, estimated size, codec, or network conditions in product
   policy;
 - implement analytics storage, database tables, queues, or external analytics services;
-- implement Telegram UI in the quality-tier foundation stage.
+- implement Telegram UI in the application choice-model or interaction-design stages.
 
 ## Implementation Progress
 
@@ -664,10 +909,13 @@ Implemented and covered by deterministic tests:
   ordering;
 - deterministic planning for hidden `VIDEO_ONLY`, audio direct options, legitimate
   single-path automatic provider behavior, and unsafe unclassifiable video qualities.
+- Telegram interaction state-flow design for rendering `ChoicePlan`, pending callback
+  state, ownership checks, stale handling, TTL, and double-click safety.
 
 Not implemented yet:
 
 - Telegram buttons/state for Video/Audio or quality selection;
+- pending-interaction store and callback handlers;
 - analytics events or storage;
 - file-size prediction, bitrate scoring, 4K/Maximum policy, or provider-specific
   branching in handlers.
@@ -681,15 +929,16 @@ Recommended Phase 4 implementation order:
 2. Reuse the implemented Low/Medium/High `QualityTierPlan` foundation for video quality
    decisions.
 3. Define Telegram interaction/state flow from the choice-plan output.
-4. Implement YouTube Video/Audio UX from `ChoicePlan`.
-5. Implement YouTube video quality choice from `QualityTierPlan`.
-6. Define privacy-conscious analytics events, including available, hidden, shown, and
+4. Implement the pending-interaction store and callback-data helpers.
+5. Implement YouTube Video/Audio UX from `ChoicePlan`.
+6. Implement YouTube video quality choice from `QualityTierPlan`.
+7. Define privacy-conscious analytics events, including available, hidden, shown, and
    selected option states.
-7. Design and implement analytics abstraction/storage only after the event model is
+8. Design and implement analytics abstraction/storage only after the event model is
    accepted.
-8. Validate provider capability combinations, policy decisions, UX flow, and analytics
+9. Validate provider capability combinations, policy decisions, UX flow, and analytics
    events.
-9. Use real usage evidence later to remove or simplify choices that users do not need.
+10. Use real usage evidence later to remove or simplify choices that users do not need.
 
 ## Unresolved Decisions
 

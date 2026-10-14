@@ -76,7 +76,7 @@ This closure does not mean production readiness. Additional client checks, uploa
 - [x] Reuse existing `DownloadMode`, `QualityOption`, `get_supported_modes()`, and `get_available_qualities()` as the provider capability source of truth for the Low/Medium/High foundation.
 - [x] Define the product/UX policy foundation that maps video `QualityOption` values to Low/Medium/High tier choices without Telegram transport coupling.
 - [x] Implement immutable application choice-plan models and `DownloadService.create_choice_plan(url)` without Telegram transport coupling.
-- [ ] Design the Telegram interaction and state flow.
+- [x] Design the Telegram interaction and state flow.
 - [x] Implement the documented Low, Medium, and High quality-tier mapping semantics for YouTube foundation code. Telegram UI integration remains open.
 - [ ] Design a privacy-conscious analytics event model.
 - [ ] Implement an application-level analytics abstraction and storage only after the analytics design is accepted.
@@ -144,6 +144,18 @@ Application choice-model foundation implemented in application services:
   selection, hidden `VIDEO_ONLY`, concrete audio options, three/two/one quality-tier
   outcomes, unsafe unclassifiable quality blocking, no useful modes, deterministic mode
   ordering, and actionable terminal options.
+
+Telegram interaction state-flow design added to `docs/PHASE4_CAPABILITY_MODEL.md`:
+
+- Use a small dedicated in-memory pending-interaction store for callback flows instead of
+  aiogram FSM, Redis, or a database at this stage.
+- Callback data contains only a version, opaque interaction ID, action type, and choice
+  index; URLs, titles, authors, and provider format details stay out of callback data.
+- Pending state is owned by user and chat, stores the existing `ChoicePlan` plus the URL
+  needed for download, expires lazily after a short TTL, and is atomically consumed before
+  terminal downloads to avoid double-click duplicates.
+- Documented direct download, mode choice, quality choice, blocked, stale, expired,
+  wrong-owner, consumed, restart, and download-error behavior.
 
 Analytics requirements for this phase:
 
