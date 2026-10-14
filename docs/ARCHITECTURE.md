@@ -45,6 +45,15 @@ before the provider spike. If a provider/content combination only has normal vid
 meaningful quality alternatives, Telegram should start the download directly without
 audio or quality screens.
 
+Future Telegram interaction state should use a small in-memory pending-interaction store
+for callback flows that need mode or quality buttons. Callback data should contain only a
+versioned action, a short opaque interaction ID, and a choice index; it must not contain
+source URLs, titles, authors, or provider format details. Pending interactions are owned
+by user and chat, expire lazily after a short TTL, and are consumed atomically before a
+terminal download starts so double-clicks cannot launch duplicate downloads. Bot restart
+makes pending buttons stale; persistent recovery and multi-instance coordination are
+deferred to production reliability work.
+
 The synchronous download and media-preparation operations run in worker threads so yt-dlp and FFmpeg do not block the aiogram event loop. Before delivery, the Telegram layer probes media with ffprobe and prepares the downloaded media through this pipeline:
 
 1. MP4 files already containing H.264 video and AAC audio pass through unchanged, without an FFmpeg re-encode.
