@@ -125,6 +125,39 @@ transcoding benchmark was performed. M4A playback and displayed duration still r
 real-client revalidation after deployment. These results do not close Phase 4 or establish
 production reliability.
 
+## YouTube watch URLs with playlist context (2026-10-15)
+
+Network-free regressions in `tests/test_youtube_provider.py` cover:
+
+- Ordinary single-video targets remain unchanged. Watch URLs with a valid single `v`
+  and playlist `list` use the individual-video extraction target; unrelated query
+  parameters retain their values and original escaping.
+- Encoded parameter names/IDs, empty/repeated playlist context, invalid/missing/duplicate
+  video IDs, playlist-only URLs, credentials, schemes, and deceptive hostnames.
+- A fake extractor reproduces yt-dlp's unprocessed `_type=url` response and the former
+  false `BLOCKED / no_useful_modes`. Canonicalized URLs instead produce identical
+  `CHOOSE_MODE` plans with audio/video and unchanged Low/Medium/High choices.
+- Both inspection orders share one cache entry. Downloads use the canonical target
+  with or without a prior inspection and reuse the inspected snapshot.
+- Metadata calls retain `download=False`, `process=False`, and `noplaylist=True`, never
+  invoke fake media processing, and do not enumerate playlists. Installed yt-dlp's local
+  extractor matching confirms the canonical targets select the video extractor.
+
+Verification:
+
+- `uv run pytest`: 417 passed, 1 skipped; 60 new parametrized regression cases. The
+  opt-in external YouTube matrix was explicitly disabled; synthetic FFmpeg tests ran.
+- `uv run ruff check .`: passed.
+- `uv run ruff format --check .`: 60 files already formatted.
+- `docker compose config --quiet`: passed; rendered configuration was not printed.
+- `git diff --check`: passed.
+
+The checks used offline uv execution with a temporary cache directory because the
+sandbox could not access the default uv cache. No dependency/configuration changes or
+live YouTube/Telegram requests were made. Compose remained running without a rebuild or
+restart. Real Telegram validation of a playlist-context watch URL remains required after
+deployment; Phase 4 and production reliability remain open.
+
 ## PR #27 media-preparation validation
 
 Deterministic automated coverage:

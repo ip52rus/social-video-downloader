@@ -2,14 +2,17 @@
 
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
 from social_video_downloader.domain.errors import (
     DownloadFailedError,
+    InvalidMediaURLError,
     MediaProcessingError,
     MetadataExtractionError,
     UnsupportedDownloadModeError,
+    UnsupportedPlatformError,
     UnsupportedQualityError,
 )
 from social_video_downloader.domain.models import (
@@ -18,6 +21,9 @@ from social_video_downloader.domain.models import (
     Platform,
 )
 from social_video_downloader.providers.youtube import YouTubeProvider
+from social_video_downloader.services.choice_model import ChoicePlanState, UserChoiceKind
+from social_video_downloader.services.download import DownloadService
+from social_video_downloader.services.quality_tiers import QualityTier
 
 VIDEO_INFO: dict[str, Any] = {
     "id": "abc123",
@@ -631,3 +637,194 @@ def test_automatic_audio_download_installs_native_preference(tmp_path):
 
     assert factory.instances[-1].params["format"] == "ba[ext=m4a][acodec~='^(mp4a|aac)']/ba"
     assert "merge_output_format" not in factory.instances[-1].params
+
+
+SINGLE_WATCH_URL = "https://www.youtube.com/watch?v=abcDEF123_-"
+CONTEXT_WATCH_URL = f"{SINGLE_WATCH_URL}&list=PLexample"
+
+
+class PlaylistContextYoutubeDL(FakeYoutubeDL):
+    """Model yt-dlp's unprocessed redirect without resolving it or using a network."""
+
+    def extract_info(self, url: str, download: bool = True, **kwargs: Any) -> dict[str, Any]:
+        info = super().extract_info(url, download=download, **kwargs)
+        assert self.params["noplaylist"] is True
+        assert download is False
+        assert kwargs["process"] is False
+        if "list" in parse_qs(urlsplit(url).query):
+            return {"_type": "url", "url": SINGLE_WATCH_URL, "ie_key": "Youtube"}
+        return info
+
+
+class PlaylistContextFactory(FakeYoutubeDLFactory):
+    def __call__(self, params: dict[str, Any]) -> PlaylistContextYoutubeDL:
+        client = PlaylistContextYoutubeDL(params, self.info)
+        self.instances.append(client)
+        return client
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        SINGLE_WATCH_URL,
+        f"{SINGLE_WATCH_URL}&t=10&si=share%2Bvalue",
+        "https://m.youtube.com/watch?v=abcDEF123_-",
+        "http://youtube.com/watch?v=abcDEF123_-",
+        "https://youtu.be/abcDEF123_-?si=share",
+        "https://www.youtube.com/shorts/abcDEF123_-",
+    ],
+)
+def test_single_video_targets_are_preserved(url: str, factory: FakeYoutubeDLFactory) -> None:
+    metadata = YouTubeProvider(ydl_factory=factory).extract_metadata(url)
+
+    assert metadata.source_url == url
+    assert factory.instances[0].extract_calls == [(url, False, False)]
+    assert not factory.instances[0].processed
+
+
+@pytest.mark.parametrize(
+    ("url", "target"),
+    [
+        (CONTEXT_WATCH_URL, SINGLE_WATCH_URL),
+        ("https://www.youtube.com/watch?list=PLexample&v=abcDEF123_-", SINGLE_WATCH_URL),
+        (f"{SINGLE_WATCH_URL}&list=", SINGLE_WATCH_URL),
+        (f"{CONTEXT_WATCH_URL}&list=PLother", SINGLE_WATCH_URL),
+        (f"{SINGLE_WATCH_URL}&%6cist=PLexample", SINGLE_WATCH_URL),
+        ("https://www.youtube.com/watch?v=abcDEF123%5F-&list=PLexample", SINGLE_WATCH_URL),
+        ("https://www.youtube.com/watch?%76=abcDEF123_-&list=PLexample", SINGLE_WATCH_URL),
+        (
+            f"{CONTEXT_WATCH_URL}&index=2&start_radio=1&t=10&si=share%2Bvalue",
+            f"{SINGLE_WATCH_URL}&index=2&start_radio=1&t=10&si=share%2Bvalue",
+        ),
+        (
+            "https://m.youtube.com/watch?v=abcDEF123_-&list=PLexample",
+            "https://m.youtube.com/watch?v=abcDEF123_-",
+        ),
+    ],
+)
+def test_watch_playlist_context_is_removed_before_extraction(url: str, target: str) -> None:
+    from yt_dlp.extractor.youtube import YoutubeIE, YoutubeTabIE
+
+    factory = PlaylistContextFactory()
+    metadata = YouTubeProvider(ydl_factory=factory).extract_metadata(url)
+
+    assert metadata.source_url == target
+    assert factory.instances[0].extract_calls == [(target, False, False)]
+    assert not factory.instances[0].processed
+    assert YoutubeIE.suitable(target)
+    assert not YoutubeTabIE.suitable(target)
+
+
+def test_unprocessed_playlist_context_redirect_reproduces_false_blocked() -> None:
+    raw = PlaylistContextYoutubeDL(YouTubeProvider._base_options(), VIDEO_INFO)
+    redirect = raw.extract_info(CONTEXT_WATCH_URL, download=False, process=False)
+    assert redirect["_type"] == "url"
+    provider = YouTubeProvider(ydl_factory=FakeYoutubeDLFactory(info=redirect))
+
+    plan = DownloadService([provider]).create_choice_plan(SINGLE_WATCH_URL)
+
+    assert plan.state is ChoicePlanState.BLOCKED
+    assert plan.blocked_reason == "no_useful_modes"
+    assert not raw.processed
+
+
+@pytest.mark.parametrize("context_first", [True, False])
+def test_equivalent_watch_urls_share_choice_plan_and_inspection_cache(context_first: bool) -> None:
+    factory = PlaylistContextFactory()
+    provider = YouTubeProvider(ydl_factory=factory)
+    service = DownloadService([provider])
+    first, second = (
+        (CONTEXT_WATCH_URL, SINGLE_WATCH_URL)
+        if context_first
+        else (SINGLE_WATCH_URL, CONTEXT_WATCH_URL)
+    )
+
+    plan = service.create_choice_plan(first)
+    assert service.create_choice_plan(second) == plan
+    assert provider.extract_metadata(second).source_url == SINGLE_WATCH_URL
+    assert plan.state is ChoicePlanState.CHOOSE_MODE
+    assert plan.blocked_reason is None
+    assert plan.technical_modes == (
+        DownloadMode.VIDEO_WITH_AUDIO,
+        DownloadMode.VIDEO_ONLY,
+        DownloadMode.AUDIO_ONLY,
+    )
+    video, audio = plan.mode_choices
+    assert video.kind is UserChoiceKind.VIDEO
+    assert audio.kind is UserChoiceKind.AUDIO
+    assert audio.final_options == DownloadOptions(mode=DownloadMode.AUDIO_ONLY)
+    assert [(choice.tier, choice.quality.id) for choice in video.quality_choices] == [
+        (QualityTier.LOW, "height-360"),
+        (QualityTier.MEDIUM, "height-720"),
+        (QualityTier.HIGH, "height-1080"),
+    ]
+    assert len(factory.instances) == 1
+    assert factory.instances[0].extract_calls == [(SINGLE_WATCH_URL, False, False)]
+    assert not factory.instances[0].processed
+
+
+@pytest.mark.parametrize("cached_url", [None, SINGLE_WATCH_URL, CONTEXT_WATCH_URL])
+@pytest.mark.parametrize("download_url", [SINGLE_WATCH_URL, CONTEXT_WATCH_URL])
+def test_playlist_context_download_uses_canonical_target_and_cached_info(
+    cached_url: str | None, download_url: str, tmp_path: Path
+) -> None:
+    factory = PlaylistContextFactory()
+    provider = YouTubeProvider(ydl_factory=factory)
+    if cached_url is not None:
+        provider.get_supported_modes(cached_url)
+
+    downloaded = provider.download(download_url, tmp_path)
+
+    assert downloaded.metadata.source_url == SINGLE_WATCH_URL
+    assert downloaded.file_path.is_file()
+    assert [call for client in factory.instances for call in client.extract_calls] == [
+        (SINGLE_WATCH_URL, False, False)
+    ]
+    assert sum(client.processed for client in factory.instances) == 1
+    assert factory.instances[-1].processed
+
+
+@pytest.mark.parametrize(
+    ("url", "error"),
+    [
+        ("https://www.youtube.com/playlist?list=PLexample", MetadataExtractionError),
+        ("https://www.youtube.com/playlist/?list=PLexample", MetadataExtractionError),
+        ("https://www.youtube.com/playlist", MetadataExtractionError),
+        ("https://www.youtube.com/playlist?v=abcDEF123_-&list=PLexample", MetadataExtractionError),
+        ("https://www.youtube.com/watch?list=PLexample", InvalidMediaURLError),
+        ("https://www.youtube.com/watch?v=&list=PLexample", InvalidMediaURLError),
+        ("https://www.youtube.com/watch?v=short&list=PLexample", InvalidMediaURLError),
+        (f"{SINGLE_WATCH_URL}x&list=PLexample", InvalidMediaURLError),
+        (f"{CONTEXT_WATCH_URL}&v=otherID1234", InvalidMediaURLError),
+        (f"{CONTEXT_WATCH_URL}&v=", InvalidMediaURLError),
+        (f"{CONTEXT_WATCH_URL}&v=abcDEF123_-", InvalidMediaURLError),
+        (f"{CONTEXT_WATCH_URL}&%76=otherID1234", InvalidMediaURLError),
+        ("https://www.youtube.com/watch?v=abcDEF123%2F&list=PLexample", InvalidMediaURLError),
+        ("https://www.youtube.com/watch?v=abcDEF123%20&list=PLexample", InvalidMediaURLError),
+        ("https://www.youtube.com/watch?v=abcDEF123%00&list=PLexample", InvalidMediaURLError),
+        (
+            "https://user:password@youtube.com/watch?v=abcDEF123_-&list=PLexample",
+            InvalidMediaURLError,
+        ),
+        ("ftp://youtube.com/watch?v=abcDEF123_-&list=PLexample", InvalidMediaURLError),
+        (
+            "https://youtube.com.example.org/watch?v=abcDEF123_-&list=PLexample",
+            UnsupportedPlatformError,
+        ),
+    ],
+)
+@pytest.mark.parametrize("operation", ["inspect", "download"])
+def test_invalid_playlist_context_is_rejected_before_extraction(
+    url: str, error: type[Exception], operation: str, tmp_path: Path
+) -> None:
+    factory = PlaylistContextFactory()
+    provider = YouTubeProvider(ydl_factory=factory)
+
+    with pytest.raises(error):
+        if operation == "download":
+            provider.download(url, tmp_path)
+        else:
+            provider.extract_metadata(url)
+
+    assert factory.instances == []
+    assert list(tmp_path.iterdir()) == []
