@@ -46,43 +46,26 @@ Core UX rule: minimum steps + provider-specific capabilities + consistent visual
 The bot must not force identical options on every provider or add an extra click when
 there is no meaningful choice.
 
-Focused reliability progress (2026-10-15): terminal callback acknowledgement/keyboard
-API failures no longer block an atomically accepted download; nonterminal quality
-transitions retain recoverable state, and domain-error notification failures are handled
-locally. Deterministic fault tests cover this bounded fix. Next gate for this change is
-real Telegram client revalidation after an explicitly approved Compose deployment.
-The current running stack has not been rebuilt. Phase 4 and production reliability
-remain open; this change adds no global Telegram or media-upload retries.
+Functional scope ACCEPTED on 2026-10-15 against main
+`ced1200bf2a81a1bb63c200e6441e8458d0af0df`, using the existing Compose bot and Local Bot
+API. Real Telegram validation confirmed the playlist-context watch URL, Video/Audio
+choices, landscape Medium 936x720, portrait Medium 720x1280 and High 1080x1920, playable
+image/sound, M4A playback/duration, callback protection and distinct-URL isolation.
+Earlier Local Bot API validation also delivered a file above 50 MB. Evidence and its
+limits are recorded in [TESTING.md](TESTING.md#phase-4-functional-acceptance-2026-10-15).
 
-Focused quality-safety correction (2026-10-15): YouTube video choices now require complete
-dimensions at or below 1080-class, with exact dimension selectors during download.
-Unknown/partial/above-ceiling video leaves audio-only available or produces a blocked
-plan. Deterministic regressions cover the previous orientation mismatch and unrestricted
-empty-quality path. Real Telegram revalidation after approved deployment remains the
-next gate for this correction; Phase 4 is not complete.
+The application choice model, inline interaction state, safe quality mapping and media
+delivery are accepted within that tested functional scope. This is not exhaustive format
+coverage, acceptance of all original backlog items, or production readiness.
 
-Planned work:
+Remaining work retains the existing phase definitions:
 
-- define the provider/content capability interpretation used by Telegram UX, reusing the
-  existing `DownloadMode`, `QualityOption`, `get_supported_modes()`, and
-  `get_available_qualities()` provider contract;
-- design the complete Telegram interaction and state flow;
-- apply the Low, Medium, and High YouTube quality semantics from the Phase 4 capability
-  model;
-- design a privacy-conscious analytics event model;
-- implement an application-level analytics abstraction and storage only after the design is accepted;
-- define the inline keyboard and state model;
-- expose only meaningful options supported by the current platform/content;
-- retain automatic/best-option selection;
-- implement YouTube Video/Audio UX;
-- implement YouTube quality choice for video;
-- design loading, progress, and status behavior where justified;
-- define cancellation and retry behavior if appropriate;
-- review all user-facing messages;
-- define consistent error messages;
-- keep the UX minimal and fast;
-- validate UX and analytics;
-- use collected evidence later to simplify choices if users overwhelmingly prefer one option.
+- unchecked analytics design/implementation/validation items remain in Phase 4 TASKS.md;
+  no analytics implementation or storage choice is implied by functional acceptance;
+- copy, obsolete choice prompts, loading/progress and interaction polish remain Phase 8;
+- HTTP 403 recovery, metadata/event-loop responsiveness, network/restart recovery and
+  monitoring remain Phase 9, which is open;
+- later usage evidence may justify simplifying options; no product policy changes here.
 
 Target YouTube UX:
 
@@ -173,7 +156,8 @@ Include:
 - consistent Telegram UI;
 - inline keyboards;
 - provider-independent mode and quality presentation;
-- all bot messages;
+- all bot messages, including removing or updating obsolete video/audio choice prompts
+  after selection when their inline buttons disappear;
 - loading and waiting messages;
 - success messages;
 - unsupported-content messages;
@@ -187,16 +171,22 @@ Goal: the bot should feel like one coherent service rather than several provider
 ## Phase 9 - Production Reliability
 Complete the operational and reliability work that is intentionally not part of the functional MVP gate.
 
+Status: OPEN. Phase 4 functional acceptance does not satisfy this reliability gate.
+
 Include:
 
 - bot restart and recovery;
 - Local Bot API restart and recovery;
 - temporary network/API failure behavior;
+- intermittent YouTube HTTP 403 diagnosis and a narrowly bounded recovery strategy,
+  with explicit limits and no duplicate downloads/uploads;
 - upload failures;
 - repeatable deployment and E2E procedure;
 - resource observations;
 - disk and temporary-file cleanup behavior;
 - concurrency and load assessment;
+- remove synchronous metadata extraction/planning from the async event loop and verify
+  that slow inspection does not block other Telegram callbacks;
 - rate limits when justified;
 - queues and workers only if measured workload requires them;
 - monitoring and observability;

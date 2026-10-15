@@ -1,5 +1,14 @@
 # Phase 4 Capability Model
 
+## Functional acceptance status
+
+The implemented functional scope is **ACCEPTED (2026-10-15)** following real Telegram
+validation on main `ced1200bf2a81a1bb63c200e6441e8458d0af0df`. See
+[TESTING.md](TESTING.md#phase-4-functional-acceptance-2026-10-15) for recorded cases and
+evidence limits. This status does not change the model or product policy below, imply
+exhaustive format testing, or close the original analytics/UX backlog. Remaining prompt
+polish is tracked under Phase 8; reliability work remains under Phase 9, which is OPEN.
+
 ## Purpose
 
 Phase 4 needs a minimal capability model for Telegram download UX. The model must use the
@@ -921,8 +930,9 @@ Not implemented yet:
 - analytics events or storage;
 - file-size prediction, bitrate scoring, 4K/Maximum policy, or provider-specific
   branching in handlers;
-- polished Telegram copy, progress UI, retry/cancellation UX, and callback-flow
-  end-to-end validation against real Telegram clients.
+- polished Telegram copy, progress UI and retry/cancellation UX. The recorded real-client
+  callback protection and distinct-URL isolation checks are accepted, while live fault
+  injection and broader recovery coverage remain unverified.
 
 ## Implementation Sequence
 
@@ -958,7 +968,9 @@ Before implementation, decide:
 
 ## Phase 4 Acceptance Notes
 
-Phase 4 should be considered ready for implementation only after:
+The original implementation-readiness checklist is retained below as design history.
+Functional acceptance above does not certify completion of every item, especially
+analytics design/storage; remaining unchecked work stays explicit in TASKS.md:
 
 - the capability interpretation layer is designed against the existing provider contract;
 - YouTube Low/Medium/High mapping rules are defined;

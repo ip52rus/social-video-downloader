@@ -1,5 +1,56 @@
 # Testing Strategy
 
+## Phase 4 functional acceptance (2026-10-15)
+
+Status: **ACCEPTED for the tested functional scope**, as confirmed by the user. This is
+real Telegram client evidence, separate from deterministic tests and provider-only live
+checks. It does not mean exhaustive format coverage or production readiness.
+
+Revision: main `ced1200bf2a81a1bb63c200e6441e8458d0af0df`, containing PR #41 and PR #42.
+The existing Compose stack was deployed by rebuilding/recreating only `bot`; all 24
+source files matched current main. Polling was active through the Local Bot API, with no
+startup errors. The Local Bot API container/image and named volume were preserved.
+No additional deployment or live test was performed for this documentation update.
+
+| Accepted functionality | Evidence | Scope/limits |
+| --- | --- | --- |
+| Individual watch URL with playlist context | Video/Audio choices appeared and the intended individual video was delivered | The original `list` case worked; this is not playlist support |
+| Video / Audio choices | User confirmed both flows in the real client | Only useful available qualities are shown; no exhaustive capability matrix |
+| Landscape Medium | 936x720, class 720, 243 seconds, 19,389,783 bytes; user confirmed image/sound | Existing sanitized upload and Telegram response logs corroborate dimensions, duration and size |
+| Portrait Medium | 720x1280, class 720; user confirmed image/sound | User-reported client result; exact size not recorded here |
+| Portrait High | 1080x1920, class 1080; user confirmed image/sound | User-reported client result; exact size not recorded here |
+| M4A audio | User confirmed M4A, playback and correct nonzero displayed duration | Exact passthrough/remux/transcode route is not established by the extension |
+| Callback protection | A rapid second press did not deliver duplicate media and produced an unavailable-choice response | Does not independently prove two callbacks reached the server or the exact invocation count |
+| Distinct-URL isolation | Two different source interactions delivered their respective audio files | Consumed inline buttons disappeared, so another press was not possible in that check |
+| Local Bot API above 50 MB | Prior real-client delivery succeeded with playback | Historical evidence, not repeated on this revision; not proof of arbitrary sizes or 2 GB support |
+
+Observed reliability issue, kept separate from playlist/quality acceptance: at 21:34:34
+Moscow time, yt-dlp reported `HTTP Error 403: Forbidden` while fetching video data,
+followed by `DownloadFailedError`. The terminal callback had reached downloading rather
+than being rejected by the 15-minute interaction TTL. No traceback, DNS/timeout indicator,
+or terminal acknowledgement/keyboard-cleanup failure was present in that log window.
+The retry interaction succeeded, with delivery at 21:36:45. Exact runtime tier/options and
+cache hit/miss were not logged; the nested Python exception class and the upstream reason
+for 403 remain NOT VERIFIED. A roughly 13-minute wait exceeds the 180-second inspection
+cache lifetime, so the original snapshot cannot remain valid for that first attempt;
+this does not establish cache expiry as the cause of 403.
+
+Verification categories and outstanding limits:
+
+- The implementation gate remains 469 passed, 1 skipped with Ruff lint/format, quiet
+  Compose config validation and diff check passing. These historical deterministic/local
+  results are not new test runs for this documentation update.
+- Missing/partial dimensions, unsafe-only video, audio-only fallback, BLOCKED and absence
+  of unrestricted-best are covered by deterministic tests; rare real-media cases were
+  not deliberately triggered. A post-PR #42 portrait Low result is NOT VERIFIED here.
+- Real-client evidence covers the recorded cases, not every codec, orientation/tier
+  combination, Telegram client or source. Source-metadata honesty, live injected API
+  failures, production throughput and robust restart/network recovery are not established.
+- Phase 8 owns obsolete choice-prompt cleanup and remaining UX polish. Phase 9 remains
+  OPEN for intermittent HTTP 403/bounded recovery, synchronous metadata blocking the
+  async event loop, network resilience, restart/recovery and monitoring. Existing analytics
+  tasks remain unchecked; functional acceptance does not imply analytics implementation.
+
 ## Deterministic tests
 
 Fast deterministic tests cover URL normalization, provider detection, filename
@@ -70,10 +121,10 @@ Verification for this fix:
 - `docker compose config --quiet`: passed; rendered configuration was not printed.
 - `git diff --check`: passed.
 
-These are unit and deterministic integration checks, not real Telegram network-failure
-tests. Existing containers were not rebuilt/restarted; real-client revalidation of the
-changed code remains outstanding. No claim of Phase 4 completion or production
-reliability follows from this bounded fix.
+These implementation-stage checks were unit/deterministic integration evidence without
+a container rebuild. Subsequent functional client acceptance is recorded above. Forced
+live Telegram network-failure recovery remains unverified; deterministic fault tests and
+functional acceptance do not establish production reliability.
 
 ## M4A audio and duration (2026-10-15)
 
@@ -120,10 +171,10 @@ Verification:
 - `docker compose config --quiet`: passed, without rendering configuration.
 - `git diff --check`: passed.
 
-No live YouTube download, Telegram API call, running-stack rebuild/restart or long
-transcoding benchmark was performed. M4A playback and displayed duration still require
-real-client revalidation after deployment. These results do not close Phase 4 or establish
-production reliability.
+That implementation stage performed no live YouTube download, Telegram API call,
+running-stack rebuild/restart or long transcoding benchmark. Subsequent M4A playback and
+displayed-duration acceptance is recorded above; route-specific live verification and
+production performance are not implied.
 
 ## YouTube watch URLs with playlist context (2026-10-15)
 
@@ -154,9 +205,9 @@ Verification:
 
 The checks used offline uv execution with a temporary cache directory because the
 sandbox could not access the default uv cache. No dependency/configuration changes or
-live YouTube/Telegram requests were made. Compose remained running without a rebuild or
-restart. Real Telegram validation of a playlist-context watch URL remains required after
-deployment; Phase 4 and production reliability remain open.
+live YouTube/Telegram requests were made in that implementation stage. Compose was not
+rebuilt then. Subsequent deployment and playlist-context functional acceptance are
+recorded above; broad reliability remains open.
 
 ## YouTube quality-selection safety (2026-10-15)
 
@@ -200,8 +251,9 @@ Verification:
 
 uv ran offline with a temporary cache because the default cache is sandbox-restricted.
 No dependency/configuration changes, live YouTube requests/downloads, Telegram calls,
-or Compose rebuilds/restarts were performed. Both services remained running. Real-client
-video, audio-fallback, M4A and callback regression remain required after deployment.
+or Compose rebuilds/restarts were performed in that implementation stage. Subsequent
+functional client evidence is recorded above; rare live audio-fallback/BLOCKED cases and
+broader network/recovery behavior remain unverified.
 
 ## PR #27 media-preparation validation
 
