@@ -23,10 +23,10 @@ Environment-based settings are validated before starting the application. The Te
 ## Telegram layer
 The aiogram router owns commands and text intake, user-facing validation responses, and result delivery. It does not contain provider-specific download logic. Membership/access control is deferred to a future monetization or business-model layer and is not part of the current implementation. The /start response describes current platform support. Text messages are validated against supported platform domains. YouTube URLs are passed to the application service; Instagram and TikTok URLs are recognized but receive an explicit message that downloading is not yet available.
 
-Future option UX is capability-driven. Telegram should show only meaningful choices for
-the current platform/content and keep a consistent visual language without forcing every
-provider into the same option tree. YouTube is expected to expose Video/Audio and
-video-quality choices in Phase 4; Instagram and TikTok should normally use direct video
+The implemented option UX is capability-driven. Telegram shows only meaningful choices for
+the current platform/content and keeps a consistent visual language without forcing every
+provider into the same option tree. YouTube exposes Video/Audio and video-quality
+choices; Instagram and TikTok should normally use direct video
 download unless future provider evidence proves useful selectable variants.
 
 Phase 4 should use the existing provider contract as the minimum capability model rather
@@ -107,8 +107,11 @@ Preparation runs in the existing worker-thread path. Partial failed conversions 
 removed and all source/output files remain inside the per-request temporary workspace.
 Passthrough introduces no media copy; remux/transcode create only their necessary output.
 This adds no queues, persistence, dependencies, audio-format screen, or upload retries.
-Real Telegram client revalidation is outstanding; Phase 4/production reliability remain
-open.
+Real Telegram client M4A playback/duration and the recorded video/callback flows are
+functionally ACCEPTED as of 2026-10-15; see
+[the evidence and limits](TESTING.md#phase-4-functional-acceptance-2026-10-15).
+This changes validation status only. Live fault recovery, broader format/client coverage,
+and Phase 9 production reliability remain open; obsolete choice-prompt cleanup is Phase 8.
 
 ## Application layer
 DownloadService normalizes the URL, detects its platform, selects a registered MediaProvider, and returns the provider's transport-neutral DownloadedMedia result. The default registry contains the YouTube provider. A recognized platform without a registered provider raises a domain-level UnsupportedPlatformError. The service does not depend on Telegram.

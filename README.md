@@ -6,7 +6,16 @@ Free Telegram bot-service for downloading media from popular social platforms.
 
 The downloader core and YouTube provider are implemented, and the YouTube validation gate has passed within the documented test scope. Phase 3 (Telegram Functional MVP) is complete: the bot accepts supported YouTube URLs, downloads YouTube media, prepares Telegram-compatible video when necessary, and sends it as a video message. Automated tests cover deterministic download orchestration, media preparation, error handling, and cleanup. A real Telegram flow through the Local Bot API Server has been verified with a short video and an MP4 file of approximately 414.7 MB; the large file arrived in Telegram and was confirmed to open and play. Telegram documents a Local Bot API Server upload ceiling of 2000 MB, but this project does not claim validated 2 GB support. The current evidence is limited to the tested scenario, not all file sizes, codecs, clients, or deployment conditions. See [the changelog](CHANGELOG.md) and [testing strategy](docs/TESTING.md) for the recorded evidence and its limits. Instagram and TikTok URLs are recognized, but download providers for those platforms are not implemented.
 
-The project is not production-ready. Next work focuses on Telegram download UX/options and additional platform providers. Access restrictions and monetization are intentionally deferred until the downloader product has broader useful functionality. See [the roadmap](docs/ROADMAP.md), [task checklist](docs/TASKS.md), and [testing strategy](docs/TESTING.md).
+Phase 4 functional scope is **ACCEPTED (2026-10-15)**: playlist-context watch links,
+Video/Audio choices, recorded landscape/portrait quality selections, M4A playback and
+duration, callback protection and distinct-URL isolation were validated in a real
+Telegram client. See [the evidence and limits](docs/TESTING.md#phase-4-functional-acceptance-2026-10-15).
+
+The project is not production-ready. Remaining UX polish is tracked in Phase 8;
+intermittent YouTube HTTP 403, metadata/event-loop blocking, network/restart recovery
+and monitoring remain open in Phase 9. Analytics and additional platform providers are
+not implied by functional acceptance. Access restrictions and monetization remain
+deferred. See [the roadmap](docs/ROADMAP.md) and [task checklist](docs/TASKS.md).
 
 ## Local startup
 
@@ -14,7 +23,13 @@ Use Python 3.13 and uv. Install dependencies with uv sync, set TELEGRAM_BOT_TOKE
 
     uv run python -m social_video_downloader
 
-The bot responds to /start. Send a public YouTube video URL to start a download; the bot prepares a Telegram-friendly H.264/AAC MP4 when needed and sends it as a video if download and upload succeed. Instagram and TikTok are currently recognition-only. Optional settings are APP_ENV (development, test, or production), LOG_LEVEL (DEBUG, INFO, WARNING, ERROR, or CRITICAL), TELEGRAM_API_BASE_URL, and TELEGRAM_API_TIMEOUT_SECONDS. Never commit the real token or put it in logs.
+The bot responds to /start. Send a public YouTube video URL, choose Video or Audio when
+offered, and select an available video quality if needed. Video uses Telegram-compatible
+MP4 preparation; audio is delivered as verified M4A/AAC with reliable duration when
+available. Instagram and TikTok are currently recognition-only. Optional settings are
+APP_ENV (development, test, or production), LOG_LEVEL (DEBUG, INFO, WARNING, ERROR, or
+CRITICAL), TELEGRAM_API_BASE_URL, and TELEGRAM_API_TIMEOUT_SECONDS. Never commit the real
+token or put it in logs.
 
 ## Telegram Bot API endpoint
 

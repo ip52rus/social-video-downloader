@@ -71,22 +71,33 @@ The automated checks for provider selection and the mocked Telegram download/del
 This closure does not mean production readiness. Additional client checks, upload failure/recovery behavior, restart/recovery validation, cloud/local rollback rehearsal, justified larger-file tests, monitoring/resource limits, and a reproducible end-to-end procedure were not verified here; they are tracked under Phase 9, Production Reliability. Instagram and TikTok links are recognized but their download providers are not implemented.
 
 ## Phase 4 - Download UX and YouTube Options
-- [ ] Review and accept [the Phase 4 capability model](PHASE4_CAPABILITY_MODEL.md) before implementation.
+
+Functional acceptance recorded on 2026-10-15 for main
+`ced1200bf2a81a1bb63c200e6441e8458d0af0df`. Real Telegram evidence covers playlist-context
+watch links, Video/Audio choices, landscape Medium 936x720, portrait Medium 720x1280,
+portrait High 1080x1920, image/sound, M4A playback/duration, callback protection and
+distinct-URL isolation. Prior Local Bot API delivery above 50 MB remains valid scoped
+evidence, not a new large-file test on this revision. See
+[TESTING.md](TESTING.md#phase-4-functional-acceptance-2026-10-15) for evidence categories
+and unverified cases. Functional acceptance does not close analytics, all UX polish, or
+Phase 9 production reliability; unchecked tasks remain open.
+
+- [x] Accept the implemented functional scope of [the Phase 4 capability model](PHASE4_CAPABILITY_MODEL.md); this records current acceptance, not a claim about a historical pre-implementation review.
 - [x] Define how Telegram UX interprets existing provider/content capabilities without creating a second independent capability system at the application choice-model level.
 - [x] Reuse existing `DownloadMode`, `QualityOption`, `get_supported_modes()`, and `get_available_qualities()` as the provider capability source of truth for the Low/Medium/High foundation.
 - [x] Define the product/UX policy foundation that maps video `QualityOption` values to Low/Medium/High tier choices without Telegram transport coupling.
 - [x] Implement immutable application choice-plan models and `DownloadService.create_choice_plan(url)` without Telegram transport coupling.
 - [x] Design the Telegram interaction and state flow.
 - [x] Implement the pending-interaction store and callback-data helpers without Telegram UX wiring.
-- [x] Implement the documented Low, Medium, and High quality-tier mapping semantics for YouTube foundation code. Telegram UI integration remains open.
+- [x] Implement the documented Low, Medium, and High quality-tier mapping semantics and Telegram UI integration; live coverage is limited to the recorded cases.
 - [x] Wire Telegram URL intake and callbacks to `ChoicePlan` for direct download, mode
   choice, quality choice, and blocked states.
 - [x] Prevent expected Telegram acknowledgement/keyboard failures from losing an
   atomically accepted terminal download; preserve exact stored options and single consume.
 - [x] Keep mode-to-quality transitions recoverable after Telegram API failures and
   handle secondary domain-error notification failures without an unhandled traceback.
-- [ ] Revalidate this callback-resilience fix in a real Telegram client after deployment;
-  deterministic fault tests do not establish live network-failure recovery.
+- [x] Revalidate callback protection and distinct-URL isolation in a real Telegram client;
+  forced acknowledgement/cleanup failures remain deterministic-test evidence only.
 - [ ] Design a privacy-conscious analytics event model.
 - [ ] Implement an application-level analytics abstraction and storage only after the analytics design is accepted.
 - [x] Implement YouTube Video/Audio UX with `🎬 Видео` and `🎵 Аудио`.
@@ -95,22 +106,23 @@ This closure does not mean production readiness. Additional client checks, uploa
   before Telegram delivery through passthrough, stream-copy remux, or required transcode.
 - [x] Supply reliable positive audio duration to Telegram, reusing preparation probes
   when source metadata is missing/invalid and omitting unknown duration safely.
-- [ ] Revalidate M4A audio delivery/playback and displayed duration in a real Telegram
-  client after deployment; current verification is deterministic/local synthetic only.
-- [ ] Keep YouTube audio direct unless later evidence justifies audio quality selection.
-- [ ] Do not expose video-without-audio as a normal user option.
-- [ ] Preserve provider-specific automatic selection where safe; YouTube video must
+- [x] Revalidate M4A audio delivery/playback and correct nonzero displayed duration in a
+  real Telegram client within the accepted scope.
+- [x] Keep YouTube audio direct unless later evidence justifies audio quality selection.
+- [x] Do not expose video-without-audio as a normal user option.
+- [x] Preserve provider-specific automatic selection where safe; YouTube video must
   retain an exact, fully dimensioned quality ID even when the quality screen is skipped.
 - [ ] Design loading, progress, and status behavior where justified.
 - [ ] Define cancellation and retry behavior if appropriate.
 - [ ] Review and standardize user-facing messages.
 - [ ] Define consistent error messages.
 - [ ] Keep the YouTube options UX minimal and fast.
-- [ ] Validate UX and analytics.
+- [x] Accept the recorded functional Telegram UX results.
+- [ ] Validate remaining UX polish and analytics; these are not implied by functional acceptance.
 - [ ] Use collected evidence later to simplify choices if users overwhelmingly prefer one option.
 
-The current provider architecture already exposes modes and quality options. Phase 4
-should connect these capabilities to Telegram UX before redesigning provider internals.
+The implemented provider/application flow connects existing modes and quality options to
+Telegram UX without a parallel capability system.
 The capability-driven UX rule is: minimum steps + provider-specific capabilities +
 consistent visual language. Do not force identical options on every provider, and never
 add an extra click when there is no meaningful choice. Do not hard-code Instagram,
@@ -120,9 +132,8 @@ platform/content can actually offer.
 Low/Medium/High foundation implemented in application services:
 
 - `QualityOption.width` is available and validated like `height`.
-- The YouTube provider preserves extracted video width and height in `QualityOption`
-  values without changing yt-dlp selectors, codec/container preference, or download
-  behavior.
+- The YouTube provider preserves extracted video width and height in `QualityOption`;
+  the later quality-safety correction below enforces exact dimension selectors.
 - `build_quality_tier_plan()` maps video qualities to Low 480, Medium 720, and High 1080
   targets using `min(width, height)` when both dimensions exist, a documented
   one-dimension fallback when only one dimension exists, and no tier mapping for
@@ -216,8 +227,9 @@ Focused callback resilience implemented on 2026-10-15:
 - Deterministic handler/store verification: 94 passed, including fault injection,
   concurrent duplicate callbacks, exact options, single media upload, and propagation
   of cancellation/programming errors. Full quality-check results are in TESTING.md.
-- This is a bounded reliability fix, not Phase 4 completion or production-readiness
-  evidence. The running Compose stack has not been rebuilt with this change.
+- At implementation time this was deterministic-only evidence without a stack rebuild.
+  Subsequent deployment and functional client acceptance are recorded in TESTING.md;
+  this does not establish live fault recovery or production readiness.
 
 Focused M4A audio/duration implementation (2026-10-15):
 
@@ -230,8 +242,9 @@ Focused M4A audio/duration implementation (2026-10-15):
 - `uv run pytest`: 357 passed, 1 skipped (opt-in YouTube live matrix). This includes four
   real local synthetic-media tests with FFmpeg, unchanged video tests, and callback
   resilience regressions. Quality checks and performance-gate evidence are in TESTING.md.
-- No live YouTube/Telegram request, Compose rebuild/restart, new dependency, or
-  production-performance benchmark was performed. Phase 4 remains open.
+- That implementation stage performed no live YouTube/Telegram request, Compose
+  rebuild/restart, new dependency, or production benchmark. Subsequent functional client
+  acceptance is recorded in TESTING.md; broader reliability remains open.
 
 Focused YouTube playlist-context correction (2026-10-15):
 
@@ -241,12 +254,13 @@ Focused YouTube playlist-context correction (2026-10-15):
   and reject malformed/ambiguous context URLs and playlist-only requests before extraction.
 - [x] Add deterministic regressions for the false-BLOCKED redirect, shared inspection
   identity, canonical download targets, unchanged audio/video choices and quality tiers.
-- [ ] Revalidate a playlist-context watch URL in the real Telegram client after deployment.
+- [x] Revalidate a playlist-context watch URL in the real Telegram client after deployment;
+  choices and a selected video succeeded, separately from an observed HTTP 403 attempt.
 
-No quality policy, HTTP 403 handling, retries, media preparation, callback behavior,
-dependencies, or runtime configuration changes are included. The existing Compose
-stack is not rebuilt/restarted; Phase 4 and production reliability remain open.
-Verification evidence is recorded in TESTING.md.
+That implementation stage changed no quality policy, HTTP 403 handling, retries, media
+preparation, callbacks, dependencies, or runtime configuration and did not rebuild the
+stack. Subsequent functional deployment/client evidence is recorded in TESTING.md;
+remaining UX/analytics and production reliability are not closed.
 
 Full deterministic/local verification: 417 passed, 1 skipped (external matrix disabled);
 Ruff lint/format, Compose configuration validation, and diff whitespace checks passed.
@@ -264,14 +278,17 @@ Focused YouTube quality-selection safety (2026-10-15):
 - [x] Retain `SINGLE_DIMENSION` classification as lower-confidence information while
   excluding incomplete dimensions from actionable YouTube video. No missing dimensions
   are invented and no automatic video fallback is allowed.
-- [ ] Revalidate selected video quality, audio fallback, and normal M4A/callback behavior
-  in the real Telegram client after an approved deployment.
+- [x] Revalidate the recorded selected video qualities and normal M4A/callback behavior
+  in the real Telegram client after approved deployment.
+
+Rare missing/partial-dimension audio-fallback or BLOCKED cases remain NOT VERIFIED live;
+deterministic tests cover them. Extend live coverage only when justified as Phase 9 work.
 
 QualityOption/DownloadOptions contracts are unchanged; provider IDs are opaque and now
 encode dimension pairs instead of height alone. Existing playlist-context handling,
 audio preparation, callbacks, retries, dependencies, and Compose are unchanged. Verification
-evidence and metadata-only guarantee limits are recorded in TESTING.md. Phase 4 and
-production reliability remain open.
+evidence and metadata-only guarantee limits are recorded in TESTING.md. Functional scope
+is accepted; remaining UX/analytics and production reliability remain open.
 
 Verification for quality-selection safety: 469 passed, 1 skipped (external matrix
 disabled); Ruff lint/format, quiet Compose validation, and diff checks passed. Existing
@@ -323,7 +340,8 @@ Do not promise universal platform support or hard-code a long unsupported platfo
 - [ ] Review the complete multi-provider Telegram UI.
 - [ ] Standardize inline keyboards.
 - [ ] Present modes and quality options consistently across providers.
-- [ ] Review all bot messages.
+- [ ] Review all bot messages, including removing or updating obsolete video/audio choice
+  prompts after selection; disappearing buttons must not leave an irrelevant instruction.
 - [ ] Standardize loading and waiting messages.
 - [ ] Standardize success messages.
 - [ ] Standardize unsupported-content messages.
@@ -333,8 +351,16 @@ Do not promise universal platform support or hard-code a long unsupported platfo
 - [ ] Perform a final interaction-flow review.
 
 ## Phase 9 - Production Reliability
+
+Status: OPEN; not closed by Phase 4 functional acceptance.
+
+- [ ] Diagnose intermittent YouTube HTTP 403 and define/test a narrowly bounded recovery
+  strategy with explicit attempt limits and no duplicate media delivery.
+- [ ] Remove synchronous metadata extraction/planning from the async event loop; verify
+  callback responsiveness while metadata inspection is slow or fails.
 - [ ] Test additional Telegram clients, including iPhone, and record the exact clients tested.
-- [ ] Test upload failures and recovery; record relevant Telegram errors and user-facing behavior.
+- [ ] Test temporary network/API and upload failures and recovery; record relevant
+  Telegram errors and user-facing behavior without assuming live fault recovery from unit tests.
 - [ ] Rehearse restart and recovery behavior for the bot and Local Bot API Server.
 - [ ] Rehearse cloud-to-local migration and local-to-cloud rollback with a separate test bot; do not treat `close` as an official local-to-cloud rollback procedure.
 - [ ] Document the full test-bot setup and repeatable end-to-end procedure.
