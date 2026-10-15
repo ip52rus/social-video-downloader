@@ -232,6 +232,24 @@ Focused M4A audio/duration implementation (2026-10-15):
 - No live YouTube/Telegram request, Compose rebuild/restart, new dependency, or
   production-performance benchmark was performed. Phase 4 remains open.
 
+Focused YouTube playlist-context correction (2026-10-15):
+
+- [x] Treat individual watch URLs with a valid single video ID and playlist context as
+  single-video requests inside the YouTube provider, before extraction/cache/download.
+- [x] Preserve unrelated query parameters, keep `noplaylist=True` and `process=False`,
+  and reject malformed/ambiguous context URLs and playlist-only requests before extraction.
+- [x] Add deterministic regressions for the false-BLOCKED redirect, shared inspection
+  identity, canonical download targets, unchanged audio/video choices and quality tiers.
+- [ ] Revalidate a playlist-context watch URL in the real Telegram client after deployment.
+
+No quality policy, HTTP 403 handling, retries, media preparation, callback behavior,
+dependencies, or runtime configuration changes are included. The existing Compose
+stack is not rebuilt/restarted; Phase 4 and production reliability remain open.
+Verification evidence is recorded in TESTING.md.
+
+Full deterministic/local verification: 417 passed, 1 skipped (external matrix disabled);
+Ruff lint/format, Compose configuration validation, and diff whitespace checks passed.
+
 Analytics requirements for this phase:
 
 - [ ] Track product statistics: total downloads, unique/returning users, downloads per user, platform usage, video vs audio, quality selected, and option availability vs option selected.

@@ -150,6 +150,16 @@ solving, yt-dlp uses yt-dlp-ejs and the pinned Deno runtime provided by the bot 
 image. This runtime support is separate from provider logic, FFmpeg media processing,
 and Telegram Bot API transport.
 
+Individual YouTube `/watch` URLs with playlist context are canonicalized inside the
+provider before inspection, cache lookup, and download. For a single valid 11-character
+`v` plus `list`, the provider removes `list` and normalizes the video parameter while
+preserving unrelated query parameters. This avoids yt-dlp's unprocessed `_type=url`
+redirect being mistaken for missing capabilities with `process=False`. Context URLs
+with missing, malformed, or duplicate video IDs and playlist-only URLs are rejected
+before extraction. Global URL normalization, `noplaylist=True`, `process=False`,
+quality selection, and provider/application responsibilities remain unchanged; no
+generic redirect resolver or playlist processing is introduced.
+
 Providers report which output modes are supported: video with audio, video only, and audio only. They also expose selectable quality options when the platform allows them to be enumerated. Quality identifiers are provider-specific and opaque to the application and Telegram layers; each option also has a user-facing label. Video quality options may include both `width` and `height` so application policy can classify resolution consistently across landscape, portrait, and square videos.
 
 Provider capabilities are technical inputs, not a command to expose every possible mode

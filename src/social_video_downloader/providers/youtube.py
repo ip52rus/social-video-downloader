@@ -3,14 +3,17 @@
 from collections.abc import Mapping
 from math import isfinite
 from pathlib import Path
+from re import fullmatch
 from time import monotonic
 from typing import Any
+from urllib.parse import parse_qs, unquote_plus, urlsplit, urlunsplit
 
 import yt_dlp
 
 from social_video_downloader.domain.errors import (
     DownloaderError,
     DownloadFailedError,
+    InvalidMediaURLError,
     MediaProcessingError,
     MetadataExtractionError,
     UnsupportedDownloadModeError,
@@ -66,7 +69,29 @@ class YouTubeProvider:
         normalized = normalize_media_url(url)
         if detect_platform(normalized) is not Platform.YOUTUBE:
             raise UnsupportedPlatformError("The URL does not point to YouTube.")
-        return normalized
+
+        parts = urlsplit(normalized)
+        hostname = parts.hostname or ""
+        if hostname != "youtube.com" and not hostname.endswith(".youtube.com"):
+            return normalized
+        if parts.path.rstrip("/") == "/playlist":
+            raise MetadataExtractionError("Playlist downloads are not supported.")
+
+        query = parse_qs(parts.query, keep_blank_values=True)
+        if parts.path != "/watch" or "list" not in query:
+            return normalized
+
+        video_ids = query.get("v", [])
+        if len(video_ids) != 1 or fullmatch(r"[A-Za-z0-9_-]{11}", video_ids[0]) is None:
+            raise InvalidMediaURLError("A single valid YouTube video identifier is required.")
+
+        # Preserve unrelated parameters verbatim, including their original escaping.
+        single_video_query = []
+        for item in parts.query.split("&"):
+            key = unquote_plus(item.partition("=")[0])
+            if key != "list":
+                single_video_query.append(f"v={video_ids[0]}" if key == "v" else item)
+        return urlunsplit(parts._replace(query="&".join(single_video_query)))
 
     def can_handle(self, url: str) -> bool:
         try:
