@@ -68,7 +68,7 @@ The Phase 3 functional gate is satisfied: a core user can submit a supported You
 
 The automated checks for provider selection and the mocked Telegram download/delivery flow passed in [GitHub Actions run 37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474). PR #27 media-preparation validation adds deterministic coverage for verified stream-copy remux and remux-failure fallback plus real local FFmpeg evidence using synthetic media: compatible MP4 passthrough, H.264/AAC MKV-to-MP4 stream-copy remux without `libx264`, and incompatible-source transcode fallback all passed. The remux check confirmed encoded H.264 and AAC packet payload hashes and decoded video hashes matched; exact decoded AAC checksum differed because of container/timestamp/priming interpretation. Containerized YouTube runtime validation confirmed the bot image exposes pinned Deno 2.9.7 to yt-dlp, raw yt-dlp uses `[jsc:deno]`, controlled metadata/simulation succeeds, and the project metadata path succeeds in the image and Compose bot runtime. A live Local Bot API Server test adds real-delivery evidence: a short video and an MP4 file of approximately 414.7 MB were delivered, and the large file was confirmed playable.
 
-This closure does not mean production readiness. Additional client checks, upload failure/recovery behavior, restart/recovery validation, cloud/local rollback rehearsal, justified larger-file tests, monitoring/resource limits, and a reproducible end-to-end procedure were not verified here; they are tracked under Phase 9, Production Reliability. Instagram and TikTok links are recognized but their download providers are not implemented.
+This closure does not mean production readiness. Additional client checks, upload failure/recovery behavior, restart/recovery validation, cloud/local rollback rehearsal, justified larger-file tests, monitoring/resource limits, and a reproducible end-to-end procedure were not verified here; they are tracked under Phase 9, Production Reliability. Instagram and TikTok links remain recognition-only in the bot. The experimental Instagram Reel provider added in Phase 5 is available only through explicit injection.
 
 ## Phase 4 - Download UX and YouTube Options
 
@@ -306,15 +306,28 @@ Analytics requirements for this phase:
 - [ ] Keep product analytics in the Telegram/application flow and out of provider implementations.
 - [ ] Do not introduce SQLite tables, external analytics SaaS, ClickHouse, Kafka, Redis, or other analytics infrastructure without a separate design stage.
 
-## Phase 5 - Instagram Provider
-- [ ] Run a technical spike.
-- [ ] Assess real-world reliability and extraction stability.
-- [ ] Make an explicit Go/No-Go decision before implementation.
-- [ ] Implement the provider only if the spike is viable.
-- [ ] Add deterministic validation.
-- [ ] Add external validation within a documented scope.
-- [ ] Map meaningful Instagram format or quality choices into the shared download-options model where available.
-- [ ] Integrate the provider into the common Telegram UX.
+## Phase 5 - Instagram Provider — in progress
+
+- [x] Record explicit user GO for narrow anonymous public Reel implementation (2026-10-16).
+- [x] Define and agree PR 1 scope and acceptance criteria; retain the one-file provider contract.
+- [x] Implement `InstagramProvider` for individual `/reel/<id>/` URLs and direct MP4 formats.
+- [x] Reject collections, redirects, unsupported URLs/formats and auth-gated metadata before acquisition.
+- [x] Use shared inspection data, safe temporary storage, domain errors and existing choice model.
+- [x] Validate explicit `DownloadService` injection and `DIRECT_DOWNLOAD` without audio/quality menus.
+- [x] Add offline provider tests and synthetic yt-dlp/ffprobe integration; record results in TESTING.md.
+- [ ] Review and merge PR 1 only after a separate decision; leave it draft for now.
+- [ ] Integrate default provider registration and Telegram direct-download routing/messages in PR 2.
+- [ ] Validate real anonymous Reel download with documented URL count/type and runtime.
+- [ ] Validate real Telegram delivery/playback after separately authorized deployment changes.
+- [ ] Assess broader extraction stability and recovery; production reliability remains open.
+
+Evidence limitation: previous Gates 1–3C are reported in the handoff and the user authorized
+GO; full Gates 1–3B evidence was unavailable here. Gate 3C demonstrates metadata for one
+five-element `/p/` playlist, which remains excluded. No carousel media was acquired.
+PR 1 tests do not substitute for real Instagram or Telegram validation. Meaningful
+Instagram quality choices, DASH/HLS assembly, silent-video handling, ordinary `/p/` posts,
+carousels, Stories, private content and authentication are outside this PR.
+See [the accepted scope](PHASE5_INSTAGRAM_REELS.md) for the evidence boundary.
 
 ## Phase 6 - TikTok Provider
 - [ ] Run a technical spike.

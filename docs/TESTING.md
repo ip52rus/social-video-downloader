@@ -429,3 +429,50 @@ phase and cannot be inferred from the happy path. Remaining operational checks i
 Telegram documents cloud-to-local migration with `logOut`, and documents `close` for
 moving between Local Bot API Servers. Do not treat `close` as an officially documented
 local-to-cloud rollback procedure.
+
+## Experimental Instagram Reel provider (2026-10-16)
+
+The first Phase 5 PR adds an injectable `InstagramProvider`; the bot's default registry
+and Telegram handlers remain unchanged. See [the agreed scope](PHASE5_INSTAGRAM_REELS.md).
+
+Network-free tests in `tests/test_instagram_provider.py` cover canonical Reel URL
+identity, explicit host/path validation, rejection of collections/redirects/images and
+private/auth-gated/DRM results, usable-format classification, optional metadata,
+unsupported options, cache reuse/expiry/bounds, one-file acquisition and workspace cleanup.
+A lazy playlist raises if enumerated; it is rejected without touching its entries.
+An expired Reel snapshot that becomes a playlist cannot start acquisition. Synthetic
+HTTP 403/429 and login-required exceptions produce safe errors without an application
+retry or authentication fallback. Missing/empty/extra/partial/symlink outputs fail safely.
+Upstream logger messages are suppressed; fixtures use synthetic IDs and `.invalid` URLs.
+
+A real local yt-dlp processor/selector test receives synthetic extractor dictionaries:
+it chooses the best admitted direct MP4 and excludes higher-resolution silent, audio-only
+and image alternatives. Extraction and file acquisition are replaced with local stubs;
+this does not test the real Instagram extractor or CDN.
+
+`tests/integration/test_instagram_pipeline.py` generates two one-second 64x96 MP4 fixtures
+in pytest temporary storage. Both pass through injected `DownloadService` and real local
+yt-dlp processing, with acquisition replaced by a fixture copy. Actual ffprobe and the
+existing Telegram preparation helper verify:
+
+- H.264/AAC MP4 passes unchanged: identical bytes, one preparation ffprobe and zero
+  preparation FFmpeg calls. Upload width/height/duration come from actual file probing
+  despite absent extractor duration.
+- An MP4 whose synthetic extractor metadata omits audio presence but whose real file has
+  no audio is rejected by the existing stream validator. The caller workspace is removed
+  in both cases, as it is by the existing request workspace boundary.
+
+Verification in an existing Python 3.13 / yt-dlp 2026.08.19 environment, using the feature
+checkout's `src` via `PYTHONPATH=src` and explicitly disabling the external YouTube test:
+
+- Provider and synthetic pipeline checks: 85 passed.
+- Full pytest suite: 554 passed, 1 skipped (opt-in external YouTube live matrix).
+- Ruff lint and formatting checks: passed.
+- `git diff --check`: passed.
+
+No real Instagram metadata/media request, live YouTube request, Telegram call, container
+command, dependency installation/update or running-stack change was performed. Synthetic
+local FFmpeg checks do not establish real Reel availability, Telegram delivery, account
+restrictions, rate-limit recovery, throughput, production reliability or broad format
+coverage. Retries of zero and a per-socket timeout are not a whole-operation deadline
+and do not restrict an extractor to one internal HTTP request.

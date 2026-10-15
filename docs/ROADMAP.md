@@ -36,7 +36,7 @@ Gate: a core user can submit a supported YouTube URL and receive downloaded medi
 
 This phase closure does not mean production readiness. It does not close restart/recovery, upload/network failure recovery, cloud/local operational rehearsal, larger-file limit work, repeatable E2E/deployment procedure, monitoring, resource limits, or broader reliability checks. Those are tracked in Phase 9, Production Reliability.
 
-Instagram and TikTok URLs are recognized but do not have download providers yet.
+Instagram and TikTok URLs remain recognition-only in the bot. An experimental Instagram Reel provider exists for explicit injection; default registration and Telegram integration remain pending.
 
 ## Phase 4 - Download UX and YouTube Options
 Expose useful provider/content capabilities through a polished Telegram interaction flow.
@@ -111,8 +111,26 @@ should connect those capabilities to Telegram UX, add only the capability modeli
 for product choices, and avoid redesigning provider internals or creating a second
 capability source of truth without evidence.
 
-## Phase 5 - Instagram Provider
-Do not promise implementation before feasibility validation.
+## Phase 5 - Instagram Provider — in progress
+
+On 2026-10-16 the user authorized implementation after the previously conducted Gates
+1–3C, limited to anonymous public individual Reels. The cached Gate 3C report confirms
+metadata extraction/classification of one five-item `/p/` playlist only; the carousel is
+out of scope and that report does not prove media acquisition or Telegram delivery.
+Full Gates 1–3B reports were not available in the handoff used for this PR. The GO is an
+explicit development scope decision, not a broad reliability verdict.
+
+PR 1 implements the `MediaProvider` contract, direct MP4 Reel acquisition, rejection
+boundaries, explicit `DownloadService` injection and deterministic validation. It leaves
+the default registry and Telegram activation unchanged. Real Instagram downloads and
+Telegram end-to-end checks remain outstanding for this implementation.
+
+Next: review PR 1 without premature merge; then a focused PR for default registration,
+Telegram direct-download routing/messages and scoped external/client acceptance.
+No running-stack rebuild/restart is authorized by this stage.
+See [the scope and acceptance record](PHASE5_INSTAGRAM_REELS.md).
+
+The general gated sequence remains:
 
 Order:
 

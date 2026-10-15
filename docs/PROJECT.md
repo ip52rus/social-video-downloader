@@ -29,8 +29,11 @@ Monetization and access control are future business-model decisions. A Telegram 
 
 ## Initial platforms
 YouTube was the first provider. The provider architecture and Phase 2 validation gate are in place, including live matrix coverage for combined video/audio, selected-quality video-only, and audio-only outputs in two containers, as well as recorded regular-video and Shorts smoke tests and deterministic error-boundary coverage. This is targeted evidence rather than a guarantee of broad reliability across all YouTube content and platform conditions.
-Phase 4 YouTube UX functional scope is ACCEPTED. Phase 5 Instagram is the next functional
-development stage, beginning with provider feasibility work and an explicit Go/No-Go
+Phase 4 YouTube UX functional scope is ACCEPTED. Phase 5 Instagram is in progress after
+explicit user GO for anonymous individual Reels. The first provider PR is isolated from
+bot activation; external acquisition and Telegram validation remain pending. See
+[the narrow scope](PHASE5_INSTAGRAM_REELS.md). The broader gated process still requires
+feasibility evidence and an explicit Go/No-Go
 decision before implementation; Phase 6 TikTok follows under the same feasibility gate.
 Phase 4 analytics remains unfinished, and Phase 8 UX and Phase 9 reliability tasks remain
 open.
