@@ -172,7 +172,25 @@ This distinction keeps providers focused on factual extraction capability. Produ
 policy belongs above the provider layer and may vary by platform, content type, and
 evidence from real usage.
 
-A missing quality selection means automatic selection of the best available quality. If a provider cannot enumerate quality options, it may return an empty list, but it must still use the best available quality for an automatic download. Providers reject unsupported output modes and invalid quality identifiers through domain errors.
+YouTube video requires a concrete provider quality ID: an empty/unclassifiable quality
+list must not become automatic/best. The application admits only fully dimensioned
+YouTube options with `min(width, height) <= 1080`; otherwise it retains an independent
+audio-only route or blocks video. `classify_quality` still records partial dimensions
+as `SINGLE_DIMENSION`, but those options are not actionable YouTube video choices.
+Future non-YouTube providers retain their own automatic behavior when qualities are absent.
+
+Reason for the provider correction: the former `height-H` identity merged distinct
+widths, and height ceilings could admit a higher short-side class than the chosen tier.
+Video IDs now identify dimension pairs (`video-WxH`), with partial dimensions represented
+explicitly. All video selector alternatives require the selected exact width and height,
+including codec/container fallbacks; partial or absent dimensions and missing video
+quality IDs fail safely. Codec ranking and audio pairing remain yt-dlp responsibilities,
+with the existing H.264/MP4/AAC preferences. No provider contract or download engine is
+added, and the provider does not recompute product tiers or enforce their policy ceiling.
+Video-with-audio quality discovery requires either a combined stream at that size or
+a separate audio stream that can be paired with it; video-only facts remain independent.
+Guarantees depend on correct source metadata; they do not prove the actual encoded
+dimensions, file size, or upstream format availability without media validation.
 
 ## Media engine
 Responsible for download and media assembly. The first implementation uses yt-dlp and FFmpeg where appropriate.

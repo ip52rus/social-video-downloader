@@ -58,7 +58,13 @@ def test_real_youtube_format_and_output_mode_matrix(tmp_path: Path) -> None:
         f"The chosen public video does not expose all required modes: {supported_modes!r}"
     )
 
-    video_qualities = provider.get_available_qualities(LIVE_URL, DownloadMode.VIDEO_ONLY)
+    video_qualities = tuple(
+        quality
+        for quality in provider.get_available_qualities(LIVE_URL, DownloadMode.VIDEO_ONLY)
+        if quality.width is not None
+        and quality.height is not None
+        and min(quality.width, quality.height) <= 1080
+    )
     assert video_qualities, "YouTube exposed no selectable video qualities."
     selected_video_quality = video_qualities[-1]
 
@@ -73,8 +79,16 @@ def test_real_youtube_format_and_output_mode_matrix(tmp_path: Path) -> None:
         f"found {tuple(audio_qualities_by_extension)}."
     )
 
+    combined_quality = next(
+        quality
+        for quality in provider.get_available_qualities(LIVE_URL, DownloadMode.VIDEO_WITH_AUDIO)
+        if quality.width is not None
+        and quality.height is not None
+        and min(quality.width, quality.height) <= 1080
+    )
+
     cases: list[tuple[DownloadMode, str | None, str | None]] = [
-        (DownloadMode.VIDEO_WITH_AUDIO, None, "mp4"),
+        (DownloadMode.VIDEO_WITH_AUDIO, combined_quality.id, "mp4"),
         (DownloadMode.VIDEO_ONLY, selected_video_quality.id, None),
     ]
     cases.extend(

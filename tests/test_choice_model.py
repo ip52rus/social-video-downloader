@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from social_video_downloader.domain.models import (
     DownloadedMedia,
     DownloadMode,
@@ -251,6 +253,90 @@ def test_no_useful_modes_are_blocked() -> None:
     assert plan.blocked_reason == NO_USEFUL_MODES_REASON
     assert plan.automatic_options is None
     assert plan.mode_choices == ()
+
+
+def test_youtube_empty_video_qualities_cannot_become_unrestricted_best() -> None:
+    provider = FakeProvider(modes=(DownloadMode.VIDEO_WITH_AUDIO,))
+
+    plan = create_plan(provider)
+
+    assert plan.state is ChoicePlanState.BLOCKED
+    assert plan.automatic_options is None
+    assert plan.blocked_reason == SAFE_QUALITY_MAPPING_UNAVAILABLE_REASON
+
+
+@pytest.mark.parametrize(
+    "qualities",
+    [
+        (),
+        (video_quality("width-only", width=720),),
+        (video_quality("height-only", height=720),),
+        (video_quality("unknown"),),
+        (
+            video_quality("1440", width=2560, height=1440),
+            video_quality("8k", width=7680, height=4320),
+        ),
+    ],
+)
+@pytest.mark.parametrize("has_audio", [True, False])
+def test_youtube_unsafe_video_preserves_audio_or_blocks(qualities, has_audio):
+    modes = (DownloadMode.VIDEO_WITH_AUDIO,)
+    if has_audio:
+        modes += (DownloadMode.AUDIO_ONLY,)
+    plan = create_plan(FakeProvider(modes=modes, qualities=qualities))
+
+    assert plan.unavailable_choices == (
+        (UserChoiceKind.VIDEO, SAFE_QUALITY_MAPPING_UNAVAILABLE_REASON),
+    )
+    if has_audio:
+        assert plan.state is ChoicePlanState.DIRECT_DOWNLOAD
+        assert plan.automatic_options == DownloadOptions(mode=DownloadMode.AUDIO_ONLY)
+        assert len(plan.mode_choices) == 1
+    else:
+        assert plan.state is ChoicePlanState.BLOCKED
+        assert plan.automatic_options is None
+        assert plan.blocked_reason == SAFE_QUALITY_MAPPING_UNAVAILABLE_REASON
+
+
+@pytest.mark.parametrize(
+    ("width", "height", "tier"),
+    [
+        (720, 1280, QualityTier.MEDIUM),
+        (1080, 1920, QualityTier.HIGH),
+        (720, 720, QualityTier.MEDIUM),
+    ],
+)
+def test_youtube_mixed_metadata_retains_exact_single_safe_choice(width, height, tier):
+    qualities = (
+        video_quality("partial", height=480),
+        video_quality("ultra", width=3840, height=2160),
+        video_quality("unknown"),
+        video_quality("safe-opaque-id", width=width, height=height),
+    )
+    provider = FakeProvider(modes=(DownloadMode.VIDEO_WITH_AUDIO,), qualities=qualities)
+
+    plan = create_plan(provider)
+    reverse = create_plan(
+        FakeProvider(modes=(DownloadMode.VIDEO_WITH_AUDIO,), qualities=tuple(reversed(qualities)))
+    )
+
+    assert plan == reverse
+    assert plan.state is ChoicePlanState.DIRECT_DOWNLOAD
+    assert plan.automatic_options == DownloadOptions(
+        mode=DownloadMode.VIDEO_WITH_AUDIO, quality_id="safe-opaque-id"
+    )
+    assert plan.mode_choices[0].quality_choices[0].tier is tier
+
+
+@pytest.mark.parametrize("platform", [Platform.INSTAGRAM, Platform.TIKTOK])
+def test_other_providers_retain_automatic_video_without_qualities(platform):
+    plan = create_plan(
+        FakeProvider(platform=platform, modes=(DownloadMode.VIDEO_WITH_AUDIO,)),
+        f"https://{platform.value}.com/example",
+    )
+
+    assert plan.state is ChoicePlanState.DIRECT_DOWNLOAD
+    assert plan.automatic_options == DownloadOptions(mode=DownloadMode.VIDEO_WITH_AUDIO)
 
 
 def test_plan_is_deterministic_independent_of_provider_mode_ordering() -> None:

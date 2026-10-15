@@ -99,7 +99,8 @@ This closure does not mean production readiness. Additional client checks, uploa
   client after deployment; current verification is deterministic/local synthetic only.
 - [ ] Keep YouTube audio direct unless later evidence justifies audio quality selection.
 - [ ] Do not expose video-without-audio as a normal user option.
-- [ ] Preserve automatic/best-option selection where no user choice is needed.
+- [ ] Preserve provider-specific automatic selection where safe; YouTube video must
+  retain an exact, fully dimensioned quality ID even when the quality screen is skipped.
 - [ ] Design loading, progress, and status behavior where justified.
 - [ ] Define cancellation and retry behavior if appropriate.
 - [ ] Review and standardize user-facing messages.
@@ -249,6 +250,32 @@ Verification evidence is recorded in TESTING.md.
 
 Full deterministic/local verification: 417 passed, 1 skipped (external matrix disabled);
 Ruff lint/format, Compose configuration validation, and diff whitespace checks passed.
+
+Focused YouTube quality-selection safety (2026-10-15):
+
+- [x] Reproduce both confirmed defects in failing deterministic regressions before the
+  fix: portrait 720-class selected landscape 1080-class; empty YouTube video qualities
+  became unrestricted automatic video.
+- [x] Identify distinct video dimension pairs and constrain every actual yt-dlp video
+  selector branch to the exact chosen width and height, preserving codec/audio fallback.
+- [x] Filter YouTube application choices to complete dimensions at or below 1080-class;
+  preserve the exact safe ID for single-choice paths, audio-only availability, and
+  `BLOCKED` when no safe useful path remains.
+- [x] Retain `SINGLE_DIMENSION` classification as lower-confidence information while
+  excluding incomplete dimensions from actionable YouTube video. No missing dimensions
+  are invented and no automatic video fallback is allowed.
+- [ ] Revalidate selected video quality, audio fallback, and normal M4A/callback behavior
+  in the real Telegram client after an approved deployment.
+
+QualityOption/DownloadOptions contracts are unchanged; provider IDs are opaque and now
+encode dimension pairs instead of height alone. Existing playlist-context handling,
+audio preparation, callbacks, retries, dependencies, and Compose are unchanged. Verification
+evidence and metadata-only guarantee limits are recorded in TESTING.md. Phase 4 and
+production reliability remain open.
+
+Verification for quality-selection safety: 469 passed, 1 skipped (external matrix
+disabled); Ruff lint/format, quiet Compose validation, and diff checks passed. Existing
+M4A, video preparation, playlist-context and callback-resilience tests remain passing.
 
 Analytics requirements for this phase:
 

@@ -292,16 +292,15 @@ application policy should produce:
 
 If no video quality can be classified, do not show fake Low / Medium / High choices. The
 plan should record `(VIDEO, "safe_quality_mapping_unavailable")` in `unavailable_choices`
-or, if no other useful path remains, `state=BLOCKED` with the same reason. Because
-`quality_id=None` currently means provider automatic/best for YouTube and may exceed the
-High approximately 1080-class product policy, an empty or unclassifiable `QualityTierPlan`
-must not silently become
+or, if no other useful path remains, `state=BLOCKED` with the same reason.
+YouTube video downloads now require a concrete, fully dimensioned quality ID; an empty
+or unsafe `QualityTierPlan` must not become
 `DownloadOptions(mode=VIDEO_WITH_AUDIO, quality_id=None)` as normal High/default
 behavior.
 
-Later implementation may add a safe provider-level approximately 1080-class ceiling
-fallback. Until that exists, the choice model must keep "safe tier mapping unavailable"
-distinct from ordinary automatic provider selection.
+The application filters YouTube video candidates to complete dimensions with
+`min(width, height) <= 1080` before tier mapping. If none remain, audio-only stays
+available independently or the plan is blocked. There is no unrestricted video fallback.
 
 ### One-choice provider example
 
@@ -386,8 +385,8 @@ errors before a plan can be built.
 
 - Whether `blocked_reason`, `hidden_modes` reasons, and `unavailable_choices` reasons
   should be free strings or small enums in the first code implementation.
-- Whether the first implementation allows a safe automatic video fallback when YouTube
-  quality metadata is insufficient, and what explicit evidence is required.
+- Any future relaxation of the current fail-closed YouTube video policy would require
+  explicit evidence that incomplete metadata can be constrained safely.
 - How much of the future analytics event shape should be defined before Telegram UI work.
 - Whether to extract a shared provider resolver later if planning grows beyond a single
   `DownloadService.create_choice_plan()` method.
@@ -672,8 +671,8 @@ Phase 4 uses three user-facing quality tiers for YouTube video:
 | High | `Высокое` | approximately 1080-class | Best reasonable Telegram-oriented quality |
 
 High must not mean unlimited maximum/original quality and must not automatically select
-1440p, 2160p, or 4320p when a 1080-class option exists. Do not introduce a `Maximum`
-button in Phase 4.
+1440-, 2160-, or 4320-class video, even when no 1080-class option exists. Do not introduce
+a `Maximum` button in Phase 4.
 
 ### Orientation-independent metric
 
@@ -712,28 +711,26 @@ Implemented foundation:
 - compute `quality_resolution = min(width, height)` when both are available;
 - keep provider-specific `quality_id` values opaque to application/Telegram code.
 
-The download selector behavior remains height-based inside the YouTube provider; the
-application mapping only selects an existing provider `quality_id`.
+The provider identifies distinct dimension pairs as opaque `video-WxH` quality IDs.
+Its actual video selectors require that exact width and height on every fallback
+branch. Formats sharing a height but different widths therefore cannot replace one
+another silently. Codec/container preference and audio pairing remain provider concerns;
+the application selects existing quality IDs without parsing them.
 
 ### Missing or partial metadata
 
 Selection policy should degrade predictably:
 
 - If both `width` and `height` are present, use `min(width, height)`.
-- If only `height` is present, use `height` as a legacy fallback and mark the mapping as
-  lower confidence because portrait content can be over-classified.
-- If only `width` is present, use `width` as a lower-confidence fallback.
+- If only one dimension is present, `classify_quality` retains the lower-confidence
+  `SINGLE_DIMENSION` classification. The provider reports partial dimensions explicitly,
+  but the YouTube application policy excludes those options from actionable video.
 - If neither dimension is present, treat the option as unclassified for tier mapping.
-- If no classifiable video quality options remain, do not show a fake Low/Medium/High
+- If no safely actionable video quality options remain, do not show a fake Low/Medium/High
   choice.
-- Prefer a safe product default consistent with the High / approximately 1080-class
-  policy when the provider can enforce that ceiling reliably.
-- Only if the provider cannot reliably apply a 1080-class ceiling because metadata is
-  insufficient may it fall back to provider automatic/best behavior.
-- That fallback is exceptional and must not redefine High as unlimited maximum/original
-  quality.
-- Future analytics/diagnostics should distinguish this fallback from normal High
-  selection.
+- Keep supported audio-only available independently; otherwise return `BLOCKED`.
+- Never replace insufficient video dimensions with automatic/best selection. Provider
+  video calls with no concrete complete-dimension quality also fail safely.
 
 Do not parse dimensions from labels as a primary strategy. Labels are user-facing text,
 not a stable capability contract.
@@ -744,9 +741,11 @@ Use a deterministic ceiling-first policy for each target tier.
 
 For each tier target `T`:
 
-1. Build candidate video qualities with a classifiable `quality_resolution`.
+1. For YouTube, first retain only complete-dimension candidates at or below 1080-class.
+   The reusable tier helper itself still supports lower-confidence classification for
+   other callers; it does not own platform-specific safety policy.
 2. Prefer the highest candidate where `quality_resolution <= T`.
-3. If no candidate is at or below `T`, choose the lowest candidate above `T`.
+3. If no candidate is at or below `T`, choose the lowest remaining safe candidate above `T`.
 4. If multiple candidates have the same `quality_resolution`, prefer the provider's
    existing ordering or selector-specific quality ID; do not duplicate codec/bitrate
    scoring in product policy.
@@ -780,9 +779,8 @@ Exact target missing:
 
 All variants above target:
 
-- choose the lowest available class above the target;
-- for High, this is the only case where an above-1080 option may be selected
-  automatically, and it should choose the lowest such option rather than maximum/original.
+- choose the lowest available safe class above the target;
+- if all YouTube candidates exceed 1080-class, none are actionable: retain audio or block.
 
 All variants below target:
 
@@ -797,10 +795,10 @@ Unusual aspect ratios:
 
 Insufficient metadata:
 
-- if individual qualities are missing dimensions, exclude them from tier mapping unless a
-  legacy one-dimension fallback is available;
-- if the provider cannot expose dimensions reliably, skip the quality screen and use
-  automatic/best provider selection.
+- exclude incomplete YouTube dimensions from actionable video, even though the reusable
+  classifier preserves their lower-confidence distinction;
+- if the provider cannot expose safe dimensions, retain audio-only or block; do not
+  request automatic/best video. Other providers may support their own automatic path.
 
 ### Interaction with provider format selection
 

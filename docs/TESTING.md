@@ -158,6 +158,51 @@ live YouTube/Telegram requests were made. Compose remained running without a reb
 restart. Real Telegram validation of a playlist-context watch URL remains required after
 deployment; Phase 4 and production reliability remain open.
 
+## YouTube quality-selection safety (2026-10-15)
+
+Before implementation, two new regressions failed on the existing code: installed
+yt-dlp selected landscape 1080-class for a portrait 720-class quality, and an empty
+YouTube quality list produced `DIRECT_DOWNLOAD` with no quality ID. Both are now covered
+as passing regressions.
+
+Network-free provider/choice tests evaluate the installed yt-dlp selectors against
+representative synthetic format dictionaries, not only selector strings. They cover:
+
+- Portrait, landscape, square and mixed orientation; formats sharing a height with
+  different short-side classes; deterministic dimension IDs and tier collapse.
+- Exact dimensions through native H.264/MP4/AAC, progressive combined audio/video, and
+  incompatible-codec/container fallbacks. Every video branch retains both dimensions;
+  video-only sizes without a pairable audio stream are not offered for video-with-audio.
+- Width-only, height-only, no dimensions, empty qualities, and only above-1080 video:
+  safe audio-only remains available or the application blocks the request. The generic
+  classifier retains `SINGLE_DIMENSION`; non-YouTube automatic policy remains unchanged.
+- Missing video quality ID, disappeared dimensions or dimensions changed after cache
+  expiry, and missing selector matches fail without unrestricted fallback.
+- Existing playlist-context extraction/cache/download identity tests use concrete safe
+  video IDs. The opt-in live matrix now also uses concrete video IDs; it is not run here.
+- A single safe YouTube quality produces a direct plan with the exact provider ID and
+  downloads through the same inspected snapshot without a second metadata extraction.
+
+The enforcement is based on extracted dimensions. These tests cannot establish source
+metadata honesty, actual encoded pixel dimensions, or future YouTube availability. The
+short-side metric is not a limit on the longer side, encoded bytes, CPU, or latency.
+Provider facts may still describe above-ceiling video; the YouTube application policy
+excludes it from normal product choices. No media/network retry policy changes are made.
+
+Verification:
+
+- `uv run pytest`: 469 passed, 1 skipped. The external YouTube matrix was explicitly
+  disabled; existing synthetic FFmpeg integration, M4A, video and callback fault tests ran.
+- `uv run ruff check .`: passed.
+- `uv run ruff format --check .`: 60 files already formatted.
+- `docker compose config --quiet`: passed; rendered configuration was not printed.
+- `git diff --check`: passed.
+
+uv ran offline with a temporary cache because the default cache is sandbox-restricted.
+No dependency/configuration changes, live YouTube requests/downloads, Telegram calls,
+or Compose rebuilds/restarts were performed. Both services remained running. Real-client
+video, audio-fallback, M4A and callback regression remain required after deployment.
+
 ## PR #27 media-preparation validation
 
 Deterministic automated coverage:
