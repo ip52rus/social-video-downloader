@@ -23,7 +23,12 @@ from social_video_downloader.domain.models import (
 from social_video_downloader.providers.youtube import YouTubeProvider
 from social_video_downloader.services.choice_model import ChoicePlanState, UserChoiceKind
 from social_video_downloader.services.download import DownloadService
-from social_video_downloader.services.quality_tiers import QualityTier
+from social_video_downloader.services.quality_tiers import (
+    QualityTier,
+    ResolutionConfidence,
+    build_quality_tier_plan,
+    classify_quality,
+)
 
 VIDEO_INFO: dict[str, Any] = {
     "id": "abc123",
@@ -76,6 +81,57 @@ VIDEO_INFO: dict[str, Any] = {
         },
     ],
 }
+
+
+def evaluate_video_selector(formats, quality, mode=DownloadMode.VIDEO_WITH_AUDIO):
+    """Evaluate the real installed yt-dlp selector without fetching media."""
+    import yt_dlp
+
+    with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True}) as ydl:
+        info = {
+            "formats": [dict(item, url="https://media.invalid/fixture") for item in formats],
+        }
+        ydl.sort_formats(info)
+        select = ydl.build_format_selector(YouTubeProvider._format_selector(mode, quality))
+        return list(select({**info, "incomplete_formats": False, "has_merged_format": False}))
+
+
+def test_medium_portrait_selection_cannot_download_landscape_1080() -> None:
+    formats = [
+        {
+            "format_id": "portrait",
+            "width": 720,
+            "height": 1280,
+            "vcodec": "avc1",
+            "acodec": "none",
+            "ext": "mp4",
+        },
+        {
+            "format_id": "landscape",
+            "width": 1920,
+            "height": 1080,
+            "vcodec": "avc1",
+            "acodec": "none",
+            "ext": "mp4",
+        },
+        {"format_id": "audio", "vcodec": "none", "acodec": "mp4a", "ext": "m4a"},
+    ]
+    qualities = YouTubeProvider._qualities_from_info(
+        {"formats": formats}, DownloadMode.VIDEO_WITH_AUDIO
+    )
+    medium = next(
+        choice.quality
+        for choice in build_quality_tier_plan(qualities).choices
+        if choice.tier is QualityTier.MEDIUM
+    )
+
+    selected = evaluate_video_selector(formats, medium)
+
+    assert len(selected) == 1
+    video, audio = selected[0]["requested_formats"]
+    assert video["format_id"] == "portrait"
+    assert min(video["width"], video["height"]) == 720
+    assert audio["format_id"] == "audio"
 
 
 class FakeYoutubeDL:
@@ -277,7 +333,7 @@ def test_lists_video_qualities_from_available_formats(
         DownloadMode.VIDEO_ONLY,
     )
 
-    assert [quality.id for quality in qualities] == ["height-1080", "height-720"]
+    assert [quality.id for quality in qualities] == ["video-1920x1080", "video-1280x720"]
     assert [quality.height for quality in qualities] == [1080, 720]
     assert [quality.width for quality in qualities] == [1920, 1280]
     assert all(quality.mode is DownloadMode.VIDEO_ONLY for quality in qualities)
@@ -309,8 +365,8 @@ def test_quality_labels_distinguish_portrait_and_landscape() -> None:
     )
 
     assert [(item.label, item.height) for item in qualities] == [
-        ("720×1280 (max)", 1280),
-        ("1080p (max)", 1080),
+        ("720×1280", 1280),
+        ("1920×1080", 1080),
     ]
     assert [(item.width, item.height) for item in qualities] == [
         (720, 1280),
@@ -356,24 +412,18 @@ def test_download_reuses_info_from_quality_discovery(
     assert factory.instances[1].processed
 
 
-def test_default_download_uses_best_available_quality(
+@pytest.mark.parametrize("mode", [DownloadMode.VIDEO_WITH_AUDIO, DownloadMode.VIDEO_ONLY])
+def test_default_video_download_requires_concrete_quality(
     provider: YouTubeProvider,
     factory: FakeYoutubeDLFactory,
     tmp_path: Path,
+    mode: DownloadMode,
 ) -> None:
-    downloaded = provider.download("https://youtu.be/abc123", tmp_path)
+    with pytest.raises(UnsupportedQualityError):
+        provider.download("https://youtu.be/abc123", tmp_path, DownloadOptions(mode=mode))
 
-    client = factory.instances[-1]
-    expected_selector = (
-        "bv[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/b[vcodec^=avc1][acodec^=mp4a][ext=mp4]/bv*+ba/b"
-    )
-    assert client.params["format"] == expected_selector
-    assert client.format_selector == expected_selector
-    assert client.params["merge_output_format"] == "mp4"
-    assert downloaded.file_path.is_file()
-    assert downloaded.file_path.suffix == ".mp4"
-    assert downloaded.file_path.read_bytes() == b"fake media"
-    assert downloaded.metadata.title == "Test: video/short"
+    assert not factory.instances[-1].processed
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_video_with_audio_download_prefers_compatible_codecs_for_selected_quality(
@@ -386,14 +436,14 @@ def test_video_with_audio_download_prefers_compatible_codecs_for_selected_qualit
         tmp_path,
         DownloadOptions(
             mode=DownloadMode.VIDEO_WITH_AUDIO,
-            quality_id="height-720",
+            quality_id="video-1280x720",
         ),
     )
 
     expected_selector = (
-        "bv[height<=720][vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
-        "b[height<=720][vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
-        "bv*[height<=720]+ba/b[height<=720]"
+        "bv[width=1280][height=720][vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
+        "b[width=1280][height=720][vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
+        "bv*[width=1280][height=720]+ba/b[width=1280][height=720]"
     )
     client = factory.instances[-1]
     assert client.params["format"] == expected_selector
@@ -412,13 +462,13 @@ def test_video_only_download_uses_selected_quality(
         tmp_path,
         DownloadOptions(
             mode=DownloadMode.VIDEO_ONLY,
-            quality_id="height-720",
+            quality_id="video-1280x720",
         ),
     )
 
     client = factory.instances[-1]
-    assert client.params["format"] == "bv[height<=720]"
-    assert client.format_selector == "bv[height<=720]"
+    assert client.params["format"] == "bv[width=1280][height=720]"
+    assert client.format_selector == "bv[width=1280][height=720]"
     assert client.params["retries"] == 10
     assert client.params["fragment_retries"] == 10
     assert "merge_output_format" not in client.params
@@ -519,7 +569,9 @@ def test_download_failure_maps_to_download_failed_error(tmp_path: Path) -> None:
     provider = YouTubeProvider(ydl_factory=factory)
 
     with pytest.raises(DownloadFailedError) as exc_info:
-        provider.download("https://youtu.be/abc123", tmp_path)
+        provider.download(
+            "https://youtu.be/abc123", tmp_path, DownloadOptions(quality_id="video-1280x720")
+        )
 
     assert isinstance(exc_info.value.__cause__, RuntimeError)
     assert list(tmp_path.iterdir()) == []
@@ -533,7 +585,9 @@ def test_post_processing_failure_maps_to_media_processing_error(tmp_path: Path) 
     provider = YouTubeProvider(ydl_factory=factory)
 
     with pytest.raises(MediaProcessingError) as exc_info:
-        provider.download("https://youtu.be/abc123", tmp_path)
+        provider.download(
+            "https://youtu.be/abc123", tmp_path, DownloadOptions(quality_id="video-1280x720")
+        )
 
     assert isinstance(exc_info.value.__cause__, PostProcessingError)
     assert list(tmp_path.iterdir()) == []
@@ -543,7 +597,9 @@ def test_missing_final_media_file_maps_to_media_processing_error(tmp_path: Path)
     provider = YouTubeProvider(ydl_factory=FakeYoutubeDLFactory(write_output=False))
 
     with pytest.raises(MediaProcessingError, match="exactly one final media file"):
-        provider.download("https://youtu.be/abc123", tmp_path)
+        provider.download(
+            "https://youtu.be/abc123", tmp_path, DownloadOptions(quality_id="video-1280x720")
+        )
 
     # The temporary workspace is removed even when no final media file is produced.
     assert list(tmp_path.iterdir()) == []
@@ -552,17 +608,11 @@ def test_missing_final_media_file_maps_to_media_processing_error(tmp_path: Path)
 @pytest.mark.parametrize(
     "format_spec",
     [
-        "bv*+ba/b",
-        "bv[height<=720]",
+        "bv[width=1280][height=720]",
         (
-            "bv[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
-            "b[vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
-            "bv*+ba/b"
-        ),
-        (
-            "bv[height<=720][vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
-            "b[height<=720][vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
-            "bv*[height<=720]+ba/b[height<=720]"
+            "bv[width=1280][height=720][vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
+            "b[width=1280][height=720][vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
+            "bv*[width=1280][height=720]+ba/b[width=1280][height=720]"
         ),
         "140-0/140",
         "251-0/251",
@@ -754,9 +804,9 @@ def test_equivalent_watch_urls_share_choice_plan_and_inspection_cache(context_fi
     assert audio.kind is UserChoiceKind.AUDIO
     assert audio.final_options == DownloadOptions(mode=DownloadMode.AUDIO_ONLY)
     assert [(choice.tier, choice.quality.id) for choice in video.quality_choices] == [
-        (QualityTier.LOW, "height-360"),
-        (QualityTier.MEDIUM, "height-720"),
-        (QualityTier.HIGH, "height-1080"),
+        (QualityTier.LOW, "video-640x360"),
+        (QualityTier.MEDIUM, "video-1280x720"),
+        (QualityTier.HIGH, "video-1920x1080"),
     ]
     assert len(factory.instances) == 1
     assert factory.instances[0].extract_calls == [(SINGLE_WATCH_URL, False, False)]
@@ -773,7 +823,9 @@ def test_playlist_context_download_uses_canonical_target_and_cached_info(
     if cached_url is not None:
         provider.get_supported_modes(cached_url)
 
-    downloaded = provider.download(download_url, tmp_path)
+    downloaded = provider.download(
+        download_url, tmp_path, DownloadOptions(quality_id="video-1280x720")
+    )
 
     assert downloaded.metadata.source_url == SINGLE_WATCH_URL
     assert downloaded.file_path.is_file()
@@ -828,3 +880,228 @@ def test_invalid_playlist_context_is_rejected_before_extraction(
 
     assert factory.instances == []
     assert list(tmp_path.iterdir()) == []
+
+
+def video_format(format_id, width, height, *, vcodec="avc1", acodec="none", ext="mp4"):
+    return {
+        "format_id": format_id,
+        "width": width,
+        "height": height,
+        "vcodec": vcodec,
+        "acodec": acodec,
+        "ext": ext,
+    }
+
+
+@pytest.mark.parametrize("mode", [DownloadMode.VIDEO_WITH_AUDIO, DownloadMode.VIDEO_ONLY])
+@pytest.mark.parametrize(
+    ("width", "height"),
+    [(720, 1280), (1280, 720), (1920, 1080), (1080, 1920), (720, 720), (720, 1080)],
+)
+def test_real_selector_preserves_dimensions_in_mixed_orientation_formats(mode, width, height):
+    formats = [
+        video_format("chosen", width, height),
+        video_format("ultra", 3840, 2160),
+        video_format("same-height", width + 1200, height),
+        video_format("width-only", width, None),
+        video_format("height-only", None, height),
+        video_format("unknown", None, None),
+        {"format_id": "audio", "vcodec": "none", "acodec": "mp4a", "ext": "m4a"},
+    ]
+    qualities = YouTubeProvider._qualities_from_info({"formats": formats}, mode)
+    quality = next(item for item in qualities if item.width == width and item.height == height)
+
+    selected = evaluate_video_selector(formats, quality, mode)
+
+    assert len(selected) == 1
+    if mode is DownloadMode.VIDEO_WITH_AUDIO:
+        video, audio = selected[0]["requested_formats"]
+        assert audio["acodec"] == "mp4a"
+    else:
+        video = selected[0]
+    assert video["format_id"] == "chosen"
+    assert (video["width"], video["height"]) == (width, height)
+
+
+@pytest.mark.parametrize(
+    ("video", "audio_codec", "audio_ext"),
+    [
+        (video_format("avc", 1280, 720), "mp4a.40.2", "m4a"),
+        (video_format("vp9", 1280, 720, vcodec="vp9", ext="webm"), "opus", "webm"),
+        (video_format("combined", 1280, 720, acodec="mp4a.40.2"), None, None),
+        (
+            video_format("combined-vp9", 1280, 720, vcodec="vp9", acodec="opus", ext="webm"),
+            None,
+            None,
+        ),
+    ],
+)
+def test_real_selector_codec_fallbacks_keep_selected_size_and_audio(video, audio_codec, audio_ext):
+    formats = [video, video_format("larger-native", 1920, 1080, acodec="mp4a.40.2")]
+    if audio_codec is not None:
+        formats.append(
+            {"format_id": "audio", "vcodec": "none", "acodec": audio_codec, "ext": audio_ext}
+        )
+    quality = next(
+        item
+        for item in YouTubeProvider._qualities_from_info(
+            {"formats": formats}, DownloadMode.VIDEO_WITH_AUDIO
+        )
+        if item.width == 1280
+    )
+
+    selected = evaluate_video_selector(formats, quality)
+
+    assert len(selected) == 1
+    streams = selected[0].get("requested_formats", [selected[0]])
+    assert any(item["acodec"] != "none" for item in streams)
+    assert [item["format_id"] for item in streams if item["vcodec"] != "none"] == [
+        video["format_id"]
+    ]
+
+
+def test_real_selector_prefers_native_mp4_aac_within_selected_dimensions():
+    formats = [
+        video_format("avc", 1280, 720),
+        video_format("vp9", 1280, 720, vcodec="vp9", ext="webm"),
+        {"format_id": "aac", "vcodec": "none", "acodec": "mp4a.40.2", "ext": "m4a"},
+        {"format_id": "opus", "vcodec": "none", "acodec": "opus", "ext": "webm"},
+    ]
+    (quality,) = YouTubeProvider._qualities_from_info(
+        {"formats": formats}, DownloadMode.VIDEO_WITH_AUDIO
+    )
+
+    selected = evaluate_video_selector(formats, quality)
+
+    assert [item["format_id"] for item in selected[0]["requested_formats"]] == ["avc", "aac"]
+
+
+@pytest.mark.parametrize(("width", "height"), [(720, None), (None, 720), (None, None)])
+def test_incomplete_video_dimensions_are_never_actionable(width, height, tmp_path):
+    info = {**VIDEO_INFO, "formats": [video_format("partial", width, height, acodec="mp4a")]}
+    factory = FakeYoutubeDLFactory(info)
+    provider = YouTubeProvider(ydl_factory=factory)
+    qualities = provider.get_available_qualities(SINGLE_WATCH_URL, DownloadMode.VIDEO_WITH_AUDIO)
+    if width is None and height is None:
+        assert qualities == ()
+        quality = None
+    else:
+        (quality,) = qualities
+        assert classify_quality(quality).confidence is ResolutionConfidence.SINGLE_DIMENSION
+
+    with pytest.raises(UnsupportedQualityError):
+        provider.download(
+            SINGLE_WATCH_URL, tmp_path, DownloadOptions(quality_id=quality.id if quality else None)
+        )
+
+    assert not any(client.processed for client in factory.instances)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_quality_identities_and_tiers_are_deterministic_with_shared_heights():
+    formats = [video_format("portrait", 720, 1080), video_format("landscape", 1920, 1080)]
+    qualities = YouTubeProvider._qualities_from_info({"formats": formats}, DownloadMode.VIDEO_ONLY)
+
+    assert len({item.id for item in qualities}) == 2
+    assert qualities == YouTubeProvider._qualities_from_info(
+        {"formats": list(reversed(formats))}, DownloadMode.VIDEO_ONLY
+    )
+    assert [
+        (choice.tier, choice.quality.id) for choice in build_quality_tier_plan(qualities).choices
+    ] == [
+        (QualityTier.MEDIUM, "video-720x1080"),
+        (QualityTier.HIGH, "video-1920x1080"),
+    ]
+
+
+@pytest.mark.parametrize("changed_dimensions", [(1920, 1080), (None, 720), (3840, 2160)])
+def test_changed_selected_dimensions_fail_without_fallback(
+    changed_dimensions, tmp_path, monkeypatch
+):
+    factory = FakeYoutubeDLFactory(
+        {**VIDEO_INFO, "formats": [video_format("same-id", 1280, 720, acodec="mp4a")]}
+    )
+    provider = YouTubeProvider(ydl_factory=factory)
+    (quality,) = provider.get_available_qualities(SINGLE_WATCH_URL, DownloadMode.VIDEO_WITH_AUDIO)
+    # Expire the existing inspection to exercise revalidation against fresh metadata.
+    monkeypatch.setattr(provider, "_INSPECTION_CACHE_TTL_SECONDS", 0)
+    factory.info = {
+        **VIDEO_INFO,
+        "formats": [video_format("same-id", *changed_dimensions, acodec="mp4a")],
+    }
+
+    with pytest.raises(UnsupportedQualityError):
+        provider.download(SINGLE_WATCH_URL, tmp_path, DownloadOptions(quality_id=quality.id))
+
+    assert not any(client.processed for client in factory.instances)
+
+
+@pytest.mark.parametrize("mode", [DownloadMode.VIDEO_WITH_AUDIO, DownloadMode.VIDEO_ONLY])
+def test_real_selector_missing_selected_size_cannot_fall_back_to_other_quality(mode):
+    (quality,) = YouTubeProvider._qualities_from_info(
+        {"formats": [video_format("chosen", 720, 1280)]}, DownloadMode.VIDEO_ONLY
+    )
+    formats = [video_format("different", 1920, 1080, acodec="mp4a")]
+
+    assert evaluate_video_selector(formats, quality, mode) == []
+
+
+def test_video_with_audio_discovery_excludes_unpairable_video_only_size():
+    formats = [
+        video_format("silent", 1280, 720),
+        video_format("combined", 1920, 1080, acodec="mp4a.40.2"),
+    ]
+    info = {"formats": formats}
+
+    (quality,) = YouTubeProvider._qualities_from_info(info, DownloadMode.VIDEO_WITH_AUDIO)
+
+    assert quality.id == "video-1920x1080"
+    assert evaluate_video_selector(formats, quality)[0]["format_id"] == "combined"
+    (video_only,) = YouTubeProvider._qualities_from_info(info, DownloadMode.VIDEO_ONLY)
+    assert video_only.id == "video-1280x720"
+
+
+@pytest.mark.parametrize("with_audio", [True, False])
+@pytest.mark.parametrize(
+    ("width", "height"), [(720, None), (None, 720), (None, None), (3840, 2160)]
+)
+def test_provider_metadata_cannot_create_unsafe_video_download_plan(width, height, with_audio):
+    formats = [video_format("video", width, height, acodec="mp4a")]
+    if with_audio:
+        formats.append({"format_id": "audio", "vcodec": "none", "acodec": "mp4a", "ext": "m4a"})
+    factory = FakeYoutubeDLFactory({**VIDEO_INFO, "formats": formats})
+    provider = YouTubeProvider(ydl_factory=factory)
+
+    plan = DownloadService([provider]).create_choice_plan(SINGLE_WATCH_URL)
+
+    if with_audio:
+        assert plan.state is ChoicePlanState.DIRECT_DOWNLOAD
+        assert plan.automatic_options == DownloadOptions(mode=DownloadMode.AUDIO_ONLY)
+    else:
+        assert plan.state is ChoicePlanState.BLOCKED
+        assert plan.automatic_options is None
+    assert len(factory.instances) == 1
+    assert not factory.instances[0].processed
+
+
+def test_single_safe_video_plan_downloads_exact_quality_from_shared_snapshot(tmp_path):
+    formats = [video_format("combined", 720, 1280, acodec="mp4a.40.2")]
+    factory = FakeYoutubeDLFactory({**VIDEO_INFO, "formats": formats})
+    provider = YouTubeProvider(ydl_factory=factory)
+    service = DownloadService([provider])
+
+    plan = service.create_choice_plan(SINGLE_WATCH_URL)
+
+    assert plan.state is ChoicePlanState.DIRECT_DOWNLOAD
+    assert plan.automatic_options == DownloadOptions(
+        mode=DownloadMode.VIDEO_WITH_AUDIO, quality_id="video-720x1280"
+    )
+    result = service.download(SINGLE_WATCH_URL, tmp_path, plan.automatic_options)
+    assert result.file_path.is_file()
+    assert factory.instances[1].processed
+    assert factory.instances[1].extract_calls == []
+    quality = plan.mode_choices[0].quality_choices[0].quality
+    assert factory.instances[1].params["format"] == YouTubeProvider._format_selector(
+        DownloadMode.VIDEO_WITH_AUDIO, quality
+    )
+    assert evaluate_video_selector(formats, quality)[0]["format_id"] == "combined"

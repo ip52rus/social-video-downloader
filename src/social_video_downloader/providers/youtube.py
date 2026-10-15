@@ -245,7 +245,10 @@ class YouTubeProvider:
         formats = cls._formats(info)
 
         if mode in {DownloadMode.VIDEO_WITH_AUDIO, DownloadMode.VIDEO_ONLY}:
-            dimensions_by_height: dict[int, int | None] = {}
+            dimensions: set[tuple[int | None, int | None]] = set()
+            has_audio_only = any(
+                cls._has_audio(item) and not cls._has_video(item) for item in formats
+            )
 
             for media_format in formats:
                 has_video = cls._has_video(media_format)
@@ -255,26 +258,33 @@ class YouTubeProvider:
                     continue
                 if mode is DownloadMode.VIDEO_ONLY and has_audio:
                     continue
+                if mode is DownloadMode.VIDEO_WITH_AUDIO and not has_audio and not has_audio_only:
+                    continue
 
                 height = cls._positive_int(media_format.get("height"))
                 width = cls._positive_int(media_format.get("width"))
-                if height is not None:
-                    current_width = dimensions_by_height.get(height)
-                    if height not in dimensions_by_height or (
-                        width is not None and (current_width is None or width > current_width)
-                    ):
-                        dimensions_by_height[height] = width
+                if width is not None or height is not None:
+                    dimensions.add((width, height))
 
             options = []
-            for height, width in sorted(dimensions_by_height.items(), reverse=True):
-                label = (
-                    f"{width}×{height} (max)"
-                    if width is not None and width <= height
-                    else f"{height}p (max)"
-                )
+            for width, height in sorted(
+                dimensions, key=lambda pair: (pair[1] or 0, pair[0] or 0), reverse=True
+            ):
+                if width is not None and height is not None:
+                    quality_id = f"video-{width}x{height}"
+                    label = f"{width}×{height}"
+                else:
+                    quality_id = (
+                        f"video-width-{width}" if width is not None else f"video-height-{height}"
+                    )
+                    label = (
+                        f"Width {width} (height unknown)"
+                        if width is not None
+                        else f"Height {height} (width unknown)"
+                    )
                 options.append(
                     QualityOption(
-                        id=f"height-{height}",
+                        id=quality_id,
                         label=label,
                         mode=mode,
                         height=height,
@@ -369,26 +379,17 @@ class YouTubeProvider:
             format_id = quality.id.removeprefix("audio:")
             return f"{format_id}-0/{format_id}"
 
-        if quality is None:
-            if mode is DownloadMode.VIDEO_ONLY:
-                return "bv"
-            return (
-                "bv[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
-                "b[vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
-                "bv*+ba/b"
-            )
+        if quality is None or quality.width is None or quality.height is None:
+            raise UnsupportedQualityError("Video requires a quality with known width and height.")
 
-        if quality.height is None:
-            raise UnsupportedQualityError("The selected video quality has no height.")
-
-        height = quality.height
+        dimensions = f"[width={quality.width}][height={quality.height}]"
         if mode is DownloadMode.VIDEO_ONLY:
-            return f"bv[height<={height}]"
+            return f"bv{dimensions}"
 
         return (
-            f"bv[height<={height}][vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
-            f"b[height<={height}][vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
-            f"bv*[height<={height}]+ba/b[height<={height}]"
+            f"bv{dimensions}[vcodec^=avc1][ext=mp4]+ba[acodec^=mp4a]/"
+            f"b{dimensions}[vcodec^=avc1][acodec^=mp4a][ext=mp4]/"
+            f"bv*{dimensions}+ba/b{dimensions}"
         )
 
     @staticmethod

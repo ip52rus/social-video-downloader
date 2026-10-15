@@ -54,6 +54,13 @@ real Telegram client revalidation after an explicitly approved Compose deploymen
 The current running stack has not been rebuilt. Phase 4 and production reliability
 remain open; this change adds no global Telegram or media-upload retries.
 
+Focused quality-safety correction (2026-10-15): YouTube video choices now require complete
+dimensions at or below 1080-class, with exact dimension selectors during download.
+Unknown/partial/above-ceiling video leaves audio-only available or produces a blocked
+plan. Deterministic regressions cover the previous orientation mismatch and unrestricted
+empty-quality path. Real Telegram revalidation after approved deployment remains the
+next gate for this correction; Phase 4 is not complete.
+
 Planned work:
 
 - define the provider/content capability interpretation used by Telegram UX, reusing the

@@ -3,9 +3,20 @@
 from dataclasses import dataclass
 from enum import StrEnum
 
-from social_video_downloader.domain.models import DownloadMode, DownloadOptions, QualityOption
+from social_video_downloader.domain.models import (
+    DownloadMode,
+    DownloadOptions,
+    Platform,
+    QualityOption,
+)
 from social_video_downloader.providers.base import MediaProvider
-from social_video_downloader.services.quality_tiers import QualityTier, build_quality_tier_plan
+from social_video_downloader.services.quality_tiers import (
+    QUALITY_TIER_TARGETS,
+    QualityTier,
+    ResolutionConfidence,
+    build_quality_tier_plan,
+    classify_quality,
+)
 
 HIDDEN_VIDEO_ONLY_REASON = "hidden_by_normal_policy"
 SAFE_QUALITY_MAPPING_UNAVAILABLE_REASON = "safe_quality_mapping_unavailable"
@@ -132,6 +143,17 @@ def build_choice_plan(provider: MediaProvider, url: str) -> ChoicePlan:
 
 def _video_choice(provider: MediaProvider, url: str) -> ModeChoice | None:
     qualities = provider.get_available_qualities(url, DownloadMode.VIDEO_WITH_AUDIO)
+    if provider.platform is Platform.YOUTUBE:
+        qualities = tuple(
+            option
+            for option in qualities
+            if (classified := classify_quality(option)) is not None
+            and classified.confidence is ResolutionConfidence.DIMENSIONS
+            and classified.resolution <= QUALITY_TIER_TARGETS[QualityTier.HIGH]
+        )
+        if not qualities:
+            return None
+
     if not qualities:
         return ModeChoice(
             kind=UserChoiceKind.VIDEO,
