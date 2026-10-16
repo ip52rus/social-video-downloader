@@ -318,8 +318,12 @@ Analytics requirements for this phase:
 - [x] Address PR #44 P1/P2: reject implicit manifests/fragments before acquisition and prefer compatible codecs using real yt-dlp selection regression tests.
 - [x] Independently review and merge PR #44 after the user's separate decision.
 - [x] Reproduce and correct overly strict rejection of incomplete direct-MP4 metadata offline; preserve manifest rejection and compatibility priority.
-- [ ] Integrate default provider registration and Telegram direct-download routing/messages in PR 2.
-- [ ] Validate real anonymous Reel download with documented URL count/type and runtime; repeat the bounded smoke only after separate authorization for the metadata-admission correction.
+- [ ] Integrate default provider registration and Telegram direct-download routing/messages in a separate integration PR.
+- [x] Validate one real anonymous Reel through corrected provider/service after PR #45: 2026-10-16, one extraction/acquisition, preparation passthrough, ffprobe/full decode PASS; no Telegram upload.
+- [x] Record expanded Phase 5 scope: Reels, public single-video posts and separately implemented photo/video carousels.
+- [x] Extend the existing provider to single-video `/p/` posts with deterministic classification, acquisition and preparation tests; retain one-file contract and all format restrictions.
+- [ ] Validate real anonymous single-video `/p/` acquisition after separate authorization; offline tests do not close this gate.
+- [ ] Design and implement photo/video carousel acquisition and ordered Telegram media groups separately; split more than 10 items into sequential groups and never silently omit unavailable elements.
 - [ ] Validate real Telegram delivery/playback after separately authorized deployment changes.
 - [ ] Assess broader extraction stability and recovery; production reliability remains open.
 
@@ -327,12 +331,15 @@ Evidence limitation: previous Gates 1–3C are reported in the handoff and the u
 GO; full Gates 1–3B evidence was unavailable here. Gate 3C demonstrates metadata for one
 five-element `/p/` playlist, which remains excluded. No carousel media was acquired.
 PR 1 tests do not substitute for real Instagram or Telegram validation. Meaningful
-Instagram quality choices, DASH/HLS assembly, silent-video handling, ordinary `/p/` posts,
-carousels, Stories, private content and authentication are outside this PR.
+Instagram quality choices, DASH/HLS assembly, silent-video handling, Stories, private
+content and authentication remain outside the implemented scope. Single-video `/p/`
+support is now implemented offline; carousels remain a separate unfinished stage.
 The first real provider smoke failed during inspection (13 formats, none admitted),
 with zero acquisition attempts. The incomplete-metadata rejection is reproduced and
-fixed offline; successful real acquisition remains outstanding. The other ten formats'
-rejection reasons remain unverified; no access failure was reported.
+fixed in PR #45. Its repeat real smoke passed: 13 formats, 3 admitted, 10 rejected for
+manifest/fragment markers; MP4 H.264/AAC, 720x1280, 11.282041 seconds, 1,317,210 bytes.
+The initial run's other ten rejection reasons were unverified; the later run's diagnosis
+does not retroactively establish them. No `/p/` live or Instagram Telegram test is claimed.
 See [the accepted scope](PHASE5_INSTAGRAM_REELS.md) for the evidence boundary.
 
 ## Phase 6 - TikTok Provider

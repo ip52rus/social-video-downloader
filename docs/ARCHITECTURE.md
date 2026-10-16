@@ -114,7 +114,7 @@ This changes validation status only. Live fault recovery, broader format/client 
 and Phase 9 production reliability remain open; obsolete choice-prompt cleanup is Phase 8.
 
 ## Application layer
-DownloadService normalizes the URL, detects its platform, selects a registered MediaProvider, and returns the provider's transport-neutral DownloadedMedia result. The default registry contains the YouTube provider. The experimental `InstagramProvider` can be explicitly injected for development/testing; default registration and Telegram activation are deferred to the next PR. A recognized platform without a registered provider raises a domain-level UnsupportedPlatformError. The service does not depend on Telegram.
+DownloadService normalizes the URL, detects its platform, selects a registered MediaProvider, and returns the provider's transport-neutral DownloadedMedia result. The default registry contains the YouTube provider. The experimental `InstagramProvider` can be explicitly injected for development/testing; default registration and Telegram activation are deferred to a separate integration stage. A recognized platform without a registered provider raises a domain-level UnsupportedPlatformError. The service does not depend on Telegram.
 
 `DownloadService.create_choice_plan(url)` reuses the same normalization and provider
 selection path to build an immutable application-level choice plan before any Telegram UI
@@ -202,11 +202,14 @@ Gates 1–3C, while retaining the one-file `DownloadedMedia` contract. No new ca
 model, downloader engine, transport pipeline or infrastructure is needed.
 
 `InstagramProvider` implements `MediaProvider` for anonymous individual `/reel/<id>/`
-URLs on the explicit Instagram host allowlist. It canonicalizes to HTTPS/www without
-tracking parameters and pins extraction to the Instagram extractor. `/p/`, Stories,
-profiles, collections, redirect results, private/auth-gated results and unsupported
-formats fail before media acquisition. A playlist is never enumerated or reduced to its
-first entry, including a one-entry playlist.
+and `/p/<id>/` URLs on the explicit Instagram host allowlist. It canonicalizes to
+HTTPS/www without tracking parameters, preserves the path kind in cache identity, and
+pins extraction to the Instagram extractor. URL acceptance alone does not establish
+content type: only a top-level single-video result with admissible formats is accepted.
+Stories, profiles, photos, collections, redirect results, private/auth-gated results and
+unsupported formats fail before media acquisition. Any result containing `entries`,
+including a one-entry playlist, is rejected without recursively processing or downloading
+its entries. `noplaylist=True` does not replace this validation or select a carousel item.
 
 The provider admits only direct HTTP(S) MP4 candidates without explicit video/audio
 absence or a DRM marker. Instagram `video_versions` may omit dimensions and codecs;
@@ -240,6 +243,8 @@ request workspace, checks for exactly one nonempty regular file (rejecting symli
 extra outputs), and publishes a generated safe filename without trusting source titles
 or IDs as filesystem paths. The workspace is removed on success or failure. Duration is
 optional; real upload parameters remain the responsibility of the existing ffprobe path.
+Posts without a title use the neutral `Instagram Video` fallback; Reel fallback titles
+and filenames retain their existing label. Both use generated filenames, not source titles.
 No cookies, credentials, persistent extractor cache or application retry loop is configured;
 yt-dlp extraction/download/fragment retries are zero and socket timeout is 20 seconds.
 This is not a whole-request deadline or a guarantee of one HTTP request: extractor internals
@@ -247,10 +252,17 @@ may make multiple requests. Raw yt-dlp log messages are suppressed to avoid expo
 source URLs or account data; domain errors retain safe public messages.
 
 The default provider registry, Telegram handlers and running deployment remain YouTube-only.
-The first real provider smoke failed during inspection, before acquisition. An offline
-regression reproduced rejection of direct MP4 metadata lacking dimensions/codecs and
-removed that overly strict condition. Successful real acquisition with the correction
-and Telegram end-to-end delivery remain unverified.
+After PR #45 corrected incomplete-metadata admission, one public Reel passed a real
+provider/service smoke on 2026-10-16: one extraction/acquisition, H.264/AAC MP4,
+720x1280, 11.282041 seconds and 1,317,210 bytes. Existing preparation used passthrough;
+ffprobe and full FFmpeg decoding passed. There was no Telegram upload. This evidence
+predates the `/p/` extension; real single-video `/p/` acquisition and all Instagram
+Telegram end-to-end delivery remain unverified.
+
+The user approved future photo/video carousels as a separate stage: preserve original
+order in Telegram media groups, split more than 10 items into sequential groups, and
+never silently omit unavailable elements. No multi-file contract, carousel/image
+acquisition or media-group delivery is implemented here; the one-file contract stays intact.
 See [the accepted plan and evidence boundary](PHASE5_INSTAGRAM_REELS.md).
 
 ## Media engine

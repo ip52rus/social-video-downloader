@@ -540,3 +540,63 @@ No live extraction/download, Docker operation, dependency change or Telegram cal
 performed for this fix. The real formats' complete fields are unavailable in this evidence, so matching
 the local defect to the prior live rejection remains a hypothesis requiring a newly
 authorized bounded provider smoke. Instagram remains disabled in the default bot.
+
+### Real corrected-provider Reel smoke (2026-10-16)
+
+After PR #45, one separately authorized anonymous smoke tested main
+`4885ee651790d70222acb3c490d2ed367ed4637c` through `InstagramProvider` and
+`DownloadService`, not standalone yt-dlp. Current source was mounted read-only in an
+isolated short-lived container using the existing bot image/runtime; Python 3.13.16,
+yt-dlp 2026.08.19 and FFmpeg/ffprobe 7.1.5. The existing Compose services were unchanged.
+
+| Observation | Verified result |
+|---|---|
+| Scope | One public Reel, one extraction and one acquisition; no retry |
+| Formats | 13 returned, 3 admitted, 10 rejected as manifest/fragment candidates |
+| Choice plan | `DIRECT_DOWNLOAD`, `VIDEO_WITH_AUDIO`, no audio/quality menus |
+| Actual file | MP4 H.264/AAC, 720x1280, 11.282041 seconds, 1,317,210 bytes (1.256189 MiB) |
+| Integrity/preparation | ffprobe PASS, full FFmpeg decode PASS, existing preparation passthrough |
+| Upload parameters | width 720, height 1280, integer duration 11; no upload performed |
+| Timings | extraction 1.991 s, plan 2.248 s, download 1.278 s, total 5.251 s |
+| Safety | 25 MiB streaming byte guard and 180 s deadline; temporary media/container/scripts removed |
+| Warning | `CSRF_TOKEN_UNAVAILABLE`, nonfatal; no error recorded |
+
+Selected codec/dimension metadata was incomplete; actual H.264/AAC and geometry came
+from file probing. The later format-rejection counts describe this run only, not the
+unretained format fields of the earlier failed attempt. This PASS proves one real Reel
+through the implemented provider, not general Instagram reliability, subjective playback
+or Telegram delivery. It predates the single-video `/p/` extension below.
+
+### Single-video post extension — offline validation only
+
+The same provider now accepts canonical `/p/<id>/` URLs, subject to single-video result
+validation before acquisition. Tests use installed yt-dlp 2026.08.19 `extract_info` with
+`download=False, process=False`, the real Instagram `_real_extract`/`_extract_product`
+classification, synthetic JSON responses and a network-forbidden opener. Only the JSON
+fixture branch is selected; no HTTP impersonation handler or real network access is used.
+
+Fixtures establish a top-level video for a single-video product, playlists for multi-video,
+mixed-media, photo-only and one-entry carousels, and a no-video error for a single photo
+or empty product. Rejected results never reach yt-dlp result processing/acquisition.
+Additional raw-result tests cover empty playlists, `entries` regardless of type,
+redirects, unknown types, private/auth-gated metadata and DRM. No first entry is selected.
+
+Shared cases now run for both Reel and post URLs: canonical tracking removal, snapshot
+reuse/expiry/bounds, unsupported options, safe filenames, failure cleanup, manifest
+rejection and actual yt-dlp compatibility-priority selection. Separate path identities
+cannot collide in the cache. Synthetic FFmpeg integration covers valid H.264/AAC,
+silently audio-free and corrupt actual files for both paths; existing preparation is reused.
+The default provider registry and Telegram handlers are unchanged.
+
+Current offline verification with the external YouTube matrix explicitly disabled:
+
+- Focused Instagram provider/synthetic preparation: 259 passed.
+- Full pytest suite: 728 passed, 1 skipped (opt-in external YouTube matrix).
+- 116 additional parameterized/regression cases compared with main.
+- Ruff lint and format checks: PASS.
+- `git diff --check`, documentation consistency and security/scope review: PASS.
+
+No live Instagram/YouTube requests, dependency changes, Docker operations or Telegram
+calls are part of this extension. Real `/p/` support remains UNVERIFIED pending a separately
+authorized smoke. Future carousel media groups/order/splitting requirements are product
+scope only; no carousel/image acquisition or delivery is implemented.

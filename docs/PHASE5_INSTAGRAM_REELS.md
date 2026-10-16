@@ -1,4 +1,4 @@
-# Phase 5: first Instagram Reel provider PR
+# Phase 5: Instagram single-video provider scope and evidence
 
 ## Agreed scope and decision
 
@@ -18,6 +18,8 @@ or claimed as freshly verified. The user's explicit scope decision authorizes th
 implementation without a new observation/waiting gate.
 
 ## PR 1 acceptance
+
+These criteria record the original Reel-only PR. The approved current expansion is below.
 
 - Implement `MediaProvider` without changing its contract or the one-file `DownloadedMedia`.
 - Admit only individual `/reel/<id>/` paths on instagram.com, www.instagram.com or
@@ -71,9 +73,47 @@ installed extractor's `video_versions` mapping confirmed and corrected the overl
 dimension/codec evidence rule. This does not establish why every real format was rejected
 or prove that the live Reel now downloads. See the follow-up evidence in TESTING.md.
 
-Next, separately authorize a bounded real provider smoke for this correction before
-default registration and common Telegram routing/messages in another PR. No audio or
-quality menu is planned. Telegram playback/deployment checks require separate authorization.
-Any future `/p/`, carousel, Story, private-content, authentication, silent-video or
-additional-format support requires a separate scope decision. Phase 5 and production
-reliability remain open until their own acceptance checks are satisfied.
+PR #45 was subsequently merged. Its separately authorized repeat smoke on 2026-10-16
+passed for one public Reel through the actual provider/service: 13 formats, 3 admitted,
+10 rejected as manifest/fragment candidates, one extraction and one acquisition.
+The actual file was MP4 H.264/AAC, 720x1280, 11.282041 seconds, 1,317,210 bytes;
+preparation was passthrough, ffprobe and full FFmpeg decoding passed. There was no
+Telegram upload. This resolves the observed admission failure for that case only.
+
+## Approved expansion and current single-video-post stage
+
+The user approved Reels, ordinary public single-video posts and future photo/video
+carousels. This stage covers only `/p/<id>/` single-video posts, using the existing
+provider and one-file `DownloadedMedia` contract. No second acquisition/preparation
+pipeline, new dependencies or Telegram changes are introduced.
+
+- Accept the same strict host allowlist and canonical HTTPS/www identity for `/reel/`
+  and `/p/`; remove tracking queries/fragments without conflating the two path kinds.
+- Decide content type from the extractor result, not the `/p/` path. Installed yt-dlp
+  maps single-video products to video results; carousel products to playlists, including
+  one-entry and mixed-media collections; photos have no admissible video formats and
+  may raise an upstream no-video error. Test these mappings with synthetic responses.
+- Reuse `_single_video()` to reject playlists, any `entries`, redirects, unclassified,
+  inaccessible/private and DRM results before acquisition. Never recursively process
+  entries or silently pick the first item. `noplaylist` is not a carousel-to-video conversion.
+- Preserve direct HTTP(S) MP4 admission, manifest/fragment rejection, H.264/AAC priority,
+  incomplete metadata support, bounded cache/snapshot reuse, safe filenames and cleanup.
+- Expose only `VIDEO_WITH_AUDIO` / `DIRECT_DOWNLOAD`; no audio or quality menu. Reject
+  unsupported modes and arbitrary quality IDs. Missing post titles use `Instagram Video`.
+- Keep Instagram disabled in the default registry and leave Telegram handlers unchanged.
+
+Real Reel smoke evidence predates this extension. Real `/p/` extraction/acquisition is
+UNVERIFIED; offline tests do not establish current platform access or Telegram delivery.
+Next: independent review and a separately authorized bounded real single-video-post smoke.
+Telegram activation/deployment checks remain separately authorized work.
+
+## Future carousel stage — not implemented
+
+Photo/video carousels are approved future product scope, not supported downloads in this
+stage. Deliver future carousel items as Telegram media groups in original order; split
+more than 10 items into sequential groups, with no silent omission of unavailable elements.
+The required multi-file acquisition/delivery design is deferred, not silently added to
+the single-file provider. Photos and all collections continue to fail safely here.
+
+Stories, private-content access, authentication, silent-video handling and additional
+formats require separate scope decisions. Phase 5 and production reliability remain open.
