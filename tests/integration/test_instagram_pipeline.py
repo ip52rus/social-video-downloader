@@ -20,12 +20,15 @@ from social_video_downloader.services.download import DownloadService
 
 pytestmark = pytest.mark.skipif(
     not shutil.which("ffmpeg") or not shutil.which("ffprobe"),
-    reason="Local synthetic Reel tests require ffmpeg and ffprobe.",
+    reason="Local synthetic Instagram tests require ffmpeg and ffprobe.",
 )
 
 
+@pytest.mark.parametrize("publication_path", ["reel", "p"])
 @pytest.mark.parametrize("media_kind", ["audio-video", "silent", "invalid"])
-def test_reel_result_uses_existing_transport_validation_and_cleanup(tmp_path, media_kind):
+def test_video_result_uses_existing_transport_validation_and_cleanup(
+    tmp_path, media_kind, publication_path
+):
     fixture = tmp_path / "synthetic.mp4"
     command = [
         "ffmpeg",
@@ -73,14 +76,14 @@ def test_reel_result_uses_existing_transport_validation_and_cleanup(tmp_path, me
             raise AssertionError("Synthetic integration must not access the network")
 
     service = DownloadService([InstagramProvider(LocalYDL)])
-    url = "https://www.instagram.com/reel/Synthetic_01/"
+    url = f"https://www.instagram.com/{publication_path}/Synthetic_01/"
     plan = service.create_choice_plan(url)
     assert plan.state is ChoicePlanState.DIRECT_DOWNLOAD
     with temporary_workspace(base_dir=tmp_path) as workspace:
         workspace_path = workspace
         result = service.download(url, workspace, plan.automatic_options)
         assert result.metadata.duration_seconds is None
-        assert len(extractions) == 1
+        assert extractions == [(url, {"download": False, "process": False, "ie_key": "Instagram"})]
         assert processing == ["direct"]
         if media_kind == "audio-video":
             calls = []

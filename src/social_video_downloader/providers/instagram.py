@@ -1,4 +1,4 @@
-"""Experimental anonymous provider for individual public Instagram Reels."""
+"""Experimental anonymous provider for individual public Instagram videos."""
 
 from collections.abc import Iterator, Mapping
 from math import isfinite
@@ -48,7 +48,7 @@ class _QuietLogger:
 
 
 class InstagramProvider:
-    """Acquire one Reel; registration and Telegram activation are a separate stage.
+    """Acquire one video; registration and Telegram activation are a separate stage.
 
     Only direct MP4 candidates are admitted. Missing codec/dimension metadata is
     unknown; actual video and audio streams still require transport validation.
@@ -66,22 +66,22 @@ class InstagramProvider:
         return Platform.INSTAGRAM
 
     @staticmethod
-    def _reel_url(url: str) -> str:
+    def _media_url(url: str) -> str:
         normalized = normalize_media_url(url)
         parts = urlsplit(normalized)
-        match = fullmatch(r"/reel/([A-Za-z0-9_-]+)/?", parts.path)
+        match = fullmatch(r"/(reel|p)/([A-Za-z0-9_-]+)/?", parts.path)
         if (
             parts.hostname not in {"instagram.com", "www.instagram.com", "m.instagram.com"}
             or parts.port is not None
             or match is None
         ):
-            raise InvalidMediaURLError("Only individual Instagram Reel URLs are supported.")
+            raise InvalidMediaURLError("Only individual Instagram Reel or post URLs are supported.")
         # Tracking parameters must not change extractor/cache identity or enter logs.
-        return f"https://www.instagram.com/reel/{match[1]}/"
+        return f"https://www.instagram.com/{match[1]}/{match[2]}/"
 
     def can_handle(self, url: str) -> bool:
         try:
-            self._reel_url(url)
+            self._media_url(url)
         except DownloaderError:
             return False
         return True
@@ -196,7 +196,7 @@ class InstagramProvider:
         return {**raw, "formats": usable}
 
     def _inspect(self, url: str, *, consume: bool = False) -> tuple[str, dict[str, Any]]:
-        normalized = self._reel_url(url)
+        normalized = self._media_url(url)
         now = monotonic()
         self._inspection_cache = {
             key: value
@@ -219,7 +219,7 @@ class InstagramProvider:
         except DownloaderError:
             raise
         except Exception as exc:
-            raise MetadataExtractionError("Unable to inspect the Instagram Reel.") from exc
+            raise MetadataExtractionError("Unable to inspect the Instagram video.") from exc
         if not consume:
             if len(self._inspection_cache) >= self._INSPECTION_CACHE_MAX_ENTRIES:
                 self._inspection_cache.pop(next(iter(self._inspection_cache)))
@@ -231,8 +231,11 @@ class InstagramProvider:
         title = info.get("title")
         uploader = info.get("uploader")
         duration = info.get("duration")
+        default_title = (
+            "Instagram Reel" if urlsplit(url).path.startswith("/reel/") else "Instagram Video"
+        )
         return MediaMetadata(
-            title=title.strip() if isinstance(title, str) and title.strip() else "Instagram Reel",
+            title=title.strip() if isinstance(title, str) and title.strip() else default_title,
             source_url=url,
             platform=Platform.INSTAGRAM,
             duration_seconds=float(duration) if cls._positive_number(duration) else None,
@@ -286,12 +289,15 @@ class InstagramProvider:
                     or source.stat().st_size == 0
                 ):
                     raise MediaProcessingError("Instagram did not produce exactly one media file.")
-                destination = output_dir / safe_filename(
-                    f"Instagram Reel {uuid4().hex}", extension="mp4"
+                label = (
+                    "Instagram Reel"
+                    if urlsplit(normalized).path.startswith("/reel/")
+                    else "Instagram Video"
                 )
+                destination = output_dir / safe_filename(f"{label} {uuid4().hex}", extension="mp4")
                 source.replace(destination)
         except DownloaderError:
             raise
         except Exception as exc:
-            raise DownloadFailedError("The Instagram Reel download failed.") from exc
+            raise DownloadFailedError("The Instagram video download failed.") from exc
         return DownloadedMedia(file_path=destination, metadata=metadata)

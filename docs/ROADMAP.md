@@ -36,7 +36,7 @@ Gate: a core user can submit a supported YouTube URL and receive downloaded medi
 
 This phase closure does not mean production readiness. It does not close restart/recovery, upload/network failure recovery, cloud/local operational rehearsal, larger-file limit work, repeatable E2E/deployment procedure, monitoring, resource limits, or broader reliability checks. Those are tracked in Phase 9, Production Reliability.
 
-Instagram and TikTok URLs remain recognition-only in the bot. An experimental Instagram Reel provider exists for explicit injection; default registration and Telegram integration remain pending.
+Instagram and TikTok URLs remain recognition-only in the bot. An experimental Instagram Reel/single-video-post provider exists for explicit injection; default registration and Telegram integration remain pending.
 
 ## Phase 4 - Download UX and YouTube Options
 Expose useful provider/content capabilities through a polished Telegram interaction flow.
@@ -113,7 +113,7 @@ capability source of truth without evidence.
 
 ## Phase 5 - Instagram Provider — in progress
 
-On 2026-10-16 the user authorized implementation after the previously conducted Gates
+On 2026-10-16 the user initially authorized implementation after the previously conducted Gates
 1–3C, limited to anonymous public individual Reels. The cached Gate 3C report confirms
 metadata extraction/classification of one five-item `/p/` playlist only; the carousel is
 out of scope and that report does not prove media acquisition or Telegram delivery.
@@ -122,16 +122,24 @@ explicit development scope decision, not a broad reliability verdict.
 
 Merged PR #44 implements the `MediaProvider` contract, direct MP4 Reel acquisition, rejection
 boundaries, explicit `DownloadService` injection and deterministic validation. It leaves
-the default registry and Telegram activation unchanged. Real Instagram downloads and
-Telegram end-to-end checks remain outstanding for this implementation.
+the default registry and Telegram activation unchanged.
 
-The first real provider smoke failed before acquisition and reported incomplete codec/
-dimension metadata. Offline reproduction confirmed an overly strict direct-MP4 admission
-rule, now corrected and verified locally; success on the real Reel is still unverified.
+The first real provider smoke failed before acquisition on incomplete metadata. After
+PR #45, a separately authorized repeat passed for one public Reel on 2026-10-16:
+13 formats, 3 admitted, one extraction and acquisition; MP4 H.264/AAC, 720x1280,
+11.282041 seconds, 1,317,210 bytes, preparation passthrough and ffprobe/full decode PASS.
+No Telegram upload was performed; this is not broad reliability evidence.
 
-Next: separately authorize a bounded real provider smoke with the correction. Successful
-acquisition must precede a focused PR for default registration, Telegram direct-download
-routing/messages and scoped external/client acceptance.
+The user subsequently approved a broader Phase 5 scope: public Reels, ordinary public
+single-video posts, and future photo/video carousels. This stage extends the same provider
+to single-video `/p/` results with offline validation only. Carousel/photo acquisition
+and Telegram integration are not implemented. The future carousel delivery policy is
+ordered Telegram media groups, splitting more than 10 items into sequential groups,
+with no silent omission of unavailable elements; it requires a separate implementation stage.
+
+Next: independent review and separately authorized bounded real single-video `/p/`
+validation. Real `/p/` acquisition and all Instagram Telegram delivery remain unverified.
+Default registration/Telegram routing and future carousel work require separate stages.
 No running-stack rebuild/restart is authorized by this stage.
 See [the scope and acceptance record](PHASE5_INSTAGRAM_REELS.md).
 
