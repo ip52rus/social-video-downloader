@@ -14,7 +14,7 @@ from social_video_downloader.domain.carousel import (
     CarouselScope,
 )
 from social_video_downloader.domain.errors import InvalidMediaURLError, MetadataExtractionError
-from social_video_downloader.infrastructure.instagram_metadata import CarouselInstagramIE
+from social_video_downloader.infrastructure.instagram_metadata import CarouselInstagramIE, _classify
 from social_video_downloader.providers.instagram import InstagramProvider
 from social_video_downloader.services.instagram_carousel import InstagramCarouselService
 
@@ -28,6 +28,14 @@ PHOTO = {
     "pk": 102,
     "media_type": 1,
     "is_video": False,
+    "image_versions2": {"candidates": [{"url": "https://media.invalid/photo.jpg"}]},
+}
+# Sanitized shape observed in the separate live metadata diagnostic. No source IDs,
+# accounts, media URLs or raw response payloads are retained.
+CORROBORATED_PHOTO = {
+    "pk": 102,
+    "media_type": 1,
+    "__typename": "UnrecognizedFixtureType",
     "image_versions2": {"candidates": [{"url": "https://media.invalid/photo.jpg"}]},
 }
 
@@ -163,7 +171,7 @@ def test_no_videos_has_clear_non_downloadable_result(items):
         {"pk": 102, "media_type": 2},
         {"pk": 102, "formats": []},
         {"pk": 102, "thumbnails": [{"url": "https://media.invalid/photo.jpg"}]},
-        {k: v for k, v in PHOTO.items() if k != "is_video"},
+        {k: v for k, v in PHOTO.items() if k not in {"is_video", "media_type"}},
         {**PHOTO, "image_versions2": {}},
         {**PHOTO, "video_versions": VIDEO["video_versions"]},
         {**PHOTO, "video_codec": "h264"},
@@ -433,3 +441,122 @@ def test_invalid_root_id_cannot_enter_unsafe_upstream_conversion(root_id):
     runtime.product["pk"] = root_id
     # The publication identity is the validated URL; child identities remain valid.
     assert runtime.service().create_selection_plan(URL).state is CarouselPlanState.READY
+
+
+@pytest.mark.parametrize(
+    "item",
+    [CORROBORATED_PHOTO, {k: v for k, v in PHOTO.items() if k != "is_video"}],
+)
+def test_numeric_photo_marker_needs_image_corroboration_and_reports_evidence(item):
+    plan = Runtime([item]).service().create_selection_plan(URL)
+    assert_blocked(plan, CarouselIssue.NO_VIDEOS)
+    assert plan.items[0].kind is CarouselItemKind.PHOTO
+    assert "media_type_photo" in plan.items[0].evidence
+    assert "image_versions" in plan.items[0].evidence
+
+
+def test_observed_twenty_item_shape_selects_only_seventeen_videos():
+    photo_positions = {8, 9, 18}
+    items = []
+    for position in range(1, 21):
+        item = (
+            CORROBORATED_PHOTO
+            if position in photo_positions
+            else {
+                **VIDEO,
+                "has_audio": True,
+                "image_versions2": PHOTO["image_versions2"],
+                "video_versions": [
+                    {"url": f"https://media.invalid/video-{height}.mp4", "height": height}
+                    for height in (640, 1280, 1920)
+                ],
+            }
+        )
+        items.append({**deepcopy(item), "pk": 100 + position})
+    runtime = Runtime(items)
+    plan = runtime.service().create_selection_plan(URL)
+    expected_positions = [i for i in range(1, 21) if i not in photo_positions]
+    assert plan.state is CarouselPlanState.READY and plan.issue is None
+    assert plan.total_entries == len(plan.items) == 20
+    assert [x.position for x in plan.items] == list(range(1, 21))
+    assert [x.item_id for x in plan.items] == [str(100 + i) for i in range(1, 21)]
+    assert [x.position for x in plan.items if x.kind is CarouselItemKind.PHOTO] == [8, 9, 18]
+    assert not any(x.kind is CarouselItemKind.UNKNOWN for x in plan.items)
+    assert len(plan.selected_videos) == 17
+    assert [x.position for x in plan.selected_videos] == expected_positions
+    assert [x.item_id for x in plan.selected_videos] == [str(100 + i) for i in expected_positions]
+    assert all(
+        x.kind is CarouselItemKind.VIDEO and x.admissible_format_count == 3
+        for x in plan.selected_videos
+    )
+    # Runtime forbids network, result processing and acquisition for the entire flow.
+    assert runtime.extractions == [URL]
+
+
+@pytest.mark.parametrize(
+    "images",
+    [
+        None,
+        {},
+        [],
+        {"candidates": None},
+        {"candidates": []},
+        {"candidates": {}},
+        {"candidates": [None, {}, {"url": None}]},
+        {"candidates": [{"url": "javascript:invalid"}]},
+        {"candidates": [{"url": "https:///missing-host.jpg"}]},
+        {"candidates": [{"url": "https://[malformed/image.jpg"}]},
+        {"candidates": [{"url": "ftp://media.invalid/photo.jpg"}]},
+    ],
+)
+def test_numeric_photo_with_invalid_image_structure_remains_unknown(images):
+    item = {**CORROBORATED_PHOTO, "image_versions2": images}
+    kind, signals = _classify(item)
+    assert kind is CarouselItemKind.UNKNOWN
+    assert "media_type_photo" not in signals
+    plan = Runtime([item]).service().create_selection_plan(URL)
+    assert_blocked(plan, CarouselIssue.UNKNOWN_ITEM)
+
+
+@pytest.mark.parametrize("marker", [True, False, "1", 1.0, 0, 3, -1, [], {}])
+def test_malformed_numeric_photo_marker_never_selects_photo(marker):
+    kind, signals = _classify({**CORROBORATED_PHOTO, "media_type": marker})
+    assert kind is CarouselItemKind.UNKNOWN
+    assert "media_type_photo" not in signals
+
+
+@pytest.mark.parametrize(
+    "video_fields",
+    [
+        {"video_versions": [{"url": "https://media.invalid/video.mp4"}]},
+        {"video_versions": [{"width": 720}]},
+        {"video_codec": "h264"},
+        {"video_codec": "none"},
+        {"video_duration": 0},
+        {"video_duration": 12},
+        {"video_dash_manifest": "nonempty fixture manifest"},
+        {"is_video": True},
+        {"__typename": "GraphVideo"},
+        {"video_versions": {}},
+        {"is_video": "false"},
+        {"__typename": []},
+        {"video_codec": False},
+        {"video_dash_manifest": {}},
+    ],
+)
+def test_numeric_photo_with_video_or_malformed_type_evidence_remains_unknown(video_fields):
+    # Direct classifier test keeps malformed manifests away from the XML parser;
+    # the existing integration cases separately prove unsupported VIDEO blocks.
+    kind, signals = _classify({**CORROBORATED_PHOTO, **video_fields})
+    assert kind is CarouselItemKind.UNKNOWN
+    assert "media_type_photo" not in signals
+
+
+@pytest.mark.parametrize("photo_fields", [{"is_video": False}, {"__typename": "GraphImage"}])
+def test_explicit_photo_markers_work_without_numeric_marker(photo_fields):
+    item = {key: value for key, value in PHOTO.items() if key not in {"media_type", "is_video"}}
+    plan = Runtime([{**item, **photo_fields}]).service().create_selection_plan(URL)
+    assert_blocked(plan, CarouselIssue.NO_VIDEOS)
+    assert plan.items[0].kind is CarouselItemKind.PHOTO
+    assert "photo_marker" in plan.items[0].evidence
+    assert "media_type_photo" not in plan.items[0].evidence

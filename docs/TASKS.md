@@ -325,7 +325,11 @@ Analytics requirements for this phase:
 - [ ] Validate real anonymous single-video `/p/` acquisition after separate authorization; offline tests do not close this gate.
 - [x] Inspect one real five-video carousel metadata-only: two URL variants, five stable ordered IDs, three direct MP4 candidates per item; installed yt-dlp ignores `img_index`; zero acquisition.
 - [x] Implement guarded instance-local source type preservation, immutable carousel inspection/selection plans and deterministic tests; keep single-file contracts unchanged.
-- [ ] Independently review carousel inspection; real mixed/photo classification remains unverified.
+- [x] Independently review and merge carousel inspection/planning PR #47.
+- [x] Record one real 20-entry metadata case: 17 VIDEO and three UNKNOWN at 8/9/18, original IDs/order preserved, BLOCKED / unknown_item; source diagnosis supports corroborated PHOTO candidates, zero acquisition.
+- [x] Correct corroborated integer media_type=1 PHOTO classification with deterministic tests; preserve conflict guards and report numeric evidence.
+- [ ] Independently review the focused PHOTO classification fix.
+- [ ] Validate corrected mixed-carousel selection live after separate authorization; offline READY plans do not close this gate.
 - [ ] Validate reliable item-reference semantics separately; keep `img_index` and ambiguous references blocked meanwhile.
 - [ ] Implement bounded ordered multi-video acquisition/preparation separately; photos are NEVER acquired, UNKNOWN/unsupported selected videos must not be silently omitted.
 - [ ] Implement ordered Telegram video groups separately: 2–10 per group, more than 10 split sequentially, a final single video sent individually.
@@ -348,7 +352,9 @@ manifest/fragment markers; MP4 H.264/AAC, 720x1280, 11.282041 seconds, 1,317,210
 The initial run's other ten rejection reasons were unverified; the later run's diagnosis
 does not retroactively establish them. No real single-video `/p/` acquisition or Instagram
 Telegram delivery is claimed. The newer carousel metadata-only experiment is recorded
-separately in TESTING.md; it does not validate mixed/photo classification or acquisition.
+separately in TESTING.md. The later 20-entry source diagnostic justifies the PHOTO
+adjustment for that observed shape, but corrected live mixed-selection behavior and
+all carousel acquisition remain unverified.
 See [the accepted scope](PHASE5_INSTAGRAM_REELS.md) for the evidence boundary.
 
 ## Phase 6 - TikTok Provider

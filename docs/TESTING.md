@@ -634,3 +634,37 @@ Verification for this carousel-inspection stage (live YouTube matrix explicitly 
 - Full regression suite: 831 passed, 1 skipped (opt-in external YouTube matrix).
 - Ruff lint/format, diff, local documentation links and security/scope review: PASS.
 - No new live extraction or media acquisition was performed for this implementation.
+
+
+### Corroborated carousel PHOTO classification — offline follow-up
+
+Separate live metadata evidence after PR #47 concerns one 20-entry publication, not a
+broad platform matrix. The first one-shot check returned 17 VIDEO and UNKNOWN at 8/9/18,
+with intact original ID/order mapping and BLOCKED / unknown_item. A separately authorized
+one-shot source diagnostic found strict integer `media_type=1` plus coherent image
+versions/nonempty candidates at those positions, with no `is_video` or video
+versions/codec/duration/manifest fields. Representative VIDEO entries had type 2 and
+nonempty video versions/manifest; both groups had image versions. Both checks performed
+zero media acquisition. This evidence supports the combined PHOTO rule for that shape.
+
+The correction is tested without network via the installed extractor and the existing
+network/processing/acquisition-forbidden Runtime. Tests include the observed PHOTO shape,
+a 20-entry fixture selecting exactly 17 VIDEO at 1–7, 10–17, 19–20, numeric evidence,
+invalid image structures/locators, malformed numeric/string markers, video contradictions,
+and unchanged explicit-photo behavior. The former UNKNOWN case for valid numeric-plus-
+image evidence is retained as a PHOTO acceptance case; image-only UNKNOWN remains tested.
+Existing unsupported VIDEO, identity, unavailable/private/DRM, cache, reference and
+single-video/YouTube/Telegram regressions remain part of the suite.
+
+The corrected adapter has NOT been retested live. The live mixed-selection gate remains
+OPEN; no carousel media acquisition or Telegram delivery is implemented or claimed.
+
+
+Verification of this focused classification fix (no live platform calls):
+
+- 39 additional deterministic cases; carousel suite: 142 passed.
+- Carousel plus existing Instagram provider/preparation tests: 401 passed.
+- Full regression suite: 870 passed, 1 skipped (opt-in external YouTube matrix disabled).
+- Ruff lint/format, diff, documentation links and security/scope review: PASS.
+- Application AST comparison: only `_classify` changed; extraction, identity/order,
+  cache, URL handling, domain contracts, registry and Telegram handlers are unchanged.

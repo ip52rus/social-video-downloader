@@ -137,9 +137,11 @@ unavailability/DRM also survives the mapping. No raw responses enter plans or th
 
 VIDEO requires explicit video evidence, including `video_versions` even when its locator
 is unusable (then the VIDEO is unsupported, never a PHOTO). PHOTO requires an explicit
-photo marker plus usable image candidate structure and no video conflict. Numeric type
-codes alone are insufficient. Unknown/conflicting evidence blocks the whole selection.
-Conservative PHOTO behavior is tested offline only, not established for live mixed posts.
+photo marker or strictly integer `media_type=1`, plus usable image candidate structure
+and no video conflict/malformed type metadata. Numeric type codes alone are insufficient.
+Only successful numeric PHOTO classification adds `media_type_photo` evidence.
+Unknown/conflicting evidence blocks the whole selection. Corrected PHOTO selection is
+validated offline only; the live evidence and outstanding gate are recorded below.
 
 Plans preserve canonical identity, original entry count, ordered positions/IDs, kinds,
 evidence, admitted-format counts, selected video references, scope and READY/BLOCKED reason.
@@ -166,7 +168,36 @@ no selected-item behavior was established. CSRF-token warning was nonfatal.
 
 This validates video metadata for that case, not this newly implemented adapter, actual
 media streams, photos/mixed carousels, frontend index semantics or Telegram delivery.
-The complete PHOTO/VIDEO/UNKNOWN gate remains INCONCLUSIVE; the installed-extractor
-item-reference gate failed. Overall decision is CONDITIONAL GO for inspection planning.
+At that gate the complete PHOTO/VIDEO/UNKNOWN result was INCONCLUSIVE; the installed-
+extractor item-reference gate failed. The decision was CONDITIONAL GO for inspection planning.
 Mixed/photo live evidence, item-specific semantics, acquisition/preparation and Telegram
 validation remain separate gates. Phase 5 and production reliability remain open.
+
+
+### Corroborated PHOTO follow-up — offline fix, live selection still open
+
+After PR #47, two separately authorized one-shot anonymous metadata checks investigated
+one real 20-entry publication without acquisition. The production adapter preserved all
+20 positions and unique IDs, classified 17 entries as VIDEO and left positions 8, 9 and 18
+UNKNOWN. Its plan was safely BLOCKED / unknown_item with no selected videos.
+
+The source diagnostic found integer `media_type=1`, no `is_video`, an unrecognized
+`__typename`, and coherent `image_versions2` with nonempty candidates at those three
+positions. Video versions/codec/duration/manifest fields were absent. Representative
+VIDEO entries had integer `media_type=2`, nonempty video versions/manifest and also image
+versions. Image metadata alone therefore does not distinguish photos from videos.
+The combination supports three PHOTO candidates for this observed schema; it does not
+establish universal Instagram semantics or involve viewing/downloading those images.
+
+The focused correction is confined to `_classify`: a strict integer photo type can
+corroborate existing image evidence. Booleans, malformed markers, conflicting video
+versions/codec/duration/manifest, `is_video=True` or `GraphVideo` cannot take this route.
+Existing explicit photo markers still work. Source extraction, ID/order guards, cache,
+URL policy and all download/transport contracts are unchanged.
+
+Deterministic tests reproduce the source shape and a 20-item mixed plan: 17 VIDEO,
+PHOTO at 8/9/18, READY with selected positions 1–7, 10–17, 19–20 and no acquisition.
+This is an offline result, not a retest of the corrected adapter against Instagram.
+The live mixed-carousel selection gate remains OPEN pending separate authorization.
+Multi-video acquisition, item references, Telegram groups and production reliability
+remain unfinished. Photos will never be acquired or delivered.
