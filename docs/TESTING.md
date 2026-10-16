@@ -600,3 +600,37 @@ No live Instagram/YouTube requests, dependency changes, Docker operations or Tel
 calls are part of this extension. Real `/p/` support remains UNVERIFIED pending a separately
 authorized smoke. Future carousel media groups/order/splitting requirements are product
 scope only; no carousel/image acquisition or delivery is implemented.
+
+### Carousel inspection/selection — deterministic validation
+
+`tests/test_instagram_carousel.py` exercises actual installed Instagram `_real_extract`
+and product mapping with synthetic JSON responses and a network-forbidden opener.
+The production per-instance extractor adapter is installed as in the real inspection path.
+Result processing/media acquisition raise immediately in the fixture runtime.
+
+Coverage: all-video counts 1/2/5/10/11/21 without truncation; conservative mixed/photo-only
+fixtures; empty/UNKNOWN/conflicting entries; missing/unsupported video locators; malformed,
+duplicate/missing/mismatched IDs; upstream reordering/schema loss; unavailable/DRM source
+fields; immutable ordered plans; tracking/cache identity, TTL and bounds; `img_index`,
+malformed/ambiguous references rejected before extraction/cache; instance isolation.
+Existing provider/YouTube/media preparation/callback regressions run in the full suite.
+No external platform calls, images/videos, dependency changes, Docker operations or
+Telegram requests are part of this implementation's tests.
+
+The preceding separately authorized live metadata gate inspected one five-video carousel
+via two URL variants, once with `img_index=3`: 2 extractions, 3 HTTP requests each, no retry,
+zero result processing or acquisition. All five positions had `video_versions`, unique
+stable IDs/order and 3 direct MP4 candidates each; total mapped formats were 9/10/7/7/7.
+Both variants returned the full playlist with identical request targets and ordered IDs;
+response bodies were not byte-identical. `img_index` reached the extractor but was not
+honored upstream. No actual frontend index semantics, photo/mixed classification or
+media downloadability was established. CSRF-token warning was nonfatal. The adapter
+introduced here has deterministic validation only; this prior experiment is not its live test.
+
+
+Verification for this carousel-inspection stage (live YouTube matrix explicitly disabled):
+
+- New carousel inspection/selection cases: 103 passed.
+- Full regression suite: 831 passed, 1 skipped (opt-in external YouTube matrix).
+- Ruff lint/format, diff, local documentation links and security/scope review: PASS.
+- No new live extraction or media acquisition was performed for this implementation.

@@ -320,26 +320,35 @@ Analytics requirements for this phase:
 - [x] Reproduce and correct overly strict rejection of incomplete direct-MP4 metadata offline; preserve manifest rejection and compatibility priority.
 - [ ] Integrate default provider registration and Telegram direct-download routing/messages in a separate integration PR.
 - [x] Validate one real anonymous Reel through corrected provider/service after PR #45: 2026-10-16, one extraction/acquisition, preparation passthrough, ffprobe/full decode PASS; no Telegram upload.
-- [x] Record expanded Phase 5 scope: Reels, public single-video posts and separately implemented photo/video carousels.
+- [x] Record expanded Phase 5 scope: Reels, public single-video posts and video-only carousel selection; photos are never downloaded/delivered.
 - [x] Extend the existing provider to single-video `/p/` posts with deterministic classification, acquisition and preparation tests; retain one-file contract and all format restrictions.
 - [ ] Validate real anonymous single-video `/p/` acquisition after separate authorization; offline tests do not close this gate.
-- [ ] Design and implement photo/video carousel acquisition and ordered Telegram media groups separately; split more than 10 items into sequential groups and never silently omit unavailable elements.
+- [x] Inspect one real five-video carousel metadata-only: two URL variants, five stable ordered IDs, three direct MP4 candidates per item; installed yt-dlp ignores `img_index`; zero acquisition.
+- [x] Implement guarded instance-local source type preservation, immutable carousel inspection/selection plans and deterministic tests; keep single-file contracts unchanged.
+- [ ] Independently review carousel inspection; real mixed/photo classification remains unverified.
+- [ ] Validate reliable item-reference semantics separately; keep `img_index` and ambiguous references blocked meanwhile.
+- [ ] Implement bounded ordered multi-video acquisition/preparation separately; photos are NEVER acquired, UNKNOWN/unsupported selected videos must not be silently omitted.
+- [ ] Implement ordered Telegram video groups separately: 2–10 per group, more than 10 split sequentially, a final single video sent individually.
 - [ ] Validate real Telegram delivery/playback after separately authorized deployment changes.
 - [ ] Assess broader extraction stability and recovery; production reliability remains open.
 
 Evidence limitation: previous Gates 1–3C are reported in the handoff and the user authorized
 GO; full Gates 1–3B evidence was unavailable here. Gate 3C demonstrates metadata for one
-five-element `/p/` playlist, which remains excluded. No carousel media was acquired.
+five-element `/p/` playlist, which remains excluded from single-file download.
+No carousel media was acquired.
 PR 1 tests do not substitute for real Instagram or Telegram validation. Meaningful
 Instagram quality choices, DASH/HLS assembly, silent-video handling, Stories, private
 content and authentication remain outside the implemented scope. Single-video `/p/`
-support is now implemented offline; carousels remain a separate unfinished stage.
+support is implemented offline; carousel inspection is implemented separately, while
+acquisition/delivery remain unfinished.
 The first real provider smoke failed during inspection (13 formats, none admitted),
 with zero acquisition attempts. The incomplete-metadata rejection is reproduced and
 fixed in PR #45. Its repeat real smoke passed: 13 formats, 3 admitted, 10 rejected for
 manifest/fragment markers; MP4 H.264/AAC, 720x1280, 11.282041 seconds, 1,317,210 bytes.
 The initial run's other ten rejection reasons were unverified; the later run's diagnosis
-does not retroactively establish them. No `/p/` live or Instagram Telegram test is claimed.
+does not retroactively establish them. No real single-video `/p/` acquisition or Instagram
+Telegram delivery is claimed. The newer carousel metadata-only experiment is recorded
+separately in TESTING.md; it does not validate mixed/photo classification or acquisition.
 See [the accepted scope](PHASE5_INSTAGRAM_REELS.md) for the evidence boundary.
 
 ## Phase 6 - TikTok Provider

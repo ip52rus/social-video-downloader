@@ -1,0 +1,61 @@
+"""Immutable metadata-only carousel facts and selections; no media locators."""
+
+from dataclasses import dataclass, field
+from enum import StrEnum
+
+
+class CarouselItemKind(StrEnum):
+    VIDEO = "video"
+    PHOTO = "photo"
+    UNKNOWN = "unknown"
+
+
+class CarouselScope(StrEnum):
+    PUBLICATION = "publication"
+    ITEM_REFERENCE = "item_reference"
+
+
+class CarouselPlanState(StrEnum):
+    READY = "ready"
+    BLOCKED = "blocked"
+
+
+class CarouselIssue(StrEnum):
+    ITEM_REFERENCE_UNSUPPORTED = "item_reference_unsupported"
+    AMBIGUOUS_REFERENCE = "ambiguous_reference"
+    INVALID_METADATA = "invalid_metadata"
+    UNSUPPORTED_CONTENT = "unsupported_content"
+    UNSTABLE_IDENTITIES = "unstable_identities"
+    UNKNOWN_ITEM = "unknown_item"
+    UNSUPPORTED_VIDEO = "unsupported_video"
+    NO_VIDEOS = "no_videos"
+
+
+@dataclass(frozen=True, slots=True)
+class CarouselItem:
+    position: int
+    item_id: str | None = field(repr=False)
+    kind: CarouselItemKind
+    evidence: tuple[str, ...]
+    admissible_format_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class CarouselInspection:
+    publication_url: str = field(repr=False)
+    total_entries: int | None
+    items: tuple[CarouselItem, ...] = ()
+    issue: CarouselIssue | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class CarouselSelectionPlan:
+    """READY validates a selection, not acquisition, streams or Telegram delivery."""
+
+    publication_url: str = field(repr=False)
+    total_entries: int | None
+    items: tuple[CarouselItem, ...]
+    selected_videos: tuple[CarouselItem, ...]
+    scope: CarouselScope
+    state: CarouselPlanState
+    issue: CarouselIssue | None = None

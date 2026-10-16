@@ -259,11 +259,43 @@ ffprobe and full FFmpeg decoding passed. There was no Telegram upload. This evid
 predates the `/p/` extension; real single-video `/p/` acquisition and all Instagram
 Telegram end-to-end delivery remain unverified.
 
-The user approved future photo/video carousels as a separate stage: preserve original
-order in Telegram media groups, split more than 10 items into sequential groups, and
-never silently omit unavailable elements. No multi-file contract, carousel/image
-acquisition or media-group delivery is implemented here; the one-file contract stays intact.
+The approved carousel scope is VIDEO ONLY: never acquire or deliver photos. Eventual
+video delivery preserves original order, splits more than 10 videos into sequential
+Telegram groups and sends a single remainder as one video. A selected video must never
+be silently omitted. Multi-video acquisition and media-group delivery are not implemented;
+the single-file contract stays intact.
 See [the accepted plan and evidence boundary](PHASE5_INSTAGRAM_REELS.md).
+
+### Carousel inspection design decision
+
+Carousel planning needs source type evidence that yt-dlp discards. A per-instance
+Instagram extractor subclass preserves only immutable type/identity evidence, with
+guards on source shape, entry count and ID mapping. It is registered only for the
+explicit carousel inspection call; no global patch or second extraction is used.
+The provider returns a bounded cached inspection; a separate application service
+builds an immutable ordered selection plan. Neither result contains transport objects
+or signed media locators. READY means metadata selection only, not implemented acquisition.
+Single-file provider/download contracts, registry and Telegram routing stay unchanged.
+
+`InstagramProvider.inspect_carousel` accepts canonical publication identities only.
+`InstagramCarouselService.create_selection_plan` validates URL intent first: known
+item-reference candidates (including `img_index`), unknown query keys and fragments
+are BLOCKED before extraction/cache lookup. Only ordinary `/p/` identities and the
+explicit tracking-key allowlist share a canonical cache key. No index semantics are guessed.
+
+VIDEO requires positive video evidence; malformed/conflicting type markers give UNKNOWN.
+PHOTO requires `is_video=False` or `GraphImage`, corroborating `image_versions2.candidates`
+and no video evidence. Numeric `media_type` alone, empty formats and thumbnails cannot
+establish PHOTO. This conservative photo rule is synthetic-only until mixed live evidence.
+Missing/duplicate/unverifiable IDs, mapping shape/order changes, unavailable content,
+UNKNOWN or a VIDEO without admitted direct MP4 formats block the entire selection.
+Only positively classified PHOTO entries may be excluded. No count-based truncation occurs.
+Plans preserve all valid source positions/IDs, contain tuples/frozen values and no media
+URLs. Unsupported reference plans have unknown entry count and no extraction. Facts use
+a separate bounded 180-second cache, retaining no raw payloads or signed locators.
+Expiry re-inspects; identities are coherent within a snapshot, not guaranteed across time.
+The existing MP4 admission filter is reused. This stage does not select/acquire a format;
+codec preference for single-file acquisition is unchanged. Streams still need later ffprobe.
 
 ## Media engine
 Responsible for download and media assembly. The first implementation uses yt-dlp and FFmpeg where appropriate.

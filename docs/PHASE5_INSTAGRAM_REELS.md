@@ -82,8 +82,9 @@ Telegram upload. This resolves the observed admission failure for that case only
 
 ## Approved expansion and current single-video-post stage
 
-The user approved Reels, ordinary public single-video posts and future photo/video
-carousels. This stage covers only `/p/<id>/` single-video posts, using the existing
+The user approved Reels, ordinary public single-video posts and future video-only
+carousel downloads. Photos are NEVER downloaded or delivered. The single-video-post
+stage covered `/p/<id>/` single-video posts, using the existing
 provider and one-file `DownloadedMedia` contract. No second acquisition/preparation
 pipeline, new dependencies or Telegram changes are introduced.
 
@@ -109,11 +110,63 @@ Telegram activation/deployment checks remain separately authorized work.
 
 ## Future carousel stage — not implemented
 
-Photo/video carousels are approved future product scope, not supported downloads in this
-stage. Deliver future carousel items as Telegram media groups in original order; split
-more than 10 items into sequential groups, with no silent omission of unavailable elements.
+Carousel acquisition is approved future VIDEO-ONLY scope, not implemented downloads in
+this stage. Skip only positively classified photos; UNKNOWN or an unavailable selected
+video blocks the operation. Preserve the original ordering of videos. One video uses one
+Telegram message; 2–10 use a group; larger selections use sequential groups with a single
+remainder sent individually. Never silently omit a selected video.
 The required multi-file acquisition/delivery design is deferred, not silently added to
-the single-file provider. Photos and all collections continue to fail safely here.
+the single-file provider. Photos and all collections still fail safely through its
+single-file download path; metadata-only carousel inspection is described below.
 
 Stories, private-content access, authentication, silent-video handling and additional
 formats require separate scope decisions. Phase 5 and production reliability remain open.
+
+## Carousel inspection and selection — metadata only
+
+The first carousel implementation adds a separate `InstagramCarouselService` entry point,
+backed by `InstagramProvider.inspect_carousel`. The existing one-file `download` paths
+still reject every collection, including one-entry playlists. No registry/handler changes,
+media acquisition, Telegram album sending or new dependencies are included.
+
+A per-instance `CarouselInstagramIE` reuses installed yt-dlp extraction and mapping, then
+preserves immutable source evidence before it is discarded. Guarded count/order/ID checks
+reject missing or changed mappings. No global monkeypatch, HTTP interception or duplicate
+metadata extraction is introduced. Missing/malformed IDs are not synthesized; source
+unavailability/DRM also survives the mapping. No raw responses enter plans or the cache.
+
+VIDEO requires explicit video evidence, including `video_versions` even when its locator
+is unusable (then the VIDEO is unsupported, never a PHOTO). PHOTO requires an explicit
+photo marker plus usable image candidate structure and no video conflict. Numeric type
+codes alone are insufficient. Unknown/conflicting evidence blocks the whole selection.
+Conservative PHOTO behavior is tested offline only, not established for live mixed posts.
+
+Plans preserve canonical identity, original entry count, ordered positions/IDs, kinds,
+evidence, admitted-format counts, selected video references, scope and READY/BLOCKED reason.
+READY means only a valid metadata selection; actual streams, budgets and acquisition are
+not validated. Every selected video needs at least one format admitted by the existing
+MP4/H.264/AAC preference and manifest/fragment rejection policy. Nothing is truncated.
+Facts use a separate bounded 180-second cache; expiry requires new inspection.
+
+Query intent is examined before canonical cache use. `img_index` and other candidate
+item references are rejected without extraction; unknown query parameters/fragments are
+ambiguous and rejected. Only allowlisted tracking parameters can be discarded. No frontend
+index semantics or first-item fallback is implemented.
+
+### Live metadata evidence — 2026-10-16, before this implementation
+
+One public five-entry video carousel was inspected twice anonymously, once with
+`img_index=3`. Both calls used `download=False, process=False`: six observed HTTP requests
+in total, zero processing/acquisition. Every position had explicit `video_versions` and
+three admitted direct MP4 candidates. Unique source IDs and original ordering survived.
+`media_type=2` was present; `is_video` was absent; normal mapping discarded type fields.
+The second URL reached the extractor with its query, but upstream requests were identical
+and both returned the full five-entry playlist with the same ordered IDs. Bodies differed;
+no selected-item behavior was established. CSRF-token warning was nonfatal.
+
+This validates video metadata for that case, not this newly implemented adapter, actual
+media streams, photos/mixed carousels, frontend index semantics or Telegram delivery.
+The complete PHOTO/VIDEO/UNKNOWN gate remains INCONCLUSIVE; the installed-extractor
+item-reference gate failed. Overall decision is CONDITIONAL GO for inspection planning.
+Mixed/photo live evidence, item-specific semantics, acquisition/preparation and Telegram
+validation remain separate gates. Phase 5 and production reliability remain open.
