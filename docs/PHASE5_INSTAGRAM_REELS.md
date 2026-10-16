@@ -19,7 +19,9 @@ implementation without a new observation/waiting gate.
 
 ## PR 1 acceptance
 
-These criteria record the original Reel-only PR. The approved current expansion is below.
+These criteria record the original Reel-only PR. Its original mandatory-audio policy
+is superseded by the approved silent-video decision below; other safety rules remain.
+The approved current expansion is below.
 
 - Implement `MediaProvider` without changing its contract or the one-file `DownloadedMedia`.
 - Admit only individual `/reel/<id>/` paths on instagram.com, www.instagram.com or
@@ -55,8 +57,9 @@ Only the `VIDEO_WITH_AUDIO` route is exposed. The installed Instagram extractor 
 omit both dimensions and codecs on progressive MP4 data. Such direct candidates remain
 eligible, with unknown codecs ranked below confirmed H.264/AAC; no streams or dimensions
 are invented. Actual video/audio presence remains unverified until stream inspection.
-Explicit audio-only/no-audio formats are rejected. A silently audio-free downloaded file
-fails the existing transport helper safely; silent Reel support is not claimed or added here.
+Explicit audio-only formats remain rejected. Audio-free video is now admitted under
+the later product decision below; actual streams still need inspection. The unchanged
+Telegram helper rejects silent files and must be extended in a separate integration PR.
 The provider does not transcode, add audio or duplicate the transport pipeline.
 
 ## Verification and follow-up
@@ -119,8 +122,9 @@ Multi-file acquisition uses the separate bounded operation described below, not 
 single-file provider contract. Telegram delivery remains a separate future integration. Photos and all collections still fail safely through its
 single-file download path; metadata-only carousel inspection is described below.
 
-Stories, private-content access, authentication, silent-video handling and additional
-formats require separate scope decisions. Phase 5 and production reliability remain open.
+Stories, private-content access, authentication and additional formats require separate
+scope decisions. Silent-video acquisition is now included; Telegram silent-video
+preparation remains separate unfinished work. Phase 5 and production reliability remain open.
 
 ## Carousel inspection and selection — metadata only
 
@@ -226,7 +230,8 @@ changes reject the operation without adopting a different selection. Only select
 children are processed sequentially; photos and the parent playlist are never acquired.
 
 Existing direct MP4 admission and H.264/AAC priority are reused. Unknown codecs remain
-unknown until actual ffprobe; actual MP4 video-plus-audio is mandatory. No conversion or
+unknown until actual ffprobe; actual MP4 video is mandatory and audio is optional.
+Every existing audio stream must have a valid codec. No conversion or
 Telegram delivery is included. All videos must validate before a collection is returned.
 Failure/cancellation kills the process group, removes all owned staged/published files and
 preserves unrelated files. Success transfers generated output-file ownership to the caller;
@@ -241,5 +246,46 @@ crash recovery are outside these limits. These defaults are not production capac
 
 Live multi-video acquisition: NOT VERIFIED. Telegram media-group preparation/delivery:
 NOT IMPLEMENTED / NOT VERIFIED. Real item-reference selection remains blocked. Next gates:
-independent review, separately approved bounded acquisition smoke, then a separate Telegram
+independent review of silent-video support, separately approved bounded acquisition smoke,
+then a separate Telegram
 integration PR and authorized real-client validation. No deployment changes in this stage.
+
+
+## Silent Instagram videos — approved policy, deterministic implementation
+
+The user approved downloading MP4 videos with or without audio for public Reels,
+single-video posts and selected carousel VIDEO entries. No new mode/menu is introduced:
+the shared legacy VIDEO_WITH_AUDIO enum remains the normal Instagram route. Explicit
+video absence, audio-only media, non-direct/unsupported protocols, manifest/fragment
+metadata and DRM remain inadmissible. Incomplete codecs remain unknown, not proof of
+video/audio. No artificial audio, retry, alternate acquisition or mandatory conversion.
+
+A preceding separately authorized metadata-only diagnostic concerned one three-VIDEO
+publication: boolean has_audio=False at all positions; three source video_versions each
+preserved as structural direct MP4 candidates with acodec="none". Nine direct candidates
+were rejected solely by the former explicit-audio-absence rule; 23 manifest-derived
+candidates also had forbidden fragment markers. Mapped counts were 11/11/10 (32 total).
+Source IDs/order were intact. One extraction and three metadata HTTP requests, zero
+media acquisition. This justified a product-policy change, not a claim that those real
+files contain valid silent video. Real silent-video acquisition remains NOT VERIFIED.
+
+Ranking retains compatibility-first selection: confirmed H.264/AAC, compatible/incomplete
+metadata (now also H.264/unknown-video with explicit silence), then other MP4 codecs.
+Within each group non-silent-or-unknown audio precedes explicit silence, then native
+yt-dlp quality order applies. Unknown is never claimed to contain audio or to be silent.
+Silent H.264 can intentionally beat less compatible VP9/AAC in another group. Equivalent
+silent candidates retain native quality ordering. No fallback after download failure.
+
+Carousel ffprobe requires actual MP4, recognized video codec and positive dimensions;
+absent audio is allowed but invalid/unknown codecs on any present audio stream fail.
+Local synthetic silent H.264 files are accepted without changing bytes. The existing
+single-video file checks remain unchanged. Limits remain 25 videos, 100 MiB/file,
+500 MiB total media, 512 MiB temporary logical media and 600 seconds. Identity/order
+revalidation, all-or-nothing cleanup and caller output ownership are unchanged.
+
+Telegram remains disabled for Instagram. The current preparation helper still requires
+both video and audio and deliberately rejects silent files. Follow-up integration must
+implement silent H.264 MP4 passthrough, compatible container remux without an audio map,
+video-only transcode for incompatible codecs, optional audio preservation, actual stream
+verification and correct upload metadata. Never generate audio just to satisfy transport.
+No albums, img_index selection, live validation or production readiness is claimed here.

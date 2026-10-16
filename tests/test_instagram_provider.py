@@ -241,8 +241,6 @@ def test_even_single_entry_playlist_is_rejected_without_iteration(tmp_path, publ
         {"url": "https://[bad"},
         {"url": "https://media.invalid/image.jpg"},
         {"vcodec": "none"},
-        {"acodec": "none"},
-        {"acodec": " NONE "},
         {"vcodec": " NONE "},
         {"vcodec": True},
         {"vcodec": float("nan")},
@@ -405,7 +403,8 @@ def test_extractor_and_download_failures_are_safe_and_not_retried(
 
 def test_real_ytdlp_processing_selects_only_valid_direct_formats(tmp_path):
     calls = []
-    unsafe = [
+    alternatives = [
+        # Silent is now admissible, but loses to non-silent/unknown in the same class.
         {"format_id": "silent", "vcodec": "avc1", "acodec": "none", "ext": "mp4"},
         {"format_id": "audio", "vcodec": "none", "acodec": "mp4a", "ext": "mp4"},
         {"format_id": "image", "vcodec": "none", "acodec": "none", "ext": "jpg"},
@@ -417,7 +416,7 @@ def test_real_ytdlp_processing_selects_only_valid_direct_formats(tmp_path):
             {**INFO["formats"][0], "format_id": "direct-high", "width": 720, "height": 1280},
             *[
                 {**item, "url": "https://media.invalid/unsafe", "height": 2160, "width": 3840}
-                for item in unsafe
+                for item in alternatives
             ],
         ],
     }
@@ -714,7 +713,6 @@ def test_actual_extractor_progressive_schema_reaches_one_acquisition(
     "product_changes, locator",
     [
         ({"video_codec": "none"}, "https://media.invalid/reel.mp4"),
-        ({"has_audio": False}, "https://media.invalid/reel.mp4"),
         ({}, "https://media.invalid/master.m3u8"),
         ({}, "https://media.invalid/manifest.mpd"),
         ({}, "https://media.invalid/resource?signature=fixture"),
@@ -907,3 +905,150 @@ def test_reel_and_post_cache_identities_do_not_collide():
     provider.extract_metadata(POST_URL)
     assert set(provider._inspection_cache) == {URL, POST_URL}
     assert [url for url, _ in factory.extractions] == [URL, POST_URL]
+
+
+@pytest.mark.parametrize("audio", ["none", " NONE ", None])
+@pytest.mark.parametrize(
+    "locator",
+    [
+        "https://media.invalid/silent.mp4",
+        "https://media.invalid/silent.mp4?signature=fixture",
+    ],
+)
+def test_silent_or_unknown_direct_mp4_reaches_single_video_acquisition(
+    tmp_path, publication_url, audio, locator
+):
+    candidate = _direct_format("silent", url=locator, acodec=audio, ext=None)
+    assert InstagramProvider._usable_format(candidate)
+    assert InstagramProvider._explicitly_silent(candidate) is (audio is not None)
+    processed = []
+    provider = InstagramProvider(_offline_processor({**INFO, "formats": [candidate]}, processed))
+    service = DownloadService([provider])
+    plan = service.create_choice_plan(publication_url)
+    assert plan.state is ChoicePlanState.DIRECT_DOWNLOAD
+    assert plan.automatic_options == DownloadOptions(mode=DownloadMode.VIDEO_WITH_AUDIO)
+    result = service.download(publication_url, tmp_path, plan.automatic_options)
+    assert processed == [("silent", "https")]
+    assert result.file_path.is_file()
+    assert candidate["acodec"] == audio  # No fabricated AAC or stream-presence claim.
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"vcodec": "none"},
+        {"vcodec": ""},
+        {"vcodec": True},
+        {"url": "https://media.invalid/master.m3u8"},
+        {"url": "https://media.invalid/manifest.mpd"},
+        {"url": "https://media.invalid/file.mp4", "protocol": "m3u8_native"},
+        {"protocol": "http_dash_segments"},
+        {"protocol": "ftp"},
+        {"fragments": []},
+        {"fragment_base_url": "https://media.invalid/"},
+        {"manifest_stream_number": 0},
+        {"manifest_url": "https://media.invalid/m.mpd"},
+        {"has_drm": True},
+        {"url": "https:///file.mp4"},
+        {"url": "https://[bad"},
+    ],
+)
+def test_silent_format_never_bypasses_video_or_transport_guards(tmp_path, publication_url, changes):
+    candidate = _direct_format("blocked", acodec="none", **changes)
+    assert not InstagramProvider._usable_format(candidate)
+    processed = []
+    provider = InstagramProvider(_offline_processor({**INFO, "formats": [candidate]}, processed))
+    with pytest.raises(MetadataExtractionError):
+        provider.download(publication_url, tmp_path)
+    assert not processed and not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize(
+    "formats,expected",
+    [
+        (
+            [
+                _direct_format("sound", vcodec="h264", acodec="aac"),
+                _direct_format("silent", vcodec="h264", acodec="none", width=1080, height=1920),
+            ],
+            "sound",
+        ),
+        (
+            [
+                _direct_format("unknown", vcodec="h264"),
+                _direct_format("silent", vcodec="h264", acodec="none", width=1080, height=1920),
+            ],
+            "unknown",
+        ),
+        (
+            [
+                _direct_format("sound", vcodec="vp09.00.31.08", acodec="aac"),
+                _direct_format(
+                    "silent", vcodec="vp09.00.31.08", acodec="none", width=1080, height=1920
+                ),
+            ],
+            "sound",
+        ),
+        (
+            [
+                _direct_format("low", vcodec="h264", acodec="none"),
+                _direct_format("high", vcodec="h264", acodec="none", width=720, height=1280),
+            ],
+            "high",
+        ),
+        (
+            [
+                _direct_format("silent", vcodec="h264", acodec="none"),
+                _direct_format(
+                    "vp9-sound", vcodec="vp09.00.31.08", acodec="aac", width=1080, height=1920
+                ),
+            ],
+            "silent",
+        ),
+        ([_direct_format("only", acodec="none")], "only"),
+    ],
+)
+@pytest.mark.parametrize("reverse", [False, True])
+def test_real_selector_silent_compatibility_and_audio_tiebreak(
+    tmp_path, publication_url, formats, expected, reverse
+):
+    processed = []
+    provider = InstagramProvider(
+        _offline_processor(
+            {**INFO, "formats": list(reversed(formats)) if reverse else formats}, processed
+        )
+    )
+    provider.download(publication_url, tmp_path)
+    assert processed == [(expected, "https")]
+
+
+@pytest.mark.parametrize(
+    "dimensions", [{}, {"width": 360}, {"height": 640}, {"width": 360, "height": 640}]
+)
+def test_installed_extractor_explicit_silence_is_admitted_without_fabrication(
+    extract_product_media, dimensions, publication_url, tmp_path
+):
+    raw = extract_product_media(
+        {
+            "pk": 1,
+            "has_audio": False,
+            "video_versions": [
+                {
+                    "id": "silent",
+                    "url": "https://media.invalid/silent.mp4?signature=fixture",
+                    **dimensions,
+                }
+            ],
+        }
+    )
+    candidate = raw["formats"][0]
+    assert candidate["acodec"] == "none"
+    assert candidate.get("vcodec") is candidate.get("ext") is None
+    processed = []
+    provider = InstagramProvider(_offline_processor(raw, processed))
+    service = DownloadService([provider])
+    plan = service.create_choice_plan(publication_url)
+    assert plan.state is ChoicePlanState.DIRECT_DOWNLOAD
+    service.download(publication_url, tmp_path, plan.automatic_options)
+    assert processed == [("silent", "https")]
+    assert candidate["acodec"] == "none" and candidate.get("vcodec") is None

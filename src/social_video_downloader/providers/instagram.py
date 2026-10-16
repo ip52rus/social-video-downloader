@@ -158,9 +158,13 @@ class InstagramProvider:
             )
             and not item.get("manifest_url")
             and video_candidate
-            and (item.get("acodec") is None or str(item.get("acodec")).strip().lower() != "none")
             and not item.get("has_drm")
         )
+
+    @staticmethod
+    def _explicitly_silent(item: Mapping[str, Any]) -> bool:
+        # Unknown audio stays unknown; only the explicit extractor marker is silence.
+        return str(item.get("acodec") or "").strip().lower() == "none"
 
     @staticmethod
     def _compatibility_rank(item: Mapping[str, Any]) -> int:
@@ -170,20 +174,27 @@ class InstagramProvider:
         aac = audio == "aac" or audio.startswith("mp4a.40.")
         if h264 and aac:
             return 0
-        if (item.get("vcodec") is None or h264) and (item.get("acodec") is None or aac):
+        if (item.get("vcodec") is None or h264) and (
+            item.get("acodec") is None or aac or InstagramProvider._explicitly_silent(item)
+        ):
             return 1
         return 2
 
     @classmethod
     def _select_format(cls, context: Mapping[str, Any]) -> Iterator[dict[str, Any]]:
         # yt-dlp sorts formats from worst to best before invoking this selector.
-        # Compatibility wins across classes; retain yt-dlp's quality order within one.
+        # Compatibility wins across classes. Within one, prefer non-silent/unknown
+        # audio over explicit silence, then retain yt-dlp's native quality order.
         formats = [item for item in context["formats"] if cls._usable_format(item)]
         for rank in (0, 1, 2):
-            for item in reversed(formats):
-                if cls._compatibility_rank(item) == rank:
-                    yield dict(item)
-                    return
+            for silent in (False, True):
+                for item in reversed(formats):
+                    if (
+                        cls._compatibility_rank(item) == rank
+                        and cls._explicitly_silent(item) == silent
+                    ):
+                        yield dict(item)
+                        return
 
     @classmethod
     def _single_video(cls, raw: Any) -> dict[str, Any]:

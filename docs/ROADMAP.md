@@ -149,9 +149,17 @@ The final authorized metadata gate passed on one real 20-entry mixed publication
 17 VIDEO, 3 PHOTO (8/9/18), zero UNKNOWN, READY with ordered unique IDs and three direct
 MP4 candidates per VIDEO. One extraction/three observed HTTP requests, zero acquisition.
 The mixed-classification gate is closed for that case only.
-Next carousel gates: independent review of bounded acquisition, separately authorized
-live multi-video acquisition, then Telegram preparation/group delivery and real-client
-validation. No live multi-video acquisition is claimed. Item-specific semantics remain
+PR #49 bounded acquisition was independently reviewed and merged. The user subsequently
+approved silent video across Reels, single posts and carousel VIDEO entries. Admission,
+compatibility ranking and actual carousel stream validation now allow optional audio;
+no synthetic audio or conversion is added. Direct MP4/protocol/manifest/DRM guards and
+resource limits remain. The evidence is one three-video metadata case (has_audio=False,
+32 mapped formats, no acquisition) plus deterministic tests, not real silent acquisition.
+Next carousel gates: independent review of silent-video support, separately authorized
+live multi-video acquisition, then optional-audio Telegram preparation/group delivery and real-client
+validation. Current Telegram preparation requires audio and is unchanged; silent
+passthrough/remux/video-only transcode without synthetic audio is still to implement.
+No live silent/multi-video acquisition is claimed. Item-specific semantics remain
 blocked pending separate validation; the installed extractor ignores `img_index`.
 No running-stack rebuild/restart is authorized by this stage.
 See [the scope and acceptance record](PHASE5_INSTAGRAM_REELS.md).

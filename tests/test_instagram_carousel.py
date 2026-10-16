@@ -194,7 +194,11 @@ def test_unknown_or_conflicting_item_blocks_whole_plan(item):
     [
         {"pk": 102, "is_video": True, "media_type": 2},
         {"pk": 102, "is_video": True, "video_versions": [{"width": 720}]},
-        {**VIDEO, "has_audio": False},
+        {
+            **VIDEO,
+            "has_audio": False,
+            "video_versions": [{"url": "https://media.invalid/video.m3u8"}],
+        },
         {**VIDEO, "video_codec": "none"},
         {**VIDEO, "video_versions": [{"url": "https://media.invalid/video.webm"}]},
         {**VIDEO, "video_versions": [{"url": "https://media.invalid/video.m3u8"}]},
@@ -560,3 +564,26 @@ def test_explicit_photo_markers_work_without_numeric_marker(photo_fields):
     assert plan.items[0].kind is CarouselItemKind.PHOTO
     assert "photo_marker" in plan.items[0].evidence
     assert "media_type_photo" not in plan.items[0].evidence
+
+
+def test_explicitly_silent_videos_are_ready_without_acquisition():
+    items = [
+        {
+            **VIDEO,
+            "pk": 101 + i,
+            "has_audio": False,
+            "video_versions": [
+                {"url": "https://media.invalid/silent.mp4?signature=fixture"} for _ in range(3)
+            ],
+        }
+        for i in range(3)
+    ]
+    runtime = Runtime(items)
+    plan = runtime.service().create_selection_plan(URL)
+    assert plan.state is CarouselPlanState.READY and plan.issue is None
+    assert plan.total_entries == 3
+    assert [x.position for x in plan.selected_videos] == [1, 2, 3]
+    assert all(
+        x.kind is CarouselItemKind.VIDEO and x.admissible_format_count == 3 for x in plan.items
+    )
+    assert len(runtime.extractions) == 1

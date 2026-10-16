@@ -332,8 +332,9 @@ Analytics requirements for this phase:
 - [x] Validate corrected mixed-carousel selection live on one publication: 20 items, 17 VIDEO, PHOTO at 8/9/18, zero UNKNOWN, READY; unique IDs/order PASS, three direct MP4 candidates per VIDEO, one extraction/three metadata HTTP requests, zero acquisition.
 - [ ] Validate reliable item-reference semantics separately; keep `img_index` and ambiguous references blocked meanwhile.
 - [x] Implement bounded ordered multi-video acquisition with fresh plan revalidation, actual stream checks, resource budgets and all-or-nothing cleanup; deterministic tests only. Photos are NEVER acquired.
-- [ ] Independently review bounded acquisition and run a separately authorized live multi-video smoke; acquisition remains NOT VERIFIED externally.
-- [ ] Integrate existing Telegram-compatible preparation separately before group delivery; no acquisition-stage conversion.
+- [x] Independently review and merge bounded acquisition (PR #49).
+- [ ] Run a separately authorized live multi-video smoke; acquisition remains NOT VERIFIED externally.
+- [ ] Integrate optional-audio Telegram preparation separately: silent H.264 MP4 passthrough, remux without mandatory audio map, video-only transcode for incompatible codecs, preserve optional audio, verify streams/upload metadata; no artificial audio. Current helper still requires audio.
 - [ ] Implement ordered Telegram video groups separately: 2–10 per group, more than 10 split sequentially, a final single video sent individually.
 - [ ] Validate real Telegram delivery/playback after separately authorized deployment changes.
 - [ ] Assess broader extraction stability and recovery; production reliability remains open.
@@ -343,7 +344,7 @@ GO; full Gates 1–3B evidence was unavailable here. Gate 3C demonstrates metada
 five-element `/p/` playlist, which remains excluded from single-file download.
 No carousel media was acquired.
 PR 1 tests do not substitute for real Instagram or Telegram validation. Meaningful
-Instagram quality choices, DASH/HLS assembly, silent-video handling, Stories, private
+Instagram quality choices, DASH/HLS assembly, silent-video Telegram preparation, Stories, private
 content and authentication remain outside the implemented scope. Single-video `/p/`
 support is implemented offline; carousel inspection is implemented separately, while
 bounded acquisition has deterministic coverage; live acquisition and delivery remain unfinished.
@@ -368,7 +369,25 @@ See [the accepted scope](PHASE5_INSTAGRAM_REELS.md) for the evidence boundary.
   512 MiB temporary logical media bytes and 600 seconds; adjustable per service.
 - Successful generated files belong to the caller. Failure/cancellation removes all
   owned files, without overwriting/deleting unrelated files. No crash recovery claim.
-- Independent review, live multi-video smoke and Telegram integration/validation remain open.
+- PR #49 was independently reviewed and merged; live multi-video smoke and Telegram
+  integration/validation remain open.
+
+
+### Silent Instagram video acquisition
+
+- [x] Record approved optional-audio policy for Reels, single-video posts and carousel VIDEO entries; keep normal route/enum and all direct-video safety guards.
+- [x] Record one real metadata-only diagnostic: 3 VIDEO, has_audio=False, 3 direct MP4 candidates each; 32 mapped formats, zero acquisition. Actual real streams remain unverified.
+- [x] Admit silent direct MP4, retain compatibility-first ranking and prefer non-silent/unknown audio within comparable groups; no fabricated audio/codec claims.
+- [x] Validate actual silent MP4 video through carousel ffprobe; reject audio-only, corrupt/wrong-container files and invalid present stream codecs; preserve budgets/cleanup.
+- [ ] Independently review silent-video support.
+
+Real silent acquisition remains NOT VERIFIED. The separately authorized live acquisition
+and optional-audio Telegram preparation/delivery tasks remain tracked above; Instagram
+is disabled by default.
+
+Verification: focused Instagram suite 563 passed; full suite 1032 passed, 1 skipped.
+Ruff lint/format, diff, documentation consistency and security/scope checks PASS.
+These checks used local synthetic media only; no external platform or Telegram calls.
 
 ## Phase 6 - TikTok Provider
 - [ ] Run a technical spike.
