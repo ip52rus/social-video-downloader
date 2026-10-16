@@ -26,6 +26,13 @@ implementation without a new observation/waiting gate.
   media acquisition. Never enumerate a playlist or select its first entry.
 - Start with direct HTTP(S) MP4 formats only. No DASH/HLS assembly, cookies, credentials,
   persistent extractor cache, new dependencies or application retry loop.
+- Validate the effective protocol before acquisition using yt-dlp's protocol helper;
+  reject manifest/fragment formats even with missing protocol or a misleading MP4 label.
+  Signed direct MP4 URLs without a filename extension remain eligible when the extractor
+  supplies the MP4 extension and video evidence.
+- Prefer metadata-confirmed H.264/AAC, then incomplete codec metadata without known
+  incompatible codecs, then other admitted MP4 formats. Retain yt-dlp quality ordering
+  within each class and select one format without acquisition-error fallback.
 - Expose one normal video route and no selectable qualities. Reject audio-only,
   video-only and supplied quality IDs. Explicit injection into `DownloadService` must
   produce the existing `DIRECT_DOWNLOAD` plan without adding Telegram UI.

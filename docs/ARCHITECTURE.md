@@ -209,11 +209,22 @@ formats fail before media acquisition. A playlist is never enumerated or reduced
 first entry, including a one-entry playlist.
 
 The first implementation admits only direct HTTP(S) MP4 formats with video evidence and
-no explicit audio absence or DRM marker. DASH/HLS assembly and audio-only/video-only
+no explicit audio absence or DRM marker. Before acquisition, yt-dlp's `determine_protocol`
+checks the effective protocol, including URL-derived detection when protocol metadata is
+missing. Manifest URLs (including a misleading HTTP/MP4 label), fragment data and DASH
+representation markers are rejected. Signed direct MP4 locators need not end in `.mp4`
+when the extractor supplies that extension. DASH/HLS assembly and audio-only/video-only
 outputs are outside this PR. Missing audio codec information in progressive extractor
 data is not proof of an audio stream: the existing Telegram preparation helper must
 verify actual streams. Explicitly silent formats are rejected; an unexpectedly silent
 file fails that existing preparation helper. No synthetic audio is added.
+
+The yt-dlp selector yields exactly one admitted format. It first prefers metadata-confirmed
+H.264/AAC, then incomplete codec metadata with no already-known incompatible codec, then
+other admitted MP4 codecs. Within a compatibility class it keeps yt-dlp's native quality
+ordering. A higher-resolution VP9 or unknown-audio option cannot displace an available
+confirmed H.264/AAC option. Selection does not retry another format after acquisition
+failure; actual file compatibility still requires the existing media preparation checks.
 
 A small bounded, 180-second inspection cache shares one validated snapshot between mode
 inspection, quality inspection and download. Download consumes the snapshot; expiry

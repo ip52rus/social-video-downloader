@@ -443,3 +443,170 @@ def test_upstream_rejection_never_triggers_authentication_or_retry(reason, tmp_p
     assert len(factory.extractions) == 1
     assert not factory.processed
     assert not list(tmp_path.iterdir())
+
+
+def _direct_format(identifier, **changes):
+    return {
+        **INFO["formats"][0],
+        "format_id": identifier,
+        "ext": "mp4",
+        **changes,
+    }
+
+
+def _offline_processor(info, processed):
+    class OfflineYDL(yt_dlp.YoutubeDL):
+        def extract_info(self, url, **kwargs):
+            assert kwargs == {"download": False, "process": False, "ie_key": "Instagram"}
+            return deepcopy(info)
+
+        def process_info(self, selected):
+            processed.append((selected["format_id"], selected["protocol"]))
+            Path(self.prepare_filename(selected)).write_bytes(b"offline fixture")
+
+        def urlopen(self, request):
+            raise AssertionError("Format selection must not access the network")
+
+    return OfflineYDL
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        pytest.param({"url": "https://media.invalid/master.m3u8"}, id="implicit-hls"),
+        pytest.param(
+            {"url": "https://media.invalid/master.m3u8", "protocol": "https"},
+            id="hls-with-http-label",
+        ),
+        pytest.param(
+            {"url": "https://media.invalid/master.M3U8?signature=fixture"},
+            id="uppercase-hls",
+        ),
+        pytest.param({"url": "https://media.invalid/manifest.mpd"}, id="implicit-dash"),
+        pytest.param({"url": "https://media.invalid/manifest.f4m"}, id="implicit-f4m"),
+        pytest.param({"protocol": "m3u8_native"}, id="explicit-hls"),
+        pytest.param({"protocol": "http_dash_segments"}, id="explicit-dash"),
+        pytest.param({"fragments": [{"url": "https://media.invalid/part.mp4"}]}, id="fragments"),
+        pytest.param({"fragments": []}, id="empty-fragment-list"),
+        pytest.param({"manifest_url": "https://media.invalid/manifest.mpd"}, id="manifest"),
+        pytest.param({"manifest_stream_number": 0}, id="dash-representation"),
+    ],
+)
+@pytest.mark.parametrize("with_direct_fallback", [False, True])
+def test_real_processing_rejects_manifest_formats_before_acquisition(
+    changes, with_direct_fallback, tmp_path
+):
+    processed = []
+    unsafe = _direct_format("manifest", width=1080, height=1920, **changes)
+    formats = [unsafe]
+    if with_direct_fallback:
+        formats.insert(0, _direct_format("direct"))
+    provider = InstagramProvider(_offline_processor({**INFO, "formats": formats}, processed))
+    if with_direct_fallback:
+        provider.download(URL, tmp_path)
+        assert processed == [("direct", "https")]
+    else:
+        with pytest.raises(MetadataExtractionError):
+            provider.download(URL, tmp_path)
+        assert processed == []
+        assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize(
+    "formats, expected",
+    [
+        pytest.param(
+            [
+                _direct_format("compatible", vcodec="avc1.64001f", acodec="mp4a.40.2"),
+                _direct_format("vp9", vcodec="vp09.00.31.08", acodec="mp4a.40.2"),
+            ],
+            "compatible",
+            id="equal-resolution-h264-over-vp9",
+        ),
+        pytest.param(
+            [
+                _direct_format("compatible", vcodec="h264", acodec="aac"),
+                _direct_format("unknown-audio", vcodec="avc1.640028", width=1080, height=1920),
+            ],
+            "compatible",
+            id="compatible-over-higher-unknown-audio",
+        ),
+        pytest.param(
+            [
+                _direct_format("unknown", width=720, height=1280),
+                _direct_format(
+                    "vp9", vcodec="vp09.00.40.08", acodec="mp4a.40.2", width=1080, height=1920
+                ),
+            ],
+            "unknown",
+            id="incomplete-before-known-incompatible",
+        ),
+        pytest.param(
+            [
+                _direct_format("unknown-audio", vcodec="avc1.64001f"),
+                _direct_format("vp9", vcodec="vp09.00.31.08", acodec="mp4a.40.2"),
+            ],
+            "unknown-audio",
+            id="incomplete-audio-fallback",
+        ),
+        pytest.param(
+            [
+                _direct_format("unknown-audio", vcodec="avc1.64001f"),
+                _direct_format("vp9", vcodec="vp09.00.40.08", width=1080, height=1920),
+            ],
+            "unknown-audio",
+            id="known-incompatible-video-with-unknown-audio-is-last",
+        ),
+        pytest.param(
+            [
+                _direct_format("unknown"),
+                _direct_format("opus", acodec="opus", width=1080, height=1920),
+            ],
+            "unknown",
+            id="known-incompatible-audio-with-unknown-video-is-last",
+        ),
+        pytest.param(
+            [_direct_format("low"), _direct_format("high", width=720, height=1280)],
+            "high",
+            id="quality-within-incomplete-class",
+        ),
+        pytest.param(
+            [
+                _direct_format("low", vcodec="h264", acodec="aac"),
+                _direct_format("high", vcodec="h264", acodec="aac", width=720, height=1280),
+            ],
+            "high",
+            id="quality-within-compatible-class",
+        ),
+        pytest.param(
+            [
+                _direct_format("low", vcodec="vp09.00.31.08", acodec="mp4a.40.2"),
+                _direct_format(
+                    "high", vcodec="vp09.00.40.08", acodec="mp4a.40.2", width=1080, height=1920
+                ),
+            ],
+            "high",
+            id="other-codec-fallback",
+        ),
+        pytest.param(
+            [
+                _direct_format(
+                    "signed",
+                    vcodec="avc3.64001f",
+                    acodec="mp4a.40.5",
+                    url="https://media.invalid/resource?signature=fixture",
+                )
+            ],
+            "signed",
+            id="signed-direct-url-without-extension",
+        ),
+    ],
+)
+@pytest.mark.parametrize("reverse", [False, True])
+def test_real_processing_prefers_compatibility_before_quality(formats, expected, reverse, tmp_path):
+    processed = []
+    raw = {**INFO, "formats": list(reversed(formats)) if reverse else formats}
+    provider = InstagramProvider(_offline_processor(raw, processed))
+    result = provider.download(URL, tmp_path)
+    assert processed == [(expected, "https")]
+    assert result.file_path.read_bytes() == b"offline fixture"

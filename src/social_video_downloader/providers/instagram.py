@@ -1,6 +1,6 @@
 """Experimental anonymous provider for individual public Instagram Reels."""
 
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from math import isfinite
 from pathlib import Path
 from re import fullmatch
@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 from uuid import uuid4
 
 import yt_dlp
+from yt_dlp.utils import determine_ext, determine_protocol
 
 from social_video_downloader.domain.errors import (
     DownloaderError,
@@ -85,8 +86,8 @@ class InstagramProvider:
             return False
         return True
 
-    @staticmethod
-    def _base_options() -> dict[str, Any]:
+    @classmethod
+    def _base_options(cls) -> dict[str, Any]:
         return {
             "noplaylist": True,
             "quiet": True,
@@ -96,7 +97,7 @@ class InstagramProvider:
             "fragment_retries": 0,
             "extractor_retries": 0,
             "socket_timeout": 20,
-            "format": "best",
+            "format": cls._select_format,
             "cachedir": False,
         }
 
@@ -123,7 +124,8 @@ class InstagramProvider:
             parts = urlsplit(locator)
         except ValueError:
             return False
-        extension = item.get("ext") or parts.path.rsplit(".", 1)[-1].lower()
+        locator_extension = determine_ext(locator, default_ext="").lower()
+        extension = item.get("ext") or locator_extension
         codec = item.get("vcodec")
         has_video = (isinstance(codec, str) and codec.strip().lower() not in {"", "none"}) or (
             codec is None
@@ -135,10 +137,42 @@ class InstagramProvider:
             and bool(parts.hostname)
             and extension == "mp4"
             and item.get("protocol") in {None, "https", "http"}
+            and determine_protocol(dict(item)) in {"https", "http"}
+            # A declared HTTP protocol must not disguise a manifest URL either.
+            and determine_protocol({"url": locator}) in {"https", "http"}
+            and locator_extension not in {"m3u8", "mpd", "f4m"}
+            and all(
+                item.get(key) is None
+                for key in ("fragments", "fragment_base_url", "manifest_stream_number")
+            )
+            and not item.get("manifest_url")
             and has_video
             and (item.get("acodec") is None or str(item.get("acodec")).strip().lower() != "none")
             and not item.get("has_drm")
         )
+
+    @staticmethod
+    def _compatibility_rank(item: Mapping[str, Any]) -> int:
+        video = str(item.get("vcodec") or "").lower()
+        audio = str(item.get("acodec") or "").lower()
+        h264 = video in {"h264", "avc1", "avc3"} or video.startswith(("avc1.", "avc3."))
+        aac = audio == "aac" or audio.startswith("mp4a.40.")
+        if h264 and aac:
+            return 0
+        if (item.get("vcodec") is None or h264) and (item.get("acodec") is None or aac):
+            return 1
+        return 2
+
+    @classmethod
+    def _select_format(cls, context: Mapping[str, Any]) -> Iterator[dict[str, Any]]:
+        # yt-dlp sorts formats from worst to best before invoking this selector.
+        # Compatibility wins across classes; retain yt-dlp's quality order within one.
+        formats = [item for item in context["formats"] if cls._usable_format(item)]
+        for rank in (0, 1, 2):
+            for item in reversed(formats):
+                if cls._compatibility_rank(item) == rank:
+                    yield dict(item)
+                    return
 
     @classmethod
     def _single_video(cls, raw: Any) -> dict[str, Any]:

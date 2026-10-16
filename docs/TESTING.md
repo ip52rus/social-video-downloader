@@ -446,7 +446,7 @@ retry or authentication fallback. Missing/empty/extra/partial/symlink outputs fa
 Upstream logger messages are suppressed; fixtures use synthetic IDs and `.invalid` URLs.
 
 A real local yt-dlp processor/selector test receives synthetic extractor dictionaries:
-it chooses the best admitted direct MP4 and excludes higher-resolution silent, audio-only
+it chooses one admitted direct MP4 and excludes higher-resolution silent, audio-only
 and image alternatives. Extraction and file acquisition are replaced with local stubs;
 this does not test the real Instagram extractor or CDN.
 
@@ -462,7 +462,7 @@ existing Telegram preparation helper verify:
   no audio is rejected by the existing stream validator. The caller workspace is removed
   in both cases, as it is by the existing request workspace boundary.
 
-Verification in an existing Python 3.13 / yt-dlp 2026.08.19 environment, using the feature
+Initial implementation verification in an existing Python 3.13 / yt-dlp 2026.08.19 environment, using the feature
 checkout's `src` via `PYTHONPATH=src` and explicitly disabling the external YouTube test:
 
 - Provider and synthetic pipeline checks: 85 passed.
@@ -476,3 +476,33 @@ local FFmpeg checks do not establish real Reel availability, Telegram delivery, 
 restrictions, rate-limit recovery, throughput, production reliability or broad format
 coverage. Retries of zero and a per-socket timeout are not a whole-operation deadline
 and do not restrict an extractor to one internal HTTP request.
+
+### PR #44 direct-format selection review follow-up
+
+P1/P2 regressions run the actual installed yt-dlp 2026.08.19 format processor/selector
+against synthetic metadata. Only extractor output and acquisition are stubbed; a network
+attempt raises immediately. The new checks cover:
+
+- Implicit `.m3u8`, uppercase/signed HLS, DASH `.mpd`, `.f4m`, explicit HLS/DASH protocols,
+  fragment lists (including empty lists), manifest locators and DASH representation markers.
+  Unsupported candidates never reach `process_info`, with or without a valid direct MP4
+  alternative. Signed direct MP4 URLs without a path extension remain accepted.
+- H.264/AAC ahead of equal-resolution VP9/AAC and higher-resolution unknown-audio formats;
+  incomplete codecs ahead of already-known incompatible codecs; both fallback classes;
+  native yt-dlp quality ordering within each class. Reversing extractor format order does
+  not change the expected choice. Only one selected format reaches acquisition.
+- Existing explicit no-audio rejection, collection/redirect rejection, optional metadata,
+  cache/expiry, workspace cleanup and synthetic transport preparation remain covered.
+
+The initial regressions reproduced both findings before the provider correction. Follow-up
+verification uses the existing Python environment, `PYTHONPATH=src`, bytecode/cache writes
+disabled and the external YouTube test explicitly disabled:
+
+- Focused Instagram provider/synthetic pipeline: 127 passed.
+- Full suite: 596 passed, 1 skipped (opt-in external YouTube matrix).
+- Ruff lint/format and `git diff --check`: passed.
+
+No new Instagram/YouTube network requests, media acquisition, Telegram delivery, dependency
+changes or Docker commands were performed for this correction. Metadata-based format
+selection does not prove actual stream presence or compatibility; real acquisition through
+this provider and Telegram activation/acceptance remain separate outstanding gates.

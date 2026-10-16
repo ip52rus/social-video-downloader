@@ -315,6 +315,7 @@ Analytics requirements for this phase:
 - [x] Use shared inspection data, safe temporary storage, domain errors and existing choice model.
 - [x] Validate explicit `DownloadService` injection and `DIRECT_DOWNLOAD` without audio/quality menus.
 - [x] Add offline provider tests and synthetic yt-dlp/ffprobe integration; record results in TESTING.md.
+- [x] Address PR #44 P1/P2: reject implicit manifests/fragments before acquisition and prefer compatible codecs using real yt-dlp selection regression tests.
 - [ ] Review and merge PR 1 only after a separate decision; leave it draft for now.
 - [ ] Integrate default provider registration and Telegram direct-download routing/messages in PR 2.
 - [ ] Validate real anonymous Reel download with documented URL count/type and runtime.
