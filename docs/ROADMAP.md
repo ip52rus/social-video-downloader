@@ -131,15 +131,21 @@ PR #45, a separately authorized repeat passed for one public Reel on 2026-10-16:
 No Telegram upload was performed; this is not broad reliability evidence.
 
 The user subsequently approved a broader Phase 5 scope: public Reels, ordinary public
-single-video posts, and future photo/video carousels. This stage extends the same provider
-to single-video `/p/` results with offline validation only. Carousel/photo acquisition
-and Telegram integration are not implemented. The future carousel delivery policy is
-ordered Telegram media groups, splitting more than 10 items into sequential groups,
-with no silent omission of unavailable elements; it requires a separate implementation stage.
+single-video posts, and video-only selection from carousels. Photos are NEVER downloaded
+or delivered. Single-video `/p/` results reuse the provider with offline validation.
+The first carousel stage now provides guarded metadata inspection and immutable whole-
+publication selection plans only. UNKNOWN, unavailable/unsupported videos and unreliable
+identities block selection; only confirmed PHOTO entries can be excluded. Item-reference
+URLs remain blocked. No multi-video acquisition or Telegram integration is implemented.
+Eventual video delivery uses ordered Telegram groups, splitting more than 10 videos;
+a single remainder uses one video message. Never silently omit a selected video.
 
 Next: independent review and separately authorized bounded real single-video `/p/`
 validation. Real `/p/` acquisition and all Instagram Telegram delivery remain unverified.
-Default registration/Telegram routing and future carousel work require separate stages.
+Default registration/Telegram routing and future carousel acquisition require separate stages.
+The next carousel acceptance gates are independent review of inspection, separately approved
+mixed/photo classification evidence, and a bounded acquisition/preparation design. Item-specific
+semantics need separate validation; the installed extractor ignores `img_index`.
 No running-stack rebuild/restart is authorized by this stage.
 See [the scope and acceptance record](PHASE5_INSTAGRAM_REELS.md).
 

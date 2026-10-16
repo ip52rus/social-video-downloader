@@ -12,6 +12,11 @@ from uuid import uuid4
 import yt_dlp
 from yt_dlp.utils import determine_ext, determine_protocol
 
+from social_video_downloader.domain.carousel import (
+    CarouselInspection,
+    CarouselIssue,
+    CarouselItem,
+)
 from social_video_downloader.domain.errors import (
     DownloaderError,
     DownloadFailedError,
@@ -31,6 +36,10 @@ from social_video_downloader.domain.models import (
 )
 from social_video_downloader.domain.urls import normalize_media_url
 from social_video_downloader.infrastructure.filenames import safe_filename
+from social_video_downloader.infrastructure.instagram_metadata import (
+    CarouselInstagramIE,
+    ItemEvidence,
+)
 from social_video_downloader.infrastructure.workspace import temporary_workspace
 
 
@@ -60,6 +69,7 @@ class InstagramProvider:
     def __init__(self, ydl_factory: Any = None) -> None:
         self._ydl_factory = ydl_factory
         self._inspection_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+        self._carousel_cache: dict[str, tuple[float, CarouselInspection]] = {}
 
     @property
     def platform(self) -> Platform:
@@ -245,6 +255,90 @@ class InstagramProvider:
     def extract_metadata(self, url: str) -> MediaMetadata:
         normalized, info = self._inspect(url)
         return self._metadata(info, normalized)
+
+    def inspect_carousel(self, url: str) -> CarouselInspection:
+        """Return immutable facts only; single-file download still rejects collections.
+
+        Reference-intent validation belongs to InstagramCarouselService. This factual
+        entry point accepts only already-canonical publication identities.
+        """
+        canonical = self._media_url(url)
+        if url != canonical or not urlsplit(canonical).path.startswith("/p/"):
+            raise InvalidMediaURLError("Carousel inspection requires a canonical publication URL.")
+        now = monotonic()
+        self._carousel_cache = {
+            key: value
+            for key, value in self._carousel_cache.items()
+            if now - value[0] < self._INSPECTION_CACHE_TTL_SECONDS
+        }
+        if cached := self._carousel_cache.get(canonical):
+            return cached[1]
+        try:
+            with self._new_ydl(
+                {**self._base_options(), "skip_download": True, "getcomments": False}
+            ) as ydl:
+                ydl.add_info_extractor(CarouselInstagramIE(ydl))
+                raw = ydl.extract_info(canonical, download=False, process=False, ie_key="Instagram")
+                inspection = self._carousel_facts(canonical, raw)
+        except DownloaderError:
+            raise
+        except Exception as exc:
+            raise MetadataExtractionError("Unable to inspect the Instagram carousel.") from exc
+        if len(self._carousel_cache) >= self._INSPECTION_CACHE_MAX_ENTRIES:
+            self._carousel_cache.pop(next(iter(self._carousel_cache)))
+        self._carousel_cache[canonical] = (monotonic(), inspection)
+        return inspection
+
+    @classmethod
+    def _carousel_facts(cls, canonical: str, raw: Any) -> CarouselInspection:
+        if (
+            not isinstance(raw, Mapping)
+            or raw.get("_type") != "playlist"
+            or raw.get("is_private")
+            or raw.get("availability") not in {None, "public"}
+            or raw.get("has_drm")
+            or raw.get("_carousel_unavailable")
+        ):
+            return CarouselInspection(canonical, None, issue=CarouselIssue.UNSUPPORTED_CONTENT)
+        entries, count = raw.get("entries"), raw.get("_carousel_source_count")
+        if not isinstance(entries, list) or type(count) is not int or len(entries) != count:
+            return CarouselInspection(
+                canonical,
+                count if type(count) is int else None,
+                issue=CarouselIssue.INVALID_METADATA,
+            )
+        items = []
+        issue = None
+        for position, entry in enumerate(entries, 1):
+            if not isinstance(entry, Mapping) or not isinstance(
+                evidence := entry.get("_carousel_item_evidence"), ItemEvidence
+            ):
+                return CarouselInspection(canonical, count, issue=CarouselIssue.INVALID_METADATA)
+            if evidence.item_id is None or entry.get("id") != evidence.mapped_id:
+                issue = CarouselIssue.UNSTABLE_IDENTITIES
+            formats = entry.get("formats")
+            admissible = (
+                sum(cls._usable_format(f) for f in formats) if isinstance(formats, list) else 0
+            )
+            if (
+                entry.get("_type", "video") != "video"
+                or "entries" in entry
+                or entry.get("is_private")
+                or entry.get("availability") not in {None, "public"}
+                or entry.get("has_drm")
+                or evidence.unavailable
+            ):
+                admissible = 0
+                issue = CarouselIssue.UNSUPPORTED_CONTENT
+            items.append(
+                CarouselItem(
+                    position, evidence.item_id, evidence.kind, evidence.signals, admissible
+                )
+            )
+        ids = [item.item_id for item in items]
+        if len(set(ids)) != len(ids):
+            issue = CarouselIssue.UNSTABLE_IDENTITIES
+        return CarouselInspection(canonical, count, tuple(items), issue)
 
     def get_supported_modes(self, url: str) -> tuple[DownloadMode, ...]:
         if not self.can_handle(url):
