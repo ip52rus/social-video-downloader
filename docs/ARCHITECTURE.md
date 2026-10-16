@@ -114,7 +114,7 @@ This changes validation status only. Live fault recovery, broader format/client 
 and Phase 9 production reliability remain open; obsolete choice-prompt cleanup is Phase 8.
 
 ## Application layer
-DownloadService normalizes the URL, detects its platform, selects a registered MediaProvider, and returns the provider's transport-neutral DownloadedMedia result. The default registry contains the YouTube provider. A recognized platform without a registered provider raises a domain-level UnsupportedPlatformError. The service does not depend on Telegram.
+DownloadService normalizes the URL, detects its platform, selects a registered MediaProvider, and returns the provider's transport-neutral DownloadedMedia result. The default registry contains the YouTube provider. The experimental `InstagramProvider` can be explicitly injected for development/testing; default registration and Telegram activation are deferred to the next PR. A recognized platform without a registered provider raises a domain-level UnsupportedPlatformError. The service does not depend on Telegram.
 
 `DownloadService.create_choice_plan(url)` reuses the same normalization and provider
 selection path to build an immutable application-level choice plan before any Telegram UI
@@ -194,6 +194,59 @@ Video-with-audio quality discovery requires either a combined stream at that siz
 a separate audio stream that can be paired with it; video-only facts remain independent.
 Guarantees depend on correct source metadata; they do not prove the actual encoded
 dimensions, file size, or upstream format availability without media validation.
+
+### Experimental Instagram Reel provider
+
+Reason for this addition: the user authorized a narrow Phase 5 implementation after
+Gates 1–3C, while retaining the one-file `DownloadedMedia` contract. No new capability
+model, downloader engine, transport pipeline or infrastructure is needed.
+
+`InstagramProvider` implements `MediaProvider` for anonymous individual `/reel/<id>/`
+URLs on the explicit Instagram host allowlist. It canonicalizes to HTTPS/www without
+tracking parameters and pins extraction to the Instagram extractor. `/p/`, Stories,
+profiles, collections, redirect results, private/auth-gated results and unsupported
+formats fail before media acquisition. A playlist is never enumerated or reduced to its
+first entry, including a one-entry playlist.
+
+The first implementation admits only direct HTTP(S) MP4 formats with video evidence and
+no explicit audio absence or DRM marker. Before acquisition, yt-dlp's `determine_protocol`
+checks the effective protocol, including URL-derived detection when protocol metadata is
+missing. Manifest URLs (including a misleading HTTP/MP4 label), fragment data and DASH
+representation markers are rejected. Signed direct MP4 locators need not end in `.mp4`
+when the extractor supplies that extension. DASH/HLS assembly and audio-only/video-only
+outputs are outside this PR. Missing audio codec information in progressive extractor
+data is not proof of an audio stream: the existing Telegram preparation helper must
+verify actual streams. Explicitly silent formats are rejected; an unexpectedly silent
+file fails that existing preparation helper. No synthetic audio is added.
+
+The yt-dlp selector yields exactly one admitted format. It first prefers metadata-confirmed
+H.264/AAC, then incomplete codec metadata with no already-known incompatible codec, then
+other admitted MP4 codecs. Within a compatibility class it keeps yt-dlp's native quality
+ordering. A higher-resolution VP9 or unknown-audio option cannot displace an available
+confirmed H.264/AAC option. Selection does not retry another format after acquisition
+failure; actual file compatibility still requires the existing media preparation checks.
+
+A small bounded, 180-second inspection cache shares one validated snapshot between mode
+inspection, quality inspection and download. Download consumes the snapshot; expiry
+requires fresh inspection. The provider exposes only normal video and no quality menu,
+so explicit injection into `DownloadService` produces `DIRECT_DOWNLOAD` using the
+existing choice model. Unknown quality IDs and other modes fail before extraction.
+
+Metadata extraction uses `download=False, process=False`; only the validated single-video
+snapshot is passed to yt-dlp processing. Acquisition uses a fixed filename in the existing
+request workspace, checks for exactly one nonempty regular file (rejecting symlinks and
+extra outputs), and publishes a generated safe filename without trusting source titles
+or IDs as filesystem paths. The workspace is removed on success or failure. Duration is
+optional; real upload parameters remain the responsibility of the existing ffprobe path.
+No cookies, credentials, persistent extractor cache or application retry loop is configured;
+yt-dlp extraction/download/fragment retries are zero and socket timeout is 20 seconds.
+This is not a whole-request deadline or a guarantee of one HTTP request: extractor internals
+may make multiple requests. Raw yt-dlp log messages are suppressed to avoid exposing
+source URLs or account data; domain errors retain safe public messages.
+
+The default provider registry, Telegram handlers and running deployment remain YouTube-only.
+Real Instagram acquisition and Telegram end-to-end delivery remain unverified for this code.
+See [the accepted plan and evidence boundary](PHASE5_INSTAGRAM_REELS.md).
 
 ## Media engine
 Responsible for download and media assembly. The first implementation uses yt-dlp and FFmpeg where appropriate.

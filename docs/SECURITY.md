@@ -35,3 +35,14 @@ runtime data while allowing `.env.example` to document required variables.
 
 ## Security gate
 Before each release inspect changed files, review the Git diff, search for credential-like strings, confirm ignored runtime files, review dependency changes, and verify logs do not expose secrets or unnecessary personal data.
+
+## Experimental Instagram provider
+
+The first Reel provider uses only anonymous extraction: no supplied cookies, browser
+sessions, credentials, authentication fallback or persistent yt-dlp cache. Only the
+explicit Instagram Reel host/path allowlist reaches the pinned Instagram extractor.
+Collections and redirects are rejected before media acquisition. Upstream locator URLs
+are runtime data, not fixtures or logs; raw yt-dlp messages are suppressed. Acquisition
+uses an isolated temporary workspace, a fixed internal filename and generated safe output
+names. No titles or source IDs are interpolated into output paths; symlinks and extra
+outputs are rejected. This provider is not registered in the default bot yet.
