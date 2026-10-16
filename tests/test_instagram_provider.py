@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 import yt_dlp
+from yt_dlp.extractor.instagram import InstagramIE
 
 from social_video_downloader.domain.errors import (
     DownloadFailedError,
@@ -222,9 +223,9 @@ def test_even_single_entry_playlist_is_rejected_without_iteration(tmp_path):
         {"vcodec": "none"},
         {"acodec": "none"},
         {"acodec": " NONE "},
-        {"width": None},
-        {"width": True},
-        {"height": float("nan")},
+        {"vcodec": " NONE "},
+        {"vcodec": True},
+        {"vcodec": float("nan")},
         {"vcodec": "", "width": None},
         {"protocol": "m3u8_native"},
         {"protocol": "http_dash_segments"},
@@ -610,3 +611,116 @@ def test_real_processing_prefers_compatibility_before_quality(formats, expected,
     result = provider.download(URL, tmp_path)
     assert processed == [(expected, "https")]
     assert result.file_path.read_bytes() == b"offline fixture"
+
+
+@pytest.fixture
+def extract_product_media():
+    class NoNetworkYDL(yt_dlp.YoutubeDL):
+        def urlopen(self, request):
+            raise AssertionError("Synthetic extractor schema test must not access the network")
+
+    with NoNetworkYDL({"quiet": True, "no_warnings": True, "cachedir": False}) as ydl:
+        # Call the installed extractor's local schema mapping, never extract_info().
+        extractor = InstagramIE(ydl)
+
+        def extract(product):
+            raw = extractor._extract_product_media(product)
+            # Normal YoutubeDL.extract_info adds these envelope fields before returning.
+            ydl.add_default_extra_info(raw, extractor, URL)
+            return raw
+
+        yield extract
+
+
+DASH_FIXTURE = """<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" mediaPresentationDuration="PT1S">
+<Period><AdaptationSet mimeType="video/mp4" codecs="avc1.640028">
+<Representation id="dash-video" bandwidth="2000000" width="1080" height="1920">
+<BaseURL>https://media.invalid/dash.mp4</BaseURL>
+<SegmentTemplate timescale="1" duration="1" startNumber="1"
+media="part-$Number$.m4s" initialization="init.mp4"/>
+</Representation></AdaptationSet></Period></MPD>"""
+
+
+@pytest.mark.parametrize(
+    "dimensions", [{}, {"width": 360, "height": 640}, {"width": 360}, {"height": 640}]
+)
+@pytest.mark.parametrize("with_dash", [False, True])
+def test_actual_extractor_progressive_schema_reaches_one_acquisition(
+    extract_product_media, dimensions, with_dash, tmp_path
+):
+    product = {
+        "pk": 1,
+        "video_versions": [{"id": "direct", "url": "https://media.invalid/reel.mp4", **dimensions}],
+    }
+    if with_dash:
+        product["video_dash_manifest"] = DASH_FIXTURE
+    raw = extract_product_media(product)
+    direct = raw["formats"][0]
+    assert direct.get("vcodec") is direct.get("acodec") is direct.get("ext") is None
+    assert direct.get("width") == dimensions.get("width")
+    assert direct.get("height") == dimensions.get("height")
+    if with_dash:
+        assert any(f.get("protocol") == "http_dash_segments" for f in raw["formats"])
+    processed = []
+    provider = InstagramProvider(_offline_processor(raw, processed))
+    service = DownloadService([provider])
+    plan = service.create_choice_plan(URL)
+    assert plan.state is ChoicePlanState.DIRECT_DOWNLOAD
+    assert provider._compatibility_rank(direct) == 1
+    result = service.download(URL, tmp_path, plan.automatic_options)
+    assert processed == [("direct", "https")]
+    assert result.metadata.duration_seconds is None
+    assert result.file_path.read_bytes() == b"offline fixture"
+    # Admission did not fabricate codec or geometry evidence in the original mapping.
+    assert direct.get("vcodec") is direct.get("acodec") is None
+    assert direct.get("width") == dimensions.get("width")
+    assert direct.get("height") == dimensions.get("height")
+
+
+@pytest.mark.parametrize(
+    "product_changes, locator",
+    [
+        ({"video_codec": "none"}, "https://media.invalid/reel.mp4"),
+        ({"has_audio": False}, "https://media.invalid/reel.mp4"),
+        ({}, "https://media.invalid/master.m3u8"),
+        ({}, "https://media.invalid/manifest.mpd"),
+        ({}, "https://media.invalid/resource?signature=fixture"),
+        ({}, "https://media.invalid/image.jpg"),
+    ],
+)
+def test_incomplete_extractor_schema_keeps_unsupported_candidates_blocked(
+    extract_product_media, product_changes, locator, tmp_path
+):
+    raw = extract_product_media(
+        {
+            "pk": 1,
+            "video_versions": [{"id": "unsupported", "url": locator}],
+            **product_changes,
+        }
+    )
+    processed = []
+    provider = InstagramProvider(_offline_processor(raw, processed))
+    with pytest.raises(MetadataExtractionError):
+        provider.download(URL, tmp_path)
+    assert processed == []
+    assert not list(tmp_path.iterdir())
+
+
+def test_incomplete_signed_mp4_with_declared_extension_is_admissible(
+    extract_product_media, tmp_path
+):
+    raw = extract_product_media(
+        {
+            "pk": 1,
+            "video_versions": [
+                {"id": "signed", "url": "https://media.invalid/resource?signature=fixture"}
+            ],
+        }
+    )
+    # The provider interface also accepts a supplied container hint, without inventing codecs.
+    raw["formats"][0]["ext"] = "mp4"
+    processed = []
+    provider = InstagramProvider(_offline_processor(raw, processed))
+    provider.download(URL, tmp_path)
+    assert processed == [("signed", "https")]
+    assert provider._compatibility_rank(raw["formats"][0]) == 1

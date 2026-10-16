@@ -316,9 +316,10 @@ Analytics requirements for this phase:
 - [x] Validate explicit `DownloadService` injection and `DIRECT_DOWNLOAD` without audio/quality menus.
 - [x] Add offline provider tests and synthetic yt-dlp/ffprobe integration; record results in TESTING.md.
 - [x] Address PR #44 P1/P2: reject implicit manifests/fragments before acquisition and prefer compatible codecs using real yt-dlp selection regression tests.
-- [ ] Review and merge PR 1 only after a separate decision; leave it draft for now.
+- [x] Independently review and merge PR #44 after the user's separate decision.
+- [x] Reproduce and correct overly strict rejection of incomplete direct-MP4 metadata offline; preserve manifest rejection and compatibility priority.
 - [ ] Integrate default provider registration and Telegram direct-download routing/messages in PR 2.
-- [ ] Validate real anonymous Reel download with documented URL count/type and runtime.
+- [ ] Validate real anonymous Reel download with documented URL count/type and runtime; repeat the bounded smoke only after separate authorization for the metadata-admission correction.
 - [ ] Validate real Telegram delivery/playback after separately authorized deployment changes.
 - [ ] Assess broader extraction stability and recovery; production reliability remains open.
 
@@ -328,6 +329,10 @@ five-element `/p/` playlist, which remains excluded. No carousel media was acqui
 PR 1 tests do not substitute for real Instagram or Telegram validation. Meaningful
 Instagram quality choices, DASH/HLS assembly, silent-video handling, ordinary `/p/` posts,
 carousels, Stories, private content and authentication are outside this PR.
+The first real provider smoke failed during inspection (13 formats, none admitted),
+with zero acquisition attempts. The incomplete-metadata rejection is reproduced and
+fixed offline; successful real acquisition remains outstanding. The other ten formats'
+rejection reasons remain unverified; no access failure was reported.
 See [the accepted scope](PHASE5_INSTAGRAM_REELS.md) for the evidence boundary.
 
 ## Phase 6 - TikTok Provider

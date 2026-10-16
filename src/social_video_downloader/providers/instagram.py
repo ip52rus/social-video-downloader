@@ -50,8 +50,8 @@ class _QuietLogger:
 class InstagramProvider:
     """Acquire one Reel; registration and Telegram activation are a separate stage.
 
-    Only direct MP4 video formats are admitted. Unknown audio codecs in progressive
-    extractor data are allowed; actual streams still require transport validation.
+    Only direct MP4 candidates are admitted. Missing codec/dimension metadata is
+    unknown; actual video and audio streams still require transport validation.
     """
 
     _INSPECTION_CACHE_TTL_SECONDS = 180.0
@@ -127,10 +127,11 @@ class InstagramProvider:
         locator_extension = determine_ext(locator, default_ext="").lower()
         extension = item.get("ext") or locator_extension
         codec = item.get("vcodec")
-        has_video = (isinstance(codec, str) and codec.strip().lower() not in {"", "none"}) or (
-            codec is None
-            and cls._positive_number(item.get("width"))
-            and cls._positive_number(item.get("height"))
+        # Instagram video_versions may omit both codecs and dimensions. A direct
+        # MP4 locator is a candidate, not proof of streams; explicit audio-only
+        # metadata still fails here and real streams are checked during preparation.
+        video_candidate = codec is None or (
+            isinstance(codec, str) and codec.strip().lower() not in {"", "none"}
         )
         return (
             parts.scheme in {"https", "http"}
@@ -146,7 +147,7 @@ class InstagramProvider:
                 for key in ("fragments", "fragment_base_url", "manifest_stream_number")
             )
             and not item.get("manifest_url")
-            and has_video
+            and video_candidate
             and (item.get("acodec") is None or str(item.get("acodec")).strip().lower() != "none")
             and not item.get("has_drm")
         )

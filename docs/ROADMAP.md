@@ -120,13 +120,18 @@ out of scope and that report does not prove media acquisition or Telegram delive
 Full Gates 1–3B reports were not available in the handoff used for this PR. The GO is an
 explicit development scope decision, not a broad reliability verdict.
 
-PR 1 implements the `MediaProvider` contract, direct MP4 Reel acquisition, rejection
+Merged PR #44 implements the `MediaProvider` contract, direct MP4 Reel acquisition, rejection
 boundaries, explicit `DownloadService` injection and deterministic validation. It leaves
 the default registry and Telegram activation unchanged. Real Instagram downloads and
 Telegram end-to-end checks remain outstanding for this implementation.
 
-Next: review PR 1 without premature merge; then a focused PR for default registration,
-Telegram direct-download routing/messages and scoped external/client acceptance.
+The first real provider smoke failed before acquisition and reported incomplete codec/
+dimension metadata. Offline reproduction confirmed an overly strict direct-MP4 admission
+rule, now corrected and verified locally; success on the real Reel is still unverified.
+
+Next: separately authorize a bounded real provider smoke with the correction. Successful
+acquisition must precede a focused PR for default registration, Telegram direct-download
+routing/messages and scoped external/client acceptance.
 No running-stack rebuild/restart is authorized by this stage.
 See [the scope and acceptance record](PHASE5_INSTAGRAM_REELS.md).
 
