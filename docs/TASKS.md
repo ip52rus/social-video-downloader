@@ -328,10 +328,12 @@ Analytics requirements for this phase:
 - [x] Independently review and merge carousel inspection/planning PR #47.
 - [x] Record one real 20-entry metadata case: 17 VIDEO and three UNKNOWN at 8/9/18, original IDs/order preserved, BLOCKED / unknown_item; source diagnosis supports corroborated PHOTO candidates, zero acquisition.
 - [x] Correct corroborated integer media_type=1 PHOTO classification with deterministic tests; preserve conflict guards and report numeric evidence.
-- [ ] Independently review the focused PHOTO classification fix.
-- [ ] Validate corrected mixed-carousel selection live after separate authorization; offline READY plans do not close this gate.
+- [x] Independently review and merge the focused PHOTO classification fix (PR #48).
+- [x] Validate corrected mixed-carousel selection live on one publication: 20 items, 17 VIDEO, PHOTO at 8/9/18, zero UNKNOWN, READY; unique IDs/order PASS, three direct MP4 candidates per VIDEO, one extraction/three metadata HTTP requests, zero acquisition.
 - [ ] Validate reliable item-reference semantics separately; keep `img_index` and ambiguous references blocked meanwhile.
-- [ ] Implement bounded ordered multi-video acquisition/preparation separately; photos are NEVER acquired, UNKNOWN/unsupported selected videos must not be silently omitted.
+- [x] Implement bounded ordered multi-video acquisition with fresh plan revalidation, actual stream checks, resource budgets and all-or-nothing cleanup; deterministic tests only. Photos are NEVER acquired.
+- [ ] Independently review bounded acquisition and run a separately authorized live multi-video smoke; acquisition remains NOT VERIFIED externally.
+- [ ] Integrate existing Telegram-compatible preparation separately before group delivery; no acquisition-stage conversion.
 - [ ] Implement ordered Telegram video groups separately: 2–10 per group, more than 10 split sequentially, a final single video sent individually.
 - [ ] Validate real Telegram delivery/playback after separately authorized deployment changes.
 - [ ] Assess broader extraction stability and recovery; production reliability remains open.
@@ -344,7 +346,7 @@ PR 1 tests do not substitute for real Instagram or Telegram validation. Meaningf
 Instagram quality choices, DASH/HLS assembly, silent-video handling, Stories, private
 content and authentication remain outside the implemented scope. Single-video `/p/`
 support is implemented offline; carousel inspection is implemented separately, while
-acquisition/delivery remain unfinished.
+bounded acquisition has deterministic coverage; live acquisition and delivery remain unfinished.
 The first real provider smoke failed during inspection (13 formats, none admitted),
 with zero acquisition attempts. The incomplete-metadata rejection is reproduced and
 fixed in PR #45. Its repeat real smoke passed: 13 formats, 3 admitted, 10 rejected for
@@ -353,9 +355,20 @@ The initial run's other ten rejection reasons were unverified; the later run's d
 does not retroactively establish them. No real single-video `/p/` acquisition or Instagram
 Telegram delivery is claimed. The newer carousel metadata-only experiment is recorded
 separately in TESTING.md. The later 20-entry source diagnostic justifies the PHOTO
-adjustment for that observed shape, but corrected live mixed-selection behavior and
-all carousel acquisition remain unverified.
+adjustment for that observed shape. The final corrected live mixed-selection gate passed
+for the same publication; carousel acquisition remains externally unverified.
 See [the accepted scope](PHASE5_INSTAGRAM_REELS.md) for the evidence boundary.
+
+### Ordered carousel acquisition verification
+
+- 74 new deterministic acquisition cases passed; full suite 944 passed, 1 skipped.
+- Actual installed yt-dlp HTTP processing and local synthetic MP4/ffprobe exercised;
+  no live Instagram/Telegram calls. Ruff lint/format, diff and documentation checks PASS.
+- Explicit operation defaults: 25 videos, 100 MiB/file, 500 MiB total received media,
+  512 MiB temporary logical media bytes and 600 seconds; adjustable per service.
+- Successful generated files belong to the caller. Failure/cancellation removes all
+  owned files, without overwriting/deleting unrelated files. No crash recovery claim.
+- Independent review, live multi-video smoke and Telegram integration/validation remain open.
 
 ## Phase 6 - TikTok Provider
 - [ ] Run a technical spike.

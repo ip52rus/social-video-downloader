@@ -656,8 +656,9 @@ image evidence is retained as a PHOTO acceptance case; image-only UNKNOWN remain
 Existing unsupported VIDEO, identity, unavailable/private/DRM, cache, reference and
 single-video/YouTube/Telegram regressions remain part of the suite.
 
-The corrected adapter has NOT been retested live. The live mixed-selection gate remains
-OPEN; no carousel media acquisition or Telegram delivery is implemented or claimed.
+At completion of that offline fix, live mixed-selection remained OPEN. The subsequent
+metadata-only gate below closes it for one publication; no live carousel acquisition or
+Telegram delivery is claimed.
 
 
 Verification of this focused classification fix (no live platform calls):
@@ -668,3 +669,49 @@ Verification of this focused classification fix (no live platform calls):
 - Ruff lint/format, diff, documentation links and security/scope review: PASS.
 - Application AST comparison: only `_classify` changed; extraction, identity/order,
   cache, URL handling, domain contracts, registry and Telegram handlers are unchanged.
+
+
+### Final mixed-carousel classification — real metadata-only PASS
+
+2026-10-16, production source `1e08478646057326284ff410ea23f2ca312b4f2f`, read-only mount
+hash-verified (27 Python files); Python 3.13.16, yt-dlp 2026.08.19, curl_cffi absent.
+One top-level anonymous extraction, three observed HTTP requests, no retries/acquisition.
+Observed: playlist with 20 items; 17 VIDEO; PHOTO at 8/9/18 with media_type_photo plus
+image_versions evidence; zero UNKNOWN. Source/mapped/plan ID uniqueness and order PASS.
+READY, issue=None, selected 1–7, 10–17, 19–20; three direct MP4 candidates per VIDEO.
+All A–L acceptance checks passed. Extraction 3.460 s, plan 3.716 s, process 4.851 s;
+CSRF_TOKEN_UNAVAILABLE warning only. No media bytes/files or Telegram calls, temporary
+runtime removed, Git/Compose unchanged. This closes classification for one publication,
+not real multi-video downloading or broad reliability.
+
+### Ordered carousel acquisition — network-forbidden deterministic validation
+
+`tests/test_instagram_acquisition.py` exercises production plan revalidation, the installed
+yt-dlp selector and HTTP downloader, synthetic in-memory HTTP responses and actual local
+ffprobe on generated MP4 files. No external Instagram/Telegram calls occur. Child-process
+tests inject only a fixture provider and run the production execution boundary, including
+POSIX per-file limits, timeout/cancellation cleanup and safe output publication.
+
+Coverage includes 1/2/5/10/11/20/21 selected videos; mixed 20-item ordering with 17 videos;
+PHOTO-only, UNKNOWN/unsupported/unavailable/DRM and forged/reference plans; refreshed and
+expired facts; changed IDs/order/count/types; HLS/DASH/manifests/fragments; codec priority
+and signed direct MP4 fallback; absent audio/video, corrupt files; empty/missing/extra/
+symlink/directory outputs; failures at first/middle/last child; per-file/cumulative/temp
+byte budgets with absent or misleading Content-Length; hard deadline and repeated
+cancellation; publication rollback/collision protection; unrelated-file preservation.
+The real HTTP reader is bounded before writes, not just a progress-hook simulation.
+
+Successful files are caller-owned until deleted. Filesystem hard-link support and POSIX
+process groups are required. Tests do not prove full decoding of arbitrary media,
+concurrent production capacity, crash recovery, real multi-video acquisition or Telegram
+preparation/group delivery. No acquisition-stage conversion is implemented.
+
+Verification of this acquisition stage (no live external calls):
+
+- New acquisition tests: 74 passed, including real child entry point/OS file limits.
+- Full suite: 944 passed, 1 skipped (external YouTube live matrix not enabled).
+- Existing Instagram/Reel/single-post, YouTube, M4A, Telegram callback and video delivery
+  regressions passed; existing synthetic FFmpeg integration checks ran in the full suite.
+- Ruff lint/format, git diff check, local documentation links and security/scope review: PASS.
+- No source/dependency/config/deployment changes outside the documented acquisition scope.
+- Live multi-video acquisition and Telegram media-group validation remain NOT VERIFIED.

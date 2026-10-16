@@ -273,21 +273,33 @@ class InstagramProvider:
         }
         if cached := self._carousel_cache.get(canonical):
             return cached[1]
+        inspection, _ = self.fresh_carousel_entries(canonical)
+        if len(self._carousel_cache) >= self._INSPECTION_CACHE_MAX_ENTRIES:
+            self._carousel_cache.pop(next(iter(self._carousel_cache)))
+        self._carousel_cache[canonical] = (monotonic(), inspection)
+        return inspection
+
+    def fresh_carousel_entries(self, url: str) -> tuple[CarouselInspection, tuple[dict, ...]]:
+        """Internal acquisition boundary: one fresh extraction, no cached locators.
+
+        Child metadata stays in the acquisition process and never enters public results.
+        The same adapter and factual guards as metadata-only inspection are used.
+        """
+        canonical = self._media_url(url)
+        if url != canonical or not urlsplit(canonical).path.startswith("/p/"):
+            raise InvalidMediaURLError("Carousel acquisition requires a canonical publication URL.")
         try:
             with self._new_ydl(
                 {**self._base_options(), "skip_download": True, "getcomments": False}
             ) as ydl:
                 ydl.add_info_extractor(CarouselInstagramIE(ydl))
                 raw = ydl.extract_info(canonical, download=False, process=False, ie_key="Instagram")
-                inspection = self._carousel_facts(canonical, raw)
+            facts = self._carousel_facts(canonical, raw)
+            return facts, tuple(raw["entries"]) if facts.issue is None else ()
         except DownloaderError:
             raise
         except Exception as exc:
             raise MetadataExtractionError("Unable to inspect the Instagram carousel.") from exc
-        if len(self._carousel_cache) >= self._INSPECTION_CACHE_MAX_ENTRIES:
-            self._carousel_cache.pop(next(iter(self._carousel_cache)))
-        self._carousel_cache[canonical] = (monotonic(), inspection)
-        return inspection
 
     @classmethod
     def _carousel_facts(cls, canonical: str, raw: Any) -> CarouselInspection:
