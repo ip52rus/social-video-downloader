@@ -24,8 +24,8 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.mark.parametrize("audio", [True, False])
-def test_reel_result_uses_existing_transport_validation_and_cleanup(tmp_path, audio):
+@pytest.mark.parametrize("media_kind", ["audio-video", "silent", "invalid"])
+def test_reel_result_uses_existing_transport_validation_and_cleanup(tmp_path, media_kind):
     fixture = tmp_path / "synthetic.mp4"
     command = [
         "ffmpeg",
@@ -38,12 +38,14 @@ def test_reel_result_uses_existing_transport_validation_and_cleanup(tmp_path, au
         "-i",
         "color=c=blue:s=64x96:r=10",
     ]
-    if audio:
+    if media_kind == "audio-video":
         command += ["-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000"]
     command += ["-t", "1", "-c:v", "libx264", "-pix_fmt", "yuv420p"]
-    if audio:
+    if media_kind == "audio-video":
         command += ["-c:a", "aac"]
     subprocess.run([*command, str(fixture)], check=True, capture_output=True)
+    if media_kind == "invalid":
+        fixture.write_bytes(b"not a media container")
     original = fixture.read_bytes()
     extractions = []
     processing = []
@@ -54,8 +56,6 @@ def test_reel_result_uses_existing_transport_validation_and_cleanup(tmp_path, au
             {
                 "format_id": "direct",
                 "url": "https://media.invalid/synthetic.mp4",
-                "width": 64,
-                "height": 96,
             }
         ],
     }
@@ -82,7 +82,7 @@ def test_reel_result_uses_existing_transport_validation_and_cleanup(tmp_path, au
         assert result.metadata.duration_seconds is None
         assert len(extractions) == 1
         assert processing == ["direct"]
-        if audio:
+        if media_kind == "audio-video":
             calls = []
 
             def runner(command, **kwargs):
@@ -95,8 +95,11 @@ def test_reel_result_uses_existing_transport_validation_and_cleanup(tmp_path, au
             assert [call[0] for call in calls] == ["ffprobe"]
             parameters = telegram_video_upload_parameters(inspect_telegram_video(prepared))
             assert parameters == {"width": 64, "height": 96, "duration": 1}
-        else:
+        elif media_kind == "silent":
             with pytest.raises(MediaProcessingError, match="both video and audio"):
+                prepare_telegram_video(result.file_path)
+        else:
+            with pytest.raises(MediaProcessingError):
                 prepare_telegram_video(result.file_path)
     assert not workspace_path.exists()
     assert fixture.read_bytes() == original

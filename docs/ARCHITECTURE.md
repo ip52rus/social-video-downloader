@@ -208,14 +208,16 @@ profiles, collections, redirect results, private/auth-gated results and unsuppor
 formats fail before media acquisition. A playlist is never enumerated or reduced to its
 first entry, including a one-entry playlist.
 
-The first implementation admits only direct HTTP(S) MP4 formats with video evidence and
-no explicit audio absence or DRM marker. Before acquisition, yt-dlp's `determine_protocol`
-checks the effective protocol, including URL-derived detection when protocol metadata is
+The provider admits only direct HTTP(S) MP4 candidates without explicit video/audio
+absence or a DRM marker. Instagram `video_versions` may omit dimensions and codecs;
+these fields remain unknown and are not prerequisites for direct-MP4 admission.
+Before acquisition, yt-dlp's `determine_protocol` checks the effective protocol,
+including URL-derived detection when protocol metadata is
 missing. Manifest URLs (including a misleading HTTP/MP4 label), fragment data and DASH
 representation markers are rejected. Signed direct MP4 locators need not end in `.mp4`
 when the extractor supplies that extension. DASH/HLS assembly and audio-only/video-only
-outputs are outside this PR. Missing audio codec information in progressive extractor
-data is not proof of an audio stream: the existing Telegram preparation helper must
+outputs are outside this scope. Missing dimensions/codecs in progressive extractor
+data are not proof of video or audio streams: the existing Telegram preparation helper must
 verify actual streams. Explicitly silent formats are rejected; an unexpectedly silent
 file fails that existing preparation helper. No synthetic audio is added.
 
@@ -245,7 +247,10 @@ may make multiple requests. Raw yt-dlp log messages are suppressed to avoid expo
 source URLs or account data; domain errors retain safe public messages.
 
 The default provider registry, Telegram handlers and running deployment remain YouTube-only.
-Real Instagram acquisition and Telegram end-to-end delivery remain unverified for this code.
+The first real provider smoke failed during inspection, before acquisition. An offline
+regression reproduced rejection of direct MP4 metadata lacking dimensions/codecs and
+removed that overly strict condition. Successful real acquisition with the correction
+and Telegram end-to-end delivery remain unverified.
 See [the accepted plan and evidence boundary](PHASE5_INSTAGRAM_REELS.md).
 
 ## Media engine

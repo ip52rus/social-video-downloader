@@ -448,19 +448,19 @@ Upstream logger messages are suppressed; fixtures use synthetic IDs and `.invali
 A real local yt-dlp processor/selector test receives synthetic extractor dictionaries:
 it chooses one admitted direct MP4 and excludes higher-resolution silent, audio-only
 and image alternatives. Extraction and file acquisition are replaced with local stubs;
-this does not test the real Instagram extractor or CDN.
+this does not test Instagram network extraction or the CDN.
 
-`tests/integration/test_instagram_pipeline.py` generates two one-second 64x96 MP4 fixtures
-in pytest temporary storage. Both pass through injected `DownloadService` and real local
+`tests/integration/test_instagram_pipeline.py` uses one-second 64x96 MP4 fixtures and an
+invalid-file case in pytest temporary storage. All pass through injected `DownloadService` and real local
 yt-dlp processing, with acquisition replaced by a fixture copy. Actual ffprobe and the
 existing Telegram preparation helper verify:
 
 - H.264/AAC MP4 passes unchanged: identical bytes, one preparation ffprobe and zero
   preparation FFmpeg calls. Upload width/height/duration come from actual file probing
-  despite absent extractor duration.
+  despite absent extractor duration, dimensions and codecs.
 - An MP4 whose synthetic extractor metadata omits audio presence but whose real file has
-  no audio is rejected by the existing stream validator. The caller workspace is removed
-  in both cases, as it is by the existing request workspace boundary.
+  no audio is rejected by the existing stream validator. Corrupt bytes are rejected too.
+  The caller workspace is removed in every case by the existing request workspace boundary.
 
 Initial implementation verification in an existing Python 3.13 / yt-dlp 2026.08.19 environment, using the feature
 checkout's `src` via `PYTHONPATH=src` and explicitly disabling the external YouTube test:
@@ -506,3 +506,37 @@ No new Instagram/YouTube network requests, media acquisition, Telegram delivery,
 changes or Docker commands were performed for this correction. Metadata-based format
 selection does not prove actual stream presence or compatibility; real acquisition through
 this provider and Telegram activation/acceptance remain separate outstanding gates.
+
+### Incomplete direct-MP4 metadata follow-up
+
+The subsequent real provider smoke, reported in the handoff, made one anonymous metadata
+extraction and zero media-acquisition attempts. It returned one video result with 13
+formats, none admitted; three had unknown video codecs and incomplete dimensions. The
+other ten formats' exact rejection reasons were not established. No Instagram access
+error was reported. This evidence is a failed inspection, not a successful provider
+download or proof that all rejected formats were otherwise admissible.
+
+Offline inspection of installed yt-dlp 2026.08.19 confirms `_extract_product_media` can
+map `video_versions` to direct locators without width, height, codecs or an explicit
+extension. `has_audio=False` maps to explicit `acodec="none"`; DASH variants are added
+separately from `video_dash_manifest`. A synthetic direct `.mp4` product passed through
+that actual local mapping reproduces `MetadataExtractionError` on main; the correction
+admits it as unknown compatibility, not confirmed H.264/AAC or proven stream presence.
+
+New offline cases use that real extractor mapping plus yt-dlp processing with stubbed
+acquisition and a network-forbidden opener. They cover absent/complete/partial dimensions,
+mixed direct/DASH output, explicit video/audio absence, HLS/DASH and non-MP4 locators,
+signed direct MP4 with a declared extension, one acquisition and unchanged unknown fields.
+Existing preference/manifest regressions remain green. Synthetic actual-file checks
+also reject silently audio-free and corrupt files through existing preparation helpers.
+
+Verification (external YouTube test disabled; no Instagram requests):
+
+- Focused provider/synthetic pipeline: 143 passed (16 additional cases).
+- Full suite: 612 passed, 1 skipped (opt-in external YouTube matrix).
+- Ruff lint/format and `git diff --check`: passed.
+
+No live extraction/download, Docker operation, dependency change or Telegram call was
+performed for this fix. The real formats' complete fields are unavailable in this evidence, so matching
+the local defect to the prior live rejection remains a hypothesis requiring a newly
+authorized bounded provider smoke. Instagram remains disabled in the default bot.
