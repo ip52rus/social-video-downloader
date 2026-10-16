@@ -108,15 +108,15 @@ UNVERIFIED; offline tests do not establish current platform access or Telegram d
 Next: independent review and a separately authorized bounded real single-video-post smoke.
 Telegram activation/deployment checks remain separately authorized work.
 
-## Future carousel stage — not implemented
+## Approved carousel scope and separate implementation stages
 
-Carousel acquisition is approved future VIDEO-ONLY scope, not implemented downloads in
+Carousel acquisition is approved VIDEO-ONLY scope, separate from single-file downloads in
 this stage. Skip only positively classified photos; UNKNOWN or an unavailable selected
 video blocks the operation. Preserve the original ordering of videos. One video uses one
 Telegram message; 2–10 use a group; larger selections use sequential groups with a single
 remainder sent individually. Never silently omit a selected video.
-The required multi-file acquisition/delivery design is deferred, not silently added to
-the single-file provider. Photos and all collections still fail safely through its
+Multi-file acquisition uses the separate bounded operation described below, not the
+single-file provider contract. Telegram delivery remains a separate future integration. Photos and all collections still fail safely through its
 single-file download path; metadata-only carousel inspection is described below.
 
 Stories, private-content access, authentication, silent-video handling and additional
@@ -174,7 +174,7 @@ Mixed/photo live evidence, item-specific semantics, acquisition/preparation and 
 validation remain separate gates. Phase 5 and production reliability remain open.
 
 
-### Corroborated PHOTO follow-up — offline fix, live selection still open
+### Corroborated PHOTO follow-up — initial offline fix
 
 After PR #47, two separately authorized one-shot anonymous metadata checks investigated
 one real 20-entry publication without acquisition. The production adapter preserved all
@@ -198,6 +198,48 @@ URL policy and all download/transport contracts are unchanged.
 Deterministic tests reproduce the source shape and a 20-item mixed plan: 17 VIDEO,
 PHOTO at 8/9/18, READY with selected positions 1–7, 10–17, 19–20 and no acquisition.
 This is an offline result, not a retest of the corrected adapter against Instagram.
-The live mixed-carousel selection gate remains OPEN pending separate authorization.
-Multi-video acquisition, item references, Telegram groups and production reliability
-remain unfinished. Photos will never be acquired or delivered.
+That initial implementation left the live mixed-selection gate open; the subsequent
+real validation below closes it for one publication. Item references, Telegram groups
+and production reliability remain unfinished. Photos will never be acquired or delivered.
+
+
+## Final mixed-carousel metadata gate — PASS, 2026-10-16
+
+After PR #48, the production adapter/service at `1e08478646057326284ff410ea23f2ca312b4f2f`
+passed one separately authorized anonymous metadata-only check: one extraction, three
+observed metadata HTTP requests; 20 original entries, 17 VIDEO, PHOTO at 8/9/18, zero
+UNKNOWN. The READY plan selected exactly 1–7, 10–17, 19–20 with issue=None, unique original
+IDs and source/mapped/plan order checks PASS; every VIDEO had three admissible direct MP4
+candidates. PHOTO evidence included integer media_type=1 and valid image structure without
+video conflicts. No acquisition or Telegram requests occurred. Nonfatal warning:
+CSRF_TOKEN_UNAVAILABLE. This validates one publication's classification, not downloadability
+of its 17 videos or general platform reliability. The mixed-classification gate is closed.
+
+## Bounded ordered video acquisition — deterministic implementation
+
+A separate explicit async `InstagramCarouselAcquisition` now downloads a READY publication
+plan into an immutable ordered collection without changing single-file contracts. It runs
+in a short-lived POSIX process for hard network/probe deadline and cancellation handling.
+One fresh extraction revalidates every source identity, position, classification and all
+selected video formats before any child processing. Cached locators are never reused;
+changes reject the operation without adopting a different selection. Only selected VIDEO
+children are processed sequentially; photos and the parent playlist are never acquired.
+
+Existing direct MP4 admission and H.264/AAC priority are reused. Unknown codecs remain
+unknown until actual ffprobe; actual MP4 video-plus-audio is mandatory. No conversion or
+Telegram delivery is included. All videos must validate before a collection is returned.
+Failure/cancellation kills the process group, removes all owned staged/published files and
+preserves unrelated files. Success transfers generated output-file ownership to the caller;
+exclusive hard links avoid large copies. Caller deletes successful files after use.
+
+Defaults, configurable per service: 25 videos, 100 MiB/file, 500 MiB total actual response
+bytes, 512 MiB temporary logical media bytes, 600 s operation deadline. No truncation,
+size-based alternative download or retry. Response reads, not size headers alone, enforce
+byte budgets; yt-dlp size checks and POSIX file limits are backstops. Exhausted unknown-size
+streams fail closed. Filesystem overhead, process memory, concurrent-operation quotas and
+crash recovery are outside these limits. These defaults are not production capacity claims.
+
+Live multi-video acquisition: NOT VERIFIED. Telegram media-group preparation/delivery:
+NOT IMPLEMENTED / NOT VERIFIED. Real item-reference selection remains blocked. Next gates:
+independent review, separately approved bounded acquisition smoke, then a separate Telegram
+integration PR and authorized real-client validation. No deployment changes in this stage.

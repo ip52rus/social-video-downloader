@@ -1,7 +1,9 @@
-"""Immutable metadata-only carousel facts and selections; no media locators."""
+"""Immutable carousel facts, selections and acquired video collections."""
 
 from dataclasses import dataclass, field
 from enum import StrEnum
+
+from social_video_downloader.domain.models import DownloadedMedia
 
 
 class CarouselItemKind(StrEnum):
@@ -59,3 +61,23 @@ class CarouselSelectionPlan:
     scope: CarouselScope
     state: CarouselPlanState
     issue: CarouselIssue | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class DownloadedCarouselVideo:
+    position: int
+    item_id: str = field(repr=False)
+    media: DownloadedMedia = field(repr=False)
+
+
+@dataclass(frozen=True, slots=True)
+class DownloadedCarousel:
+    """Caller owns all returned files until explicitly removed; no signed locators."""
+
+    publication_url: str = field(repr=False)
+    videos: tuple[DownloadedCarouselVideo, ...]
+    total_bytes: int
+
+    @property
+    def file_count(self) -> int:
+        return len(self.videos)

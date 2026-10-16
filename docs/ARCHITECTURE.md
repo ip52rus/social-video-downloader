@@ -262,8 +262,8 @@ Telegram end-to-end delivery remain unverified.
 The approved carousel scope is VIDEO ONLY: never acquire or deliver photos. Eventual
 video delivery preserves original order, splits more than 10 videos into sequential
 Telegram groups and sends a single remainder as one video. A selected video must never
-be silently omitted. Multi-video acquisition and media-group delivery are not implemented;
-the single-file contract stays intact.
+be silently omitted. Bounded carousel acquisition is a separate explicit operation;
+media-group delivery remains unimplemented and the single-file contract stays intact.
 See [the accepted plan and evidence boundary](PHASE5_INSTAGRAM_REELS.md).
 
 ### Carousel inspection design decision
@@ -274,7 +274,7 @@ guards on source shape, entry count and ID mapping. It is registered only for th
 explicit carousel inspection call; no global patch or second extraction is used.
 The provider returns a bounded cached inspection; a separate application service
 builds an immutable ordered selection plan. Neither result contains transport objects
-or signed media locators. READY means metadata selection only, not implemented acquisition.
+or signed media locators. READY describes metadata selection only; it does not execute acquisition.
 Single-file provider/download contracts, registry and Telegram routing stay unchanged.
 
 `InstagramProvider.inspect_carousel` accepts canonical publication identities only.
@@ -289,7 +289,8 @@ corroborating `image_versions2.candidates` and no video evidence or malformed/co
 type fields. Numeric `media_type` alone, empty formats and thumbnails cannot establish
 PHOTO. A successful numeric contribution is recorded as `media_type_photo` in evidence.
 The added combination follows one real 20-entry publication's source metadata diagnosis;
-its corrected selection behavior is validated offline only, pending a separate live gate.
+its corrected selection behavior subsequently passed the separately authorized live gate
+for that one publication (see the Phase 5 evidence record).
 Missing/duplicate/unverifiable IDs, mapping shape/order changes, unavailable content,
 UNKNOWN or a VIDEO without admitted direct MP4 formats block the entire selection.
 Only positively classified PHOTO entries may be excluded. No count-based truncation occurs.
@@ -297,11 +298,66 @@ Plans preserve all valid source positions/IDs, contain tuples/frozen values and 
 URLs. Unsupported reference plans have unknown entry count and no extraction. Facts use
 a separate bounded 180-second cache, retaining no raw payloads or signed locators.
 Expiry re-inspects; identities are coherent within a snapshot, not guaranteed across time.
-The existing MP4 admission filter is reused. This stage does not select/acquire a format;
-codec preference for single-file acquisition is unchanged. Streams still need later ffprobe.
+The existing MP4 admission filter is reused. Metadata-only planning does not select/acquire a format;
+codec preference for single-file acquisition is unchanged. Acquisition verifies actual streams.
 
 ## Media engine
 Responsible for download and media assembly. The first implementation uses yt-dlp and FFmpeg where appropriate.
 
 ## Evolution
 The initial implementation may run in one process. Queues, workers, persistent storage, and distributed deployment are introduced only when measured requirements justify them.
+
+### Ordered carousel acquisition design decision
+
+A separate explicit async acquisition service retains the single-file contracts.
+A short-lived child process is necessary to enforce a whole-operation deadline and
+cancellation even during blocking yt-dlp extraction/network reads. This is not a queue
+or persistent worker. Current source and dependencies are reused; no Telegram transport
+runs in the child. Fresh carousel metadata must match every planned identity, position
+and classification before processing any selected video. A bounded response reader
+limits actual media bytes before writes; ffprobe will verify actual video/audio.
+All staged files belong to one isolated workspace; failure/cancellation removes the
+workspace before returning. Successful output ownership transfers to the caller only
+when the complete ordered collection is returned. No media transformation is included.
+
+
+`InstagramCarouselAcquisition.acquire(plan, output_dir)` returns a frozen
+`DownloadedCarousel` with an ordered tuple of `DownloadedCarouselVideo` (original position,
+stable item ID, existing `DownloadedMedia`), aggregate count/bytes and canonical publication
+identity. Signed locators and extractor account/title data never enter the collection.
+Only complete READY whole-publication plans are accepted; item-reference URLs, forged
+partial selections and count-limit overflow fail before launching the child.
+
+The child always performs exactly one fresh metadata extraction, ignoring the facts cache
+for media locators. The existing instance-local adapter rechecks source/mapped identity.
+All original positions, IDs, types and the selected video set must still match, and every
+selected child must remain admissible before the first download. A changed publication
+requires a new plan; no silent reselection. Only these children enter yt-dlp processing,
+sequentially, using the existing direct MP4 selector and H.264/AAC priority. No parent
+playlist processing, photos, retries, separate streams, remux or transcoding is allowed.
+
+Adjustable `CarouselAcquisitionLimits` defaults: 25 selected videos, 100 MiB/file,
+500 MiB total received media bytes, 512 MiB temporary logical media-file bytes and 600 s
+for the operation. These are conservative implementation guardrails, not measured capacity
+or the old 25 MiB live-smoke ceiling. Insufficient free disk rejects acquisition.
+The response reader caps each read before a write and counts actual bytes independent of
+Content-Length; yt-dlp max_filesize and POSIX RLIMIT_FSIZE provide additional safeguards.
+At an exhausted unknown-length stream budget the operation fails closed, even if EOF might
+follow exactly at that boundary. Logical media limits exclude filesystem bookkeeping and
+metadata/process memory; no physical disk quota or aggregate multi-operation capacity is claimed.
+
+The POSIX-only short-lived child has a separate process group. The parent terminates and
+reaps it (including ffprobe) on timeout/cancellation before workspace cleanup; repeated
+cancellation still waits for cleanup and propagates cancellation. ffprobe reuses the
+existing reader, scans packets with network protocols disabled, and requires actual MP4,
+video/audio codecs and positive video dimensions. Probe errors and silent media fail;
+this does not promise full decoding, Telegram codec compatibility or playback.
+
+Files are staged under a private temporary workspace inside the caller's output directory.
+After all files validate, exclusive generated-name hard links publish the collection without
+copies or overwrites. No result is returned until all publication steps succeed. Failures
+and cancellation remove staged and already published owned names; unrelated files remain.
+Success removes staging names and transfers ownership of returned files to the caller,
+which must delete them when finished. This is caller-result atomicity, not a filesystem-wide
+transaction or crash/power-loss recovery. Hard-link support on the output filesystem is
+required. Default registry, YouTube, normal single-file paths and Telegram handlers are unchanged.

@@ -136,20 +136,23 @@ or delivered. Single-video `/p/` results reuse the provider with offline validat
 The first carousel stage now provides guarded metadata inspection and immutable whole-
 publication selection plans only. UNKNOWN, unavailable/unsupported videos and unreliable
 identities block selection; only confirmed PHOTO entries can be excluded. Item-reference
-URLs remain blocked. No multi-video acquisition or Telegram integration is implemented.
+URLs remain blocked. Bounded ordered acquisition is implemented separately with deterministic
+validation; live collection acquisition and Telegram integration remain unverified.
 Eventual video delivery uses ordered Telegram groups, splitting more than 10 videos;
 a single remainder uses one video message. Never silently omit a selected video.
 
 Next: independent review and separately authorized bounded real single-video `/p/`
 validation. Real `/p/` acquisition and all Instagram Telegram delivery remain unverified.
-Default registration/Telegram routing and future carousel acquisition require separate stages.
-PR #47 inspection was independently reviewed and merged. A later real 20-entry metadata
-case safely blocked on three UNKNOWN entries; its source diagnosis supports a narrowly
-corroborated PHOTO rule. That classification correction is implemented/tested offline only.
-The next carousel gates are independent review of this fix, separately authorized live
-mixed-selection validation of the corrected adapter, and bounded acquisition/preparation
-design. The live gate is not complete. Item-specific
-semantics need separate validation; the installed extractor ignores `img_index`.
+Default registration/Telegram routing and live carousel acquisition require separate gates.
+PR #47 inspection and PR #48 PHOTO correction were independently reviewed and merged.
+The final authorized metadata gate passed on one real 20-entry mixed publication:
+17 VIDEO, 3 PHOTO (8/9/18), zero UNKNOWN, READY with ordered unique IDs and three direct
+MP4 candidates per VIDEO. One extraction/three observed HTTP requests, zero acquisition.
+The mixed-classification gate is closed for that case only.
+Next carousel gates: independent review of bounded acquisition, separately authorized
+live multi-video acquisition, then Telegram preparation/group delivery and real-client
+validation. No live multi-video acquisition is claimed. Item-specific semantics remain
+blocked pending separate validation; the installed extractor ignores `img_index`.
 No running-stack rebuild/restart is authorized by this stage.
 See [the scope and acceptance record](PHASE5_INSTAGRAM_REELS.md).
 
