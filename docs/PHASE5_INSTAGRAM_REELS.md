@@ -58,8 +58,8 @@ omit both dimensions and codecs on progressive MP4 data. Such direct candidates 
 eligible, with unknown codecs ranked below confirmed H.264/AAC; no streams or dimensions
 are invented. Actual video/audio presence remains unverified until stream inspection.
 Explicit audio-only formats remain rejected. Audio-free video is now admitted under
-the later product decision below; actual streams still need inspection. The unchanged
-Telegram helper rejects silent files and must be extended in a separate integration PR.
+the later product decision below; actual streams still need inspection. Default Telegram
+preparation still rejects silent files; the explicit optional-audio API below is tested offline.
 The provider does not transcode, add audio or duplicate the transport pipeline.
 
 ## Verification and follow-up
@@ -123,8 +123,9 @@ single-file provider contract. Telegram delivery remains a separate future integ
 single-file download path; metadata-only carousel inspection is described below.
 
 Stories, private-content access, authentication and additional formats require separate
-scope decisions. Silent-video acquisition is now included; Telegram silent-video
-preparation remains separate unfinished work. Phase 5 and production reliability remain open.
+scope decisions. Silent-video acquisition is included; optional-audio preparation is
+implemented offline with explicit opt-in. Routing, albums and real-client validation
+remain separate unfinished work. Phase 5 and production reliability remain open.
 
 ## Carousel inspection and selection — metadata only
 
@@ -244,11 +245,11 @@ byte budgets; yt-dlp size checks and POSIX file limits are backstops. Exhausted 
 streams fail closed. Filesystem overhead, process memory, concurrent-operation quotas and
 crash recovery are outside these limits. These defaults are not production capacity claims.
 
-Live multi-video acquisition: NOT VERIFIED. Telegram media-group preparation/delivery:
-NOT IMPLEMENTED / NOT VERIFIED. Real item-reference selection remains blocked. Next gates:
-independent review of silent-video support, separately approved bounded acquisition smoke,
-then a separate Telegram
-integration PR and authorized real-client validation. No deployment changes in this stage.
+The narrow real three-video acquisition gate passed (record below); larger collections
+remain NOT VERIFIED. Telegram media-group delivery is NOT IMPLEMENTED / NOT VERIFIED.
+Real item-reference selection remains blocked. Next: independent optional-audio
+preparation review, separate routing/group integration and authorized real-client
+validation. No deployment changes in this stage.
 
 
 ## Silent Instagram videos — approved policy, deterministic implementation
@@ -267,7 +268,8 @@ were rejected solely by the former explicit-audio-absence rule; 23 manifest-deri
 candidates also had forbidden fragment markers. Mapped counts were 11/11/10 (32 total).
 Source IDs/order were intact. One extraction and three metadata HTTP requests, zero
 media acquisition. This justified a product-policy change, not a claim that those real
-files contain valid silent video. Real silent-video acquisition remains NOT VERIFIED.
+files contain valid silent video. The later bounded acquisition below verifies the
+actual streams of those three files only.
 
 Ranking retains compatibility-first selection: confirmed H.264/AAC, compatible/incomplete
 metadata (now also H.264/unknown-video with explicit silence), then other MP4 codecs.
@@ -283,9 +285,39 @@ single-video file checks remain unchanged. Limits remain 25 videos, 100 MiB/file
 500 MiB total media, 512 MiB temporary logical media and 600 seconds. Identity/order
 revalidation, all-or-nothing cleanup and caller output ownership are unchanged.
 
-Telegram remains disabled for Instagram. The current preparation helper still requires
-both video and audio and deliberately rejects silent files. Follow-up integration must
-implement silent H.264 MP4 passthrough, compatible container remux without an audio map,
-video-only transcode for incompatible codecs, optional audio preservation, actual stream
-verification and correct upload metadata. Never generate audio just to satisfy transport.
-No albums, img_index selection, live validation or production readiness is claimed here.
+Telegram remains disabled for Instagram. Default preparation still requires audio;
+explicit optional-audio preparation is implemented and tested locally below. No albums,
+img_index selection, real Telegram playback or production readiness is claimed.
+
+
+## First real silent three-video acquisition — PASS
+
+A separately authorized one-shot experiment used production main
+`055fced0bdf337a5b04132600cc803321db59c80` in an isolated existing-image runtime with
+current source read-only and verified hashes. The three-entry READY publication had
+VIDEO at 1/2/3, no PHOTO/UNKNOWN, three admitted direct MP4 candidates each, and valid
+source/mapped identity and order. Planning plus fresh acquisition extraction made two
+extractor calls, six observed metadata HTTP opens; three media requests succeeded.
+
+All three actual files were silent MP4/H.264, 720x960, 5.041667 seconds each; sizes
+613050, 738479 and 609669 bytes (1,961,198 total). ffprobe passed. Received-body hashes
+matched final-file hashes: no remux/transcode/artificial audio. Acquisition took 6.90 s
+under explicit limits 3 videos / 30 MiB per file / 75 MiB received / 90 MiB temporary /
+180 s. Files, scripts and isolated runtime were removed; Compose was untouched and
+Telegram calls were zero. This closes only the real three-video acquisition gate.
+Larger carousels, broader availability and real Telegram playback remain NOT VERIFIED.
+
+## Explicit optional-audio preparation — offline implementation
+
+`prepare_telegram_video(path, runner=None, *, allow_silent=False)` keeps the existing
+YouTube audio-required default. Explicit `allow_silent=True` accepts actual video without
+audio: H.264 MP4 passes unchanged, compatible non-MP4 remuxes by stream copy, incompatible
+video converts with the established H.264 settings. Existing audio is mapped and prepared
+as AAC; absent audio is never mapped or synthesized. Actual output container/streams
+are checked, including unchanged audio presence. Failed derivatives are removed and
+pre-existing destinations preserved. Orientation and video-derived upload parameters
+are covered by generated local FFmpeg/ffprobe fixtures, not real Telegram sends.
+
+Future Instagram callers must opt in and own successful derivatives inside their request
+workspace. Routing, albums and client playback remain unimplemented/unverified. No new
+Instagram extraction, media acquisition or Telegram request occurred in this offline stage.

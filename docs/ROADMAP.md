@@ -137,13 +137,14 @@ The first carousel stage now provides guarded metadata inspection and immutable 
 publication selection plans only. UNKNOWN, unavailable/unsupported videos and unreliable
 identities block selection; only confirmed PHOTO entries can be excluded. Item-reference
 URLs remain blocked. Bounded ordered acquisition is implemented separately with deterministic
-validation; live collection acquisition and Telegram integration remain unverified.
+validation and one bounded real three-video smoke; larger collections and Telegram
+integration remain unverified.
 Eventual video delivery uses ordered Telegram groups, splitting more than 10 videos;
 a single remainder uses one video message. Never silently omit a selected video.
 
 Next: independent review and separately authorized bounded real single-video `/p/`
-validation. Real `/p/` acquisition and all Instagram Telegram delivery remain unverified.
-Default registration/Telegram routing and live carousel acquisition require separate gates.
+validation. Real single-video `/p/` acquisition and all Instagram Telegram delivery
+remain unverified. Default registration/Telegram routing require separate gates.
 PR #47 inspection and PR #48 PHOTO correction were independently reviewed and merged.
 The final authorized metadata gate passed on one real 20-entry mixed publication:
 17 VIDEO, 3 PHOTO (8/9/18), zero UNKNOWN, READY with ordered unique IDs and three direct
@@ -153,13 +154,15 @@ PR #49 bounded acquisition was independently reviewed and merged. The user subse
 approved silent video across Reels, single posts and carousel VIDEO entries. Admission,
 compatibility ranking and actual carousel stream validation now allow optional audio;
 no synthetic audio or conversion is added. Direct MP4/protocol/manifest/DRM guards and
-resource limits remain. The evidence is one three-video metadata case (has_audio=False,
-32 mapped formats, no acquisition) plus deterministic tests, not real silent acquisition.
-Next carousel gates: independent review of silent-video support, separately authorized
-live multi-video acquisition, then optional-audio Telegram preparation/group delivery and real-client
-validation. Current Telegram preparation requires audio and is unchanged; silent
-passthrough/remux/video-only transcode without synthetic audio is still to implement.
-No live silent/multi-video acquisition is claimed. Item-specific semantics remain
+resource limits remain. PR #50 was independently reviewed and merged. A separately
+authorized production smoke then passed on one three-video carousel: 3/3 silent
+H.264 MP4 files, 720x960, 1,961,198 bytes total, exact order, ffprobe PASS, no conversion
+or Telegram calls. Only that small real-acquisition gate is closed.
+Optional-audio preparation now has offline coverage behind `allow_silent=True`;
+existing callers keep the audio-required default. Next: independent review, then
+separate Instagram routing/ordered group delivery and authorized client validation.
+Larger-carousel acquisition, broad reliability and real Telegram playback remain
+NOT VERIFIED. Item-specific semantics remain
 blocked pending separate validation; the installed extractor ignores `img_index`.
 No running-stack rebuild/restart is authorized by this stage.
 See [the scope and acceptance record](PHASE5_INSTAGRAM_REELS.md).

@@ -108,15 +108,19 @@ def telegram_video_upload_parameters(probe_data: dict[str, Any]) -> dict[str, in
     return parameters
 
 
-def _probe_streams(path: Path, runner: Runner) -> tuple[str | None, str | None]:
-    """Return the first video and audio codec names, failing closed on invalid media."""
+def _probe_streams(
+    path: Path, runner: Runner, *, allow_silent: bool = False
+) -> tuple[str, str | None, bool]:
+    """Read actual codecs/container, distinguishing absent audio from invalid audio."""
     result = runner(
         [
             "ffprobe",
             "-v",
             "error",
+            "-protocol_whitelist",
+            "file,pipe",
             "-show_entries",
-            "stream=codec_type,codec_name",
+            "format=format_name:stream=codec_type,codec_name,width,height",
             "-of",
             "json",
             str(path),
@@ -126,47 +130,83 @@ def _probe_streams(path: Path, runner: Runner) -> tuple[str | None, str | None]:
         text=True,
     )
     try:
-        streams = json.loads(result.stdout)["streams"]
-        video = next(
-            (item.get("codec_name") for item in streams if item.get("codec_type") == "video"),
-            None,
-        )
-        audio = next(
-            (item.get("codec_name") for item in streams if item.get("codec_type") == "audio"),
-            None,
-        )
+        data = json.loads(result.stdout)
+        streams = data["streams"]
+        container = data["format"]["format_name"]
+        if (
+            not isinstance(streams, list)
+            or any(
+                not isinstance(item, dict)
+                or not isinstance(item.get("codec_type"), str)
+                or not item["codec_type"]
+                for item in streams
+            )
+            or not isinstance(container, str)
+            or container.strip().lower() in {"", "unknown"}
+            or getattr(result, "stderr", "")
+        ):
+            raise TypeError("Invalid stream or container metadata")
+        videos = [item for item in streams if item["codec_type"] == "video"]
+        audios = [item for item in streams if item["codec_type"] == "audio"]
+        if any(
+            not isinstance(item.get("codec_name"), str)
+            or item["codec_name"].strip().lower() in {"", "none", "unknown"}
+            for item in (*videos, *audios)
+        ) or any(
+            type(item.get(key)) is not int or item[key] <= 0
+            for item in videos
+            for key in ("width", "height")
+        ):
+            raise TypeError("Invalid codec or video dimensions")
     except (AttributeError, KeyError, TypeError, json.JSONDecodeError) as exc:
         raise MediaProcessingError("Unable to inspect downloaded media streams.") from exc
-    if not video or not audio:
+    if not videos or (not audios and not allow_silent):
         raise MediaProcessingError("Downloaded video must contain both video and audio streams.")
-    return str(video).lower(), str(audio).lower()
+    return (
+        videos[0]["codec_name"].strip().lower(),
+        audios[0]["codec_name"].strip().lower() if audios else None,
+        "mp4" in container.split(","),
+    )
 
 
-def prepare_telegram_video(path: Path, runner: Runner | None = None) -> Path:
+def prepare_telegram_video(
+    path: Path, runner: Runner | None = None, *, allow_silent: bool = False
+) -> Path:
     """Return a Telegram-friendly MP4, transcoding only when needed.
 
-    H.264 video and AAC audio are used for broad client compatibility. FFmpeg's
+    Audio is required by default; explicit opt-in allows video-only output without
+    inventing audio. H.264 video and optional AAC audio are used. FFmpeg's
     default autorotation preserves visual orientation; no scale filter is applied.
     """
     execute = runner or subprocess.run
     source = Path(path)
     if not source.is_file():
         raise MediaProcessingError("Downloaded media file is missing.")
+    output = None
+    completed = False
     try:
-        video_codec, audio_codec = _probe_streams(source, execute)
+        video_codec, audio_codec, is_mp4 = _probe_streams(
+            source, execute, allow_silent=allow_silent
+        )
+        compatible_audio = audio_codec in {_COMPATIBLE_AUDIO_CODEC, None}
         if (
             source.suffix.lower() == ".mp4"
+            and is_mp4
             and video_codec == _COMPATIBLE_VIDEO_CODEC
-            and audio_codec == _COMPATIBLE_AUDIO_CODEC
+            and compatible_audio
         ):
             return source
 
-        output = source.with_name(f"{source.stem}.telegram-compatible.mp4")
+        destination = source.with_name(f"{source.stem}.telegram-compatible.mp4")
+        if destination.exists() or destination.is_symlink():
+            raise MediaProcessingError("Compatible video output already exists.")
+        output = destination
+        audio_map = ["-map", "0:a:0"] if audio_codec is not None else ["-an"]
 
         # If the streams are already compatible, try a stream-copy remux first.
         # This avoids expensive lossy re-encoding for files such as MKV containers
         # that already contain H.264 video and AAC audio.
-        if video_codec == _COMPATIBLE_VIDEO_CODEC and audio_codec == _COMPATIBLE_AUDIO_CODEC:
+        if video_codec == _COMPATIBLE_VIDEO_CODEC and compatible_audio:
             try:
                 execute(
                     [
@@ -179,8 +219,7 @@ def prepare_telegram_video(path: Path, runner: Runner | None = None) -> Path:
                         str(source),
                         "-map",
                         "0:v:0",
-                        "-map",
-                        "0:a:0",
+                        *audio_map,
                         "-map_metadata",
                         "0",
                         "-c",
@@ -194,12 +233,16 @@ def prepare_telegram_video(path: Path, runner: Runner | None = None) -> Path:
                     text=True,
                 )
                 if output.is_file() and output.stat().st_size > 0:
-                    remuxed_video, remuxed_audio = _probe_streams(output, execute)
+                    remuxed_video, remuxed_audio, remuxed_mp4 = _probe_streams(
+                        output, execute, allow_silent=allow_silent
+                    )
                     if (
                         output.suffix.lower() == ".mp4"
+                        and remuxed_mp4
                         and remuxed_video == _COMPATIBLE_VIDEO_CODEC
-                        and remuxed_audio == _COMPATIBLE_AUDIO_CODEC
+                        and remuxed_audio == audio_codec
                     ):
+                        completed = True
                         return output
             except (OSError, subprocess.SubprocessError, MediaProcessingError):
                 # Some otherwise compatible streams cannot be copied into MP4.
@@ -218,8 +261,7 @@ def prepare_telegram_video(path: Path, runner: Runner | None = None) -> Path:
                 str(source),
                 "-map",
                 "0:v:0",
-                "-map",
-                "0:a:0",
+                *audio_map,
                 "-map_metadata",
                 "0",
                 "-c:v",
@@ -230,10 +272,7 @@ def prepare_telegram_video(path: Path, runner: Runner | None = None) -> Path:
                 "23",
                 "-pix_fmt",
                 "yuv420p",
-                "-c:a",
-                "aac",
-                "-b:a",
-                "192k",
+                *(["-c:a", "aac", "-b:a", "192k"] if audio_codec is not None else []),
                 "-movflags",
                 "+faststart",
                 str(output),
@@ -244,15 +283,22 @@ def prepare_telegram_video(path: Path, runner: Runner | None = None) -> Path:
         )
         if not output.is_file() or output.stat().st_size == 0:
             raise MediaProcessingError("FFmpeg did not produce a usable compatible video.")
-        converted_video, converted_audio = _probe_streams(output, execute)
+        converted_video, converted_audio, converted_mp4 = _probe_streams(
+            output, execute, allow_silent=allow_silent
+        )
         if (
             output.suffix.lower() != ".mp4"
+            or not converted_mp4
             or converted_video != _COMPATIBLE_VIDEO_CODEC
-            or converted_audio != _COMPATIBLE_AUDIO_CODEC
+            or converted_audio != (_COMPATIBLE_AUDIO_CODEC if audio_codec is not None else None)
         ):
             raise MediaProcessingError("Converted video does not use compatible codecs.")
+        completed = True
         return output
     except MediaProcessingError:
         raise
     except (OSError, subprocess.SubprocessError) as exc:
         raise MediaProcessingError("Unable to prepare video for Telegram playback.") from exc
+    finally:
+        if output is not None and not completed:
+            output.unlink(missing_ok=True)

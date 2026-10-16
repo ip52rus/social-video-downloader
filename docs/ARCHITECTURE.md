@@ -74,6 +74,15 @@ The synchronous download and media-preparation operations run in worker threads 
 
 The remux path is an optimization for compatible streams when only the container needs conversion; it is not a claim that all media can be remuxed. The transcode path remains the compatibility fallback. No scaling filter is applied, and FFmpeg autorotation is retained. The bot sends the prepared file as a Telegram video with streaming support. A per-request temporary directory holds the media while Telegram uploads it, and is removed after delivery or failure. Telegram upload errors and expected downloader errors are mapped to safe user-facing messages; detailed source exceptions are not sent to the user.
 
+### Optional-audio preparation design
+
+Optional-audio preparation design: extend the existing video helper with the explicit
+keyword-only `allow_silent=False` flag. Existing callers continue requiring audio;
+only opt-in callers may prepare video-only files. Use actual ffprobe container/stream
+facts for passthrough and output validation, conditionally map existing audio, and
+reuse the current stream-copy/transcode settings. No provider or transport routing
+change, new pipeline, or synthetic audio is required.
+
 ### Audio compatibility
 
 Normal Telegram audio delivery requires verified AAC in M4A because the previous
@@ -114,6 +123,7 @@ This changes validation status only. Live fault recovery, broader format/client 
 and Phase 9 production reliability remain open; obsolete choice-prompt cleanup is Phase 8.
 
 ## Application layer
+
 DownloadService normalizes the URL, detects its platform, selects a registered MediaProvider, and returns the provider's transport-neutral DownloadedMedia result. The default registry contains the YouTube provider. The experimental `InstagramProvider` can be explicitly injected for development/testing; default registration and Telegram activation are deferred to a separate integration stage. A recognized platform without a registered provider raises a domain-level UnsupportedPlatformError. The service does not depend on Telegram.
 
 `DownloadService.create_choice_plan(url)` reuses the same normalization and provider
@@ -225,8 +235,9 @@ video-only user routes remain outside this scope. The legacy `VIDEO_WITH_AUDIO` 
 Instagram's normal video route, not a requirement that every Instagram file contain audio.
 Missing dimensions/codecs are not proof of actual streams. Carousel acquisition probes
 actual MP4 video and optional audio; normal single-video acquisition retains its existing
-output-file checks. Telegram preparation still requires audio and rejects silent files;
-Instagram routing remains disabled until a separate transport integration. No synthetic
+output-file checks. Telegram preparation requires audio by default; explicit
+`allow_silent=True` permits video-only preparation. Instagram routing remains disabled
+until a separate transport integration. No synthetic
 audio or conversion merely because audio is absent is introduced.
 
 The yt-dlp selector yields exactly one admitted format. It first prefers metadata-confirmed
@@ -387,9 +398,19 @@ zero acquisition: these facts do not establish actual stream contents or playbac
 
 Only the Instagram audio-absence policy is changed. Locator, explicit video absence,
 manifest/fragment/protocol/DRM checks, collection identities, deadlines, byte limits and
-publication cleanup remain in force. Real silent acquisition is NOT VERIFIED. The current
-Telegram helper remains unchanged and requires audio. A later integration must provide
-silent H.264 MP4 passthrough, compatible remux without mandatory audio mapping and
-video-only H.264 transcoding only for incompatible codecs, preserve audio when present,
-verify optional streams/upload metadata and never create artificial audio. This is future
-work, not implemented Telegram readiness. YouTube's live preparation path is unchanged.
+publication cleanup remain in force. A separately authorized three-video live acquisition
+passed at main `055fced0bdf337a5b04132600cc803321db59c80`: three ordered silent H.264
+MP4 files, 720x960, 1,961,198 bytes total, ffprobe PASS; no conversion or Telegram calls.
+This closes only that bounded three-video acquisition gate, not larger-carousel reliability.
+
+`prepare_telegram_video(path, runner=None, *, allow_silent=False)` preserves the
+audio-required default used by existing YouTube handlers. Opt-in permits H.264 silent
+MP4 passthrough without changing bytes or orientation metadata, compatible stream-copy
+remux and video-only H.264 conversion when necessary. AAC audio is retained/produced
+when audio exists; silent sources have no audio mapping and never gain a track.
+Actual container, valid stream codecs and positive video dimensions are probed locally;
+output checks require MP4/H.264 and preserve source audio presence. Failed derivatives
+are removed; existing destination files are not overwritten. Upload metadata remains
+video-derived. Callers own successful derivatives inside their request workspace.
+Future Instagram callers must explicitly opt in; handlers/routing and albums are unchanged.
+Local generated fixtures verify preparation, not real Telegram delivery or playback.

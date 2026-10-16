@@ -333,8 +333,8 @@ Analytics requirements for this phase:
 - [ ] Validate reliable item-reference semantics separately; keep `img_index` and ambiguous references blocked meanwhile.
 - [x] Implement bounded ordered multi-video acquisition with fresh plan revalidation, actual stream checks, resource budgets and all-or-nothing cleanup; deterministic tests only. Photos are NEVER acquired.
 - [x] Independently review and merge bounded acquisition (PR #49).
-- [ ] Run a separately authorized live multi-video smoke; acquisition remains NOT VERIFIED externally.
-- [ ] Integrate optional-audio Telegram preparation separately: silent H.264 MP4 passthrough, remux without mandatory audio map, video-only transcode for incompatible codecs, preserve optional audio, verify streams/upload metadata; no artificial audio. Current helper still requires audio.
+- [x] Validate one separately authorized bounded three-video silent carousel acquisition: 3/3 files, original order, MP4/H.264 720x960, 1,961,198 bytes total, ffprobe PASS; no conversion or Telegram calls. Larger collections remain unverified.
+- [x] Implement explicit optional-audio Telegram preparation with default audio-required behavior: silent passthrough/remux/transcode, output validation, cleanup and upload metadata verified on local generated media; no artificial audio. Future Instagram callers must opt in.
 - [ ] Implement ordered Telegram video groups separately: 2–10 per group, more than 10 split sequentially, a final single video sent individually.
 - [ ] Validate real Telegram delivery/playback after separately authorized deployment changes.
 - [ ] Assess broader extraction stability and recovery; production reliability remains open.
@@ -342,12 +342,13 @@ Analytics requirements for this phase:
 Evidence limitation: previous Gates 1–3C are reported in the handoff and the user authorized
 GO; full Gates 1–3B evidence was unavailable here. Gate 3C demonstrates metadata for one
 five-element `/p/` playlist, which remains excluded from single-file download.
-No carousel media was acquired.
+Those early gates acquired no carousel media; the later three-video smoke is recorded below.
 PR 1 tests do not substitute for real Instagram or Telegram validation. Meaningful
-Instagram quality choices, DASH/HLS assembly, silent-video Telegram preparation, Stories, private
+Instagram quality choices, DASH/HLS assembly, Telegram routing/albums, Stories, private
 content and authentication remain outside the implemented scope. Single-video `/p/`
 support is implemented offline; carousel inspection is implemented separately, while
-bounded acquisition has deterministic coverage; live acquisition and delivery remain unfinished.
+bounded acquisition has deterministic coverage and one real three-video PASS; larger
+collections and Telegram delivery remain unfinished.
 The first real provider smoke failed during inspection (13 formats, none admitted),
 with zero acquisition attempts. The incomplete-metadata rejection is reproduced and
 fixed in PR #45. Its repeat real smoke passed: 13 formats, 3 admitted, 10 rejected for
@@ -357,7 +358,8 @@ does not retroactively establish them. No real single-video `/p/` acquisition or
 Telegram delivery is claimed. The newer carousel metadata-only experiment is recorded
 separately in TESTING.md. The later 20-entry source diagnostic justifies the PHOTO
 adjustment for that observed shape. The final corrected live mixed-selection gate passed
-for the same publication; carousel acquisition remains externally unverified.
+for the same publication; the separate three-video acquisition smoke below does not
+verify acquisition of that 17-video selection.
 See [the accepted scope](PHASE5_INSTAGRAM_REELS.md) for the evidence boundary.
 
 ### Ordered carousel acquisition verification
@@ -369,25 +371,41 @@ See [the accepted scope](PHASE5_INSTAGRAM_REELS.md) for the evidence boundary.
   512 MiB temporary logical media bytes and 600 seconds; adjustable per service.
 - Successful generated files belong to the caller. Failure/cancellation removes all
   owned files, without overwriting/deleting unrelated files. No crash recovery claim.
-- PR #49 was independently reviewed and merged; live multi-video smoke and Telegram
-  integration/validation remain open.
+- PR #49 was independently reviewed and merged; the subsequent three-video live smoke
+  passed. Larger collections and Telegram integration/validation remain open.
 
 
 ### Silent Instagram video acquisition
 
 - [x] Record approved optional-audio policy for Reels, single-video posts and carousel VIDEO entries; keep normal route/enum and all direct-video safety guards.
-- [x] Record one real metadata-only diagnostic: 3 VIDEO, has_audio=False, 3 direct MP4 candidates each; 32 mapped formats, zero acquisition. Actual real streams remain unverified.
+- [x] Record one real metadata-only diagnostic: 3 VIDEO, has_audio=False, 3 direct MP4 candidates each; 32 mapped formats, zero acquisition. That diagnostic did not validate actual streams.
 - [x] Admit silent direct MP4, retain compatibility-first ranking and prefer non-silent/unknown audio within comparable groups; no fabricated audio/codec claims.
 - [x] Validate actual silent MP4 video through carousel ffprobe; reject audio-only, corrupt/wrong-container files and invalid present stream codecs; preserve budgets/cleanup.
-- [ ] Independently review silent-video support.
+- [x] Independently review and merge silent-video support (PR #50).
 
-Real silent acquisition remains NOT VERIFIED. The separately authorized live acquisition
-and optional-audio Telegram preparation/delivery tasks remain tracked above; Instagram
-is disabled by default.
+One real silent three-video acquisition passed at main `055fced0bdf337a5b04132600cc803321db59c80`: files 613050/738479/609669 bytes, each 5.041667 seconds,
+720x960 H.264 MP4 without audio; 6.90 seconds acquisition, exact original order.
+Limits 3 videos, 30 MiB/file, 75 MiB received, 90 MiB temporary media, 180 seconds held.
+All outputs/runtime were deleted. Larger carousels, broad availability and Telegram
+playback remain NOT VERIFIED. Instagram is disabled by default.
 
 Verification: focused Instagram suite 563 passed; full suite 1032 passed, 1 skipped.
 Ruff lint/format, diff, documentation consistency and security/scope checks PASS.
 These checks used local synthetic media only; no external platform or Telegram calls.
+
+### Optional-audio Telegram preparation
+
+The helper has keyword-only `allow_silent=False`; default callers still require audio.
+Local generated fixtures verify silent passthrough, stream-copy remux, H.264 conversion,
+optional audio preservation, output/container/stream checks, rotation/upload metadata and
+partial-file cleanup. No synthetic audio, routing changes or external calls in this stage.
+
+- [ ] Independently review optional-audio preparation before wiring future callers.
+
+Real Telegram delivery/playback and ordered groups remain the open tasks above.
+Verification: focused suite 98 passed; full suite 1112 passed, 1 skipped; net +80 cases.
+Real local FFmpeg/ffprobe fixtures passed, including silent remux/transcode and rotation.
+Ruff lint/format, diff, documentation and security/scope checks PASS; no live requests.
 
 ## Phase 6 - TikTok Provider
 - [ ] Run a technical spike.
