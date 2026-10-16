@@ -446,7 +446,8 @@ retry or authentication fallback. Missing/empty/extra/partial/symlink outputs fa
 Upstream logger messages are suppressed; fixtures use synthetic IDs and `.invalid` URLs.
 
 A real local yt-dlp processor/selector test receives synthetic extractor dictionaries:
-it chooses one admitted direct MP4 and excludes higher-resolution silent, audio-only
+it chooses one admitted direct MP4, preferring non-silent/unknown over higher-resolution
+explicit silence in the same compatibility group, and excludes audio-only
 and image alternatives. Extraction and file acquisition are replaced with local stubs;
 this does not test Instagram network extraction or the CDN.
 
@@ -491,7 +492,8 @@ attempt raises immediately. The new checks cover:
   incomplete codecs ahead of already-known incompatible codecs; both fallback classes;
   native yt-dlp quality ordering within each class. Reversing extractor format order does
   not change the expected choice. Only one selected format reaches acquisition.
-- Existing explicit no-audio rejection, collection/redirect rejection, optional metadata,
+- The then-current explicit no-audio rejection (superseded by the silent-video policy
+  below), collection/redirect rejection, optional metadata,
   cache/expiry, workspace cleanup and synthetic transport preparation remain covered.
 
 The initial regressions reproduced both findings before the provider correction. Follow-up
@@ -715,3 +717,46 @@ Verification of this acquisition stage (no live external calls):
 - Ruff lint/format, git diff check, local documentation links and security/scope review: PASS.
 - No source/dependency/config/deployment changes outside the documented acquisition scope.
 - Live multi-video acquisition and Telegram media-group validation remain NOT VERIFIED.
+
+
+### Silent Instagram video policy — deterministic validation
+
+The user approved MP4 video with optional audio for Reels, single-video `/p/` and carousel
+VIDEO entries. The preceding real metadata diagnostic found three VIDEO entries with
+boolean has_audio=False, correctly mapped to acodec="none": 3 direct MP4 candidates per
+entry rejected solely for audio absence; 23 additional manifest-derived formats also
+rejected for fragment markers, mapped totals 11/11/10. One extraction, three metadata
+HTTP requests, zero acquisition; actual files/streams were not inspected. These are
+pre-change metadata facts, not live validation of the new admission policy.
+
+Network-forbidden tests now admit explicit silence, preserve unknown audio metadata,
+exercise installed extractor mapping and actual yt-dlp selection for Reels/posts, and
+retain rejection of explicit video absence, hostile locators, DRM, HLS/DASH and fragments.
+Ranking tests cover H.264/AAC priority, non-silent/unknown preference within compatibility
+groups, stable native quality order for silent-only candidates and intentional compatible
+silent H.264 preference over less compatible VP9/AAC in another group.
+
+The carousel fixtures cover READY for three silent VIDEO with three direct candidates
+each, with/without rejected DASH variants, plus mixed PHOTO/VIDEO ordering. Actual local
+H.264 silent MP4 passes ffprobe acquisition validation and retains identical bytes with
+no audio stream added. Video+audio still passes; audio-only/corrupt/wrong-container media
+and invalid video/dimensions/present-audio codecs fail. Existing limits, deadline, repeated
+cancellation, output checks, rollback and unrelated-file preservation remain tested.
+
+Single-video integration explicitly supplies acodec="none", acquires the synthetic file
+unchanged and confirms actual H.264 video without audio. The unchanged Telegram helper
+then rejects it for missing audio as expected. This protects the future integration
+boundary: silent transport support is NOT IMPLEMENTED, not a successful delivery claim.
+Real silent/multi-video Instagram acquisition and Telegram albums remain NOT VERIFIED.
+No external extraction/download or Telegram API request is part of these tests.
+
+
+Verification of silent-video support:
+
+- Focused provider/carousel/acquisition/synthetic integration suite: 563 passed.
+- Full suite: 1032 passed, 1 skipped (opt-in external YouTube matrix not enabled).
+- Net test-case increase: 88; obsolete silent-rejection cases were replaced by positive
+  coverage and explicit negative cases for audio-only/manifest content.
+- Existing YouTube, M4A, video delivery, callback fault handling, limits and cancellation
+  regressions: PASS. Ruff lint/format, diff, documentation links and security/scope: PASS.
+- Real silent Instagram acquisition, Telegram silent preparation and albums: NOT VERIFIED.

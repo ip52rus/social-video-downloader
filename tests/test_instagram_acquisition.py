@@ -246,7 +246,7 @@ def test_invalid_plan_never_starts_acquisition(tmp_path, media_files, case):
             "https://media.invalid/file.mp4",
             {"manifest_url": "https://media.invalid/m.mpd"},
         ),
-        ("https", "https://media.invalid/file.mp4", {"acodec": "none"}),
+        ("https", "https://media.invalid/file.mp4", {"acodec": "none", "vcodec": "none"}),
         ("https", "https://media.invalid/file.mp4", {"vcodec": "none"}),
         ("https", "https://media.invalid/file.mp4", {"has_drm": True}),
     ],
@@ -293,7 +293,7 @@ def test_first_middle_last_failure_never_returns_partial_collection(
     assert not list(tmp_path.iterdir())
 
 
-@pytest.mark.parametrize("kind", ["silent", "audio", "corrupt"])
+@pytest.mark.parametrize("kind", ["audio", "corrupt"])
 def test_real_probe_rejects_missing_streams_or_corruption(tmp_path, media_files, kind):
     runtime = Runtime(product(1), media_files[kind])
     with pytest.raises(DownloadFailedError):
@@ -390,10 +390,11 @@ def install_child(monkeypatch, script):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("media_kind", ["video", "silent"])
 async def test_public_collection_is_immutable_and_caller_owns_outputs(
-    tmp_path, media_files, monkeypatch
+    tmp_path, media_files, monkeypatch, media_kind
 ):
-    runtime = Runtime(product(2), media_files["video"])
+    runtime = Runtime(product(2), media_files[media_kind])
     processes = install_child(monkeypatch, subprocess_script(runtime.media))
     result = await InstagramCarouselAcquisition().acquire(runtime.plan(), tmp_path)
     assert [x.position for x in result.videos] == [1, 2]
@@ -597,3 +598,112 @@ async def test_repeated_cancellation_waits_for_child_cleanup(tmp_path, media_fil
         await task
     assert all(p.returncode is not None for p in processes)
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("photos", [(), (2,)])
+@pytest.mark.parametrize("with_dash", [False, True])
+def test_observed_three_silent_video_metadata_plan_and_actual_acquisition(
+    tmp_path, media_files, photos, with_dash
+):
+    data = product(3 + len(photos), photos)
+    for entry in data["carousel_media"]:
+        if entry["media_type"] != 2:
+            continue
+        entry["has_audio"] = False
+        entry["video_versions"] = [
+            {"url": "https://media.invalid/silent.mp4?signature=fixture"} for _ in range(3)
+        ]
+        if with_dash:
+            entry["video_dash_manifest"] = """<MPD xmlns="urn:mpeg:dash:schema:mpd:2011"
+mediaPresentationDuration="PT1S"><Period><AdaptationSet mimeType="video/mp4">
+<Representation id="dash" codecs="avc1.64001f" width="720" height="1280">
+<BaseURL>https://media.invalid/</BaseURL><SegmentTemplate timescale="1" duration="1"
+startNumber="1" media="part-$Number$.m4s" initialization="init.mp4"/>
+</Representation></AdaptationSet></Period></MPD>"""
+    runtime = Runtime(data, media_files["silent"])
+    plan = runtime.plan()
+    assert plan.state is CarouselPlanState.READY and plan.issue is None
+    selected = [i for i in range(1, len(data["carousel_media"]) + 1) if i not in photos]
+    assert [x.position for x in plan.selected_videos] == selected
+    assert all(x.admissible_format_count == 3 for x in plan.selected_videos)
+    assert [x.position for x in plan.items if x.kind is CarouselItemKind.PHOTO] == list(photos)
+    original = runtime.media.read_bytes()
+    with temporary_workspace(base_dir=tmp_path) as workspace:
+        result = acquire_in_workspace(
+            plan, workspace, CarouselAcquisitionLimits(), runtime.provider
+        )
+        assert len(result["durations"]) == 3
+        assert all(path.read_bytes() == original for path in workspace.iterdir())
+        from social_video_downloader.infrastructure.telegram_media import inspect_telegram_video
+
+        for path in workspace.iterdir():
+            streams = inspect_telegram_video(path)["streams"]
+            assert [s["codec_type"] for s in streams] == ["video"]
+            assert streams[0]["codec_name"] == "h264"
+    assert runtime.processed == [f"video-{i}" for i in selected]
+    assert runtime.extractions == 2 and runtime.requests == 3
+    assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize(
+    "video_changes,audio",
+    [
+        ({"codec_name": None}, []),
+        ({"codec_name": ""}, []),
+        ({"codec_name": "unknown"}, []),
+        ({"codec_name": False}, []),
+        ({"width": 0}, []),
+        ({"height": -1}, []),
+        ({"width": None}, []),
+        ({}, [{"codec_type": "audio", "codec_name": None}]),
+        ({}, [{"codec_type": "audio", "codec_name": "unknown"}]),
+        ({}, [{"codec_type": "audio", "codec_name": "none"}]),
+        ({}, [{"codec_type": "audio", "codec_name": ""}]),
+    ],
+)
+def test_probe_rejects_invalid_video_and_present_invalid_audio(
+    tmp_path, monkeypatch, video_changes, audio
+):
+    import social_video_downloader.infrastructure.instagram_acquisition as module
+
+    data = {
+        "format": {"format_name": "mov,mp4,m4a,3gp,3g2,mj2", "duration": "1"},
+        "streams": [
+            {
+                "codec_type": "video",
+                "codec_name": "h264",
+                "width": 64,
+                "height": 96,
+                **video_changes,
+            },
+            *audio,
+        ],
+    }
+    monkeypatch.setattr(module, "inspect_telegram_video", lambda *a, **kw: data)
+    with pytest.raises(DownloadFailedError):
+        module._validate_file(tmp_path / "fixture.mp4", 1)
+
+
+def test_actual_wrong_container_rejected_even_with_mp4_filename(tmp_path, media_files):
+    disguised = tmp_path / "wrong-container.mp4"
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            str(media_files["silent"]),
+            "-c",
+            "copy",
+            "-f",
+            "matroska",
+            str(disguised),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    runtime = Runtime(product(1), disguised)
+    with pytest.raises(DownloadFailedError):
+        acquire(runtime, runtime.plan(), tmp_path)
+    assert list(tmp_path.iterdir()) == [disguised]

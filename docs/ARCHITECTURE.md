@@ -211,24 +211,33 @@ unsupported formats fail before media acquisition. Any result containing `entrie
 including a one-entry playlist, is rejected without recursively processing or downloading
 its entries. `noplaylist=True` does not replace this validation or select a carousel item.
 
-The provider admits only direct HTTP(S) MP4 candidates without explicit video/audio
-absence or a DRM marker. Instagram `video_versions` may omit dimensions and codecs;
+The provider admits only direct HTTP(S) MP4 candidates without explicit video
+absence or a DRM marker. Explicitly audio-free (`acodec="none"`) video is now eligible
+under the approved silent-Instagram product policy; missing audio metadata stays unknown.
+Instagram `video_versions` may omit dimensions and codecs;
 these fields remain unknown and are not prerequisites for direct-MP4 admission.
 Before acquisition, yt-dlp's `determine_protocol` checks the effective protocol,
 including URL-derived detection when protocol metadata is
 missing. Manifest URLs (including a misleading HTTP/MP4 label), fragment data and DASH
 representation markers are rejected. Signed direct MP4 locators need not end in `.mp4`
-when the extractor supplies that extension. DASH/HLS assembly and audio-only/video-only
-outputs are outside this scope. Missing dimensions/codecs in progressive extractor
-data are not proof of video or audio streams: the existing Telegram preparation helper must
-verify actual streams. Explicitly silent formats are rejected; an unexpectedly silent
-file fails that existing preparation helper. No synthetic audio is added.
+when the extractor supplies that extension. DASH/HLS assembly and separate audio-only/
+video-only user routes remain outside this scope. The legacy `VIDEO_WITH_AUDIO` enum names
+Instagram's normal video route, not a requirement that every Instagram file contain audio.
+Missing dimensions/codecs are not proof of actual streams. Carousel acquisition probes
+actual MP4 video and optional audio; normal single-video acquisition retains its existing
+output-file checks. Telegram preparation still requires audio and rejects silent files;
+Instagram routing remains disabled until a separate transport integration. No synthetic
+audio or conversion merely because audio is absent is introduced.
 
 The yt-dlp selector yields exactly one admitted format. It first prefers metadata-confirmed
 H.264/AAC, then incomplete codec metadata with no already-known incompatible codec, then
-other admitted MP4 codecs. Within a compatibility class it keeps yt-dlp's native quality
-ordering. A higher-resolution VP9 or unknown-audio option cannot displace an available
-confirmed H.264/AAC option. Selection does not retry another format after acquisition
+other admitted MP4 codecs. Silent H.264 or unknown-video candidates enter the compatible/
+incomplete group rather than being treated as an incompatible audio codec. Within each
+group, candidates without explicit silence (including UNKNOWN audio) precede explicit
+`acodec="none"`, then yt-dlp's native quality ordering is retained. This does not label
+UNKNOWN as confirmed audio. Compatibility still wins across groups: silent H.264 may
+beat VP9/AAC, preserving the video-codec compatibility priority. A higher-resolution
+VP9 or unknown-audio option cannot displace an available confirmed H.264/AAC option. Selection does not retry another format after acquisition
 failure; actual file compatibility still requires the existing media preparation checks.
 
 A small bounded, 180-second inspection cache shares one validated snapshot between mode
@@ -350,7 +359,9 @@ The POSIX-only short-lived child has a separate process group. The parent termin
 reaps it (including ffprobe) on timeout/cancellation before workspace cleanup; repeated
 cancellation still waits for cleanup and propagates cancellation. ffprobe reuses the
 existing reader, scans packets with network protocols disabled, and requires actual MP4,
-video/audio codecs and positive video dimensions. Probe errors and silent media fail;
+recognized video codecs and positive video dimensions. Audio is optional, but every
+present audio stream must have a recognized nonempty codec. Probe errors, audio-only
+files, wrong containers and unknown/invalid stream codecs fail;
 this does not promise full decoding, Telegram codec compatibility or playback.
 
 Files are staged under a private temporary workspace inside the caller's output directory.
@@ -361,3 +372,24 @@ Success removes staging names and transfers ownership of returned files to the c
 which must delete them when finished. This is caller-result atomicity, not a filesystem-wide
 transaction or crash/power-loss recovery. Hard-link support on the output filesystem is
 required. Default registry, YouTube, normal single-file paths and Telegram handlers are unchanged.
+
+
+### Silent Instagram policy and transport boundary
+
+The user explicitly approved silent MP4 videos for Reels, single-video `/p/` posts and
+carousel VIDEO entries after one separate anonymous metadata diagnostic of a three-video
+publication. All three source items had boolean `has_audio=False`; upstream mapping
+preserved three structural direct HTTPS MP4 candidates per item with `acodec="none"`.
+Those nine direct candidates failed only the former audio-absence predicate; 23 further
+manifest-derived formats failed audio and fragment-marker checks (32 formats total).
+No candidate loss in mapping was observed. One extraction/three metadata HTTP requests,
+zero acquisition: these facts do not establish actual stream contents or playback.
+
+Only the Instagram audio-absence policy is changed. Locator, explicit video absence,
+manifest/fragment/protocol/DRM checks, collection identities, deadlines, byte limits and
+publication cleanup remain in force. Real silent acquisition is NOT VERIFIED. The current
+Telegram helper remains unchanged and requires audio. A later integration must provide
+silent H.264 MP4 passthrough, compatible remux without mandatory audio mapping and
+video-only H.264 transcoding only for incompatible codecs, preserve audio when present,
+verify optional streams/upload metadata and never create artificial audio. This is future
+work, not implemented Telegram readiness. YouTube's live preparation path is unchanged.

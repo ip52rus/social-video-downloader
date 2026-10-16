@@ -59,6 +59,7 @@ def test_video_result_uses_existing_transport_validation_and_cleanup(
             {
                 "format_id": "direct",
                 "url": "https://media.invalid/synthetic.mp4",
+                "acodec": "none" if media_kind == "silent" else None,
             }
         ],
     }
@@ -99,6 +100,13 @@ def test_video_result_uses_existing_transport_validation_and_cleanup(
             parameters = telegram_video_upload_parameters(inspect_telegram_video(prepared))
             assert parameters == {"width": 64, "height": 96, "duration": 1}
         elif media_kind == "silent":
+            # Acquisition is valid and byte-preserving; Telegram preparation still
+            # deliberately rejects silence until the separately scoped integration PR.
+            assert result.file_path.read_bytes() == original
+            streams = inspect_telegram_video(result.file_path)["streams"]
+            assert [stream["codec_type"] for stream in streams] == ["video"]
+            assert streams[0]["codec_name"] == "h264"
+            assert raw["formats"][0]["acodec"] == "none"
             with pytest.raises(MediaProcessingError, match="both video and audio"):
                 prepare_telegram_video(result.file_path)
         else:

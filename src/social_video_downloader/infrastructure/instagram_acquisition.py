@@ -86,12 +86,26 @@ def _validate_file(path: Path, remaining: float) -> float | None:
 
     data = inspect_telegram_video(path, runner=runner)
     streams = data.get("streams", [])
-    videos = [s for s in streams if s.get("codec_type") == "video" and s.get("codec_name")]
-    audio = [s for s in streams if s.get("codec_type") == "audio" and s.get("codec_name")]
+    if not isinstance(streams, list) or any(not isinstance(s, dict) for s in streams):
+        raise MediaProcessingError("Carousel stream information is invalid.")
+    videos = [s for s in streams if s.get("codec_type") == "video"]
+    audio = [s for s in streams if s.get("codec_type") == "audio"]
     container = data.get("format", {}).get("format_name", "").split(",")
-    if not videos or not audio or "mp4" not in container:
-        raise MediaProcessingError("Carousel requires actual MP4 video and audio streams.")
-    if not all(type(videos[0].get(k)) is int and videos[0][k] > 0 for k in ("width", "height")):
+    if not videos or "mp4" not in container:
+        raise MediaProcessingError("Carousel requires an actual MP4 video stream.")
+    # Audio may be absent, but an existing undecodable/unidentified stream is not
+    # silently discarded. No audio is created and the acquired file is not changed.
+    if any(
+        not isinstance(s.get("codec_name"), str)
+        or s["codec_name"].strip().lower() in {"", "none", "unknown"}
+        for s in (*videos, *audio)
+    ):
+        raise MediaProcessingError("Carousel stream codec is invalid.")
+    if any(
+        type(video.get(k)) is not int or video[k] <= 0
+        for video in videos
+        for k in ("width", "height")
+    ):
         raise MediaProcessingError("Carousel video dimensions are invalid.")
     try:
         duration = float(data.get("format", {}).get("duration"))
