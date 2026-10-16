@@ -143,8 +143,12 @@ a single remainder uses one video message. Never silently omit a selected video.
 Next: independent review and separately authorized bounded real single-video `/p/`
 validation. Real `/p/` acquisition and all Instagram Telegram delivery remain unverified.
 Default registration/Telegram routing and future carousel acquisition require separate stages.
-The next carousel acceptance gates are independent review of inspection, separately approved
-mixed/photo classification evidence, and a bounded acquisition/preparation design. Item-specific
+PR #47 inspection was independently reviewed and merged. A later real 20-entry metadata
+case safely blocked on three UNKNOWN entries; its source diagnosis supports a narrowly
+corroborated PHOTO rule. That classification correction is implemented/tested offline only.
+The next carousel gates are independent review of this fix, separately authorized live
+mixed-selection validation of the corrected adapter, and bounded acquisition/preparation
+design. The live gate is not complete. Item-specific
 semantics need separate validation; the installed extractor ignores `img_index`.
 No running-stack rebuild/restart is authorized by this stage.
 See [the scope and acceptance record](PHASE5_INSTAGRAM_REELS.md).

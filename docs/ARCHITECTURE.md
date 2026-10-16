@@ -284,9 +284,12 @@ are BLOCKED before extraction/cache lookup. Only ordinary `/p/` identities and t
 explicit tracking-key allowlist share a canonical cache key. No index semantics are guessed.
 
 VIDEO requires positive video evidence; malformed/conflicting type markers give UNKNOWN.
-PHOTO requires `is_video=False` or `GraphImage`, corroborating `image_versions2.candidates`
-and no video evidence. Numeric `media_type` alone, empty formats and thumbnails cannot
-establish PHOTO. This conservative photo rule is synthetic-only until mixed live evidence.
+PHOTO requires `is_video=False`, `GraphImage`, or strictly integer `media_type=1`,
+corroborating `image_versions2.candidates` and no video evidence or malformed/conflicting
+type fields. Numeric `media_type` alone, empty formats and thumbnails cannot establish
+PHOTO. A successful numeric contribution is recorded as `media_type_photo` in evidence.
+The added combination follows one real 20-entry publication's source metadata diagnosis;
+its corrected selection behavior is validated offline only, pending a separate live gate.
 Missing/duplicate/unverifiable IDs, mapping shape/order changes, unavailable content,
 UNKNOWN or a VIDEO without admitted direct MP4 formats block the entire selection.
 Only positively classified PHOTO entries may be excluded. No count-based truncation occurs.

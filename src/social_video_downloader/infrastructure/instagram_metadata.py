@@ -74,6 +74,7 @@ def _classify(item):
     )
     photo_marker = item.get("is_video") is False or item.get("__typename") == "GraphImage"
     media_type = item.get("media_type")
+    numeric_photo_marker = type(media_type) is int and media_type == 1
     if item.get("is_video") is True:
         signals.append("is_video_true")
     if item.get("__typename") == "GraphVideo":
@@ -88,18 +89,24 @@ def _classify(item):
         signals.append("photo_marker")
     if _has_images(item):
         signals.append("image_versions")
-    # Numeric markers only corroborate/contradict evidence, never establish a type.
+    # Numeric markers need image corroboration and must never override video evidence.
     if (
         (media_type is not None and (type(media_type) is not int or media_type not in {1, 2}))
         or (video and (photo_marker or media_type == 1))
         or (photo_marker and media_type == 2)
         or (item.get("video_versions") is not None and not isinstance(item["video_versions"], list))
         or (item.get("is_video") is not None and type(item["is_video"]) is not bool)
+        or any(
+            item.get(key) is not None and not isinstance(item[key], str)
+            for key in ("__typename", "video_codec", "video_dash_manifest")
+        )
     ):
         return CarouselItemKind.UNKNOWN, (*signals, "conflicting_or_invalid_type")
     if video:
         return CarouselItemKind.VIDEO, tuple(signals)
-    if photo_marker and _has_images(item):
+    if (photo_marker or numeric_photo_marker) and _has_images(item):
+        if numeric_photo_marker:
+            signals.append("media_type_photo")
         return CarouselItemKind.PHOTO, tuple(signals)
     return CarouselItemKind.UNKNOWN, tuple(signals)
 
