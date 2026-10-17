@@ -459,8 +459,8 @@ existing Telegram preparation helper verify:
 - H.264/AAC MP4 passes unchanged: identical bytes, one preparation ffprobe and zero
   preparation FFmpeg calls. Upload width/height/duration come from actual file probing
   despite absent extractor duration, dimensions and codecs.
-- An MP4 whose synthetic extractor metadata omits audio presence but whose real file has
-  no audio is rejected by the existing stream validator. Corrupt bytes are rejected too.
+- A real video-only fixture is rejected by default; explicit `allow_silent=True` now
+  passes it through unchanged with correct upload metadata. Corrupt bytes are rejected.
   The caller workspace is removed in every case by the existing request workspace boundary.
 
 Initial implementation verification in an existing Python 3.13 / yt-dlp 2026.08.19 environment, using the feature
@@ -716,7 +716,8 @@ Verification of this acquisition stage (no live external calls):
   regressions passed; existing synthetic FFmpeg integration checks ran in the full suite.
 - Ruff lint/format, git diff check, local documentation links and security/scope review: PASS.
 - No source/dependency/config/deployment changes outside the documented acquisition scope.
-- Live multi-video acquisition and Telegram media-group validation remain NOT VERIFIED.
+- At this implementation stage, live multi-video acquisition and Telegram groups were
+  NOT VERIFIED; the later bounded three-video acquisition is recorded below.
 
 
 ### Silent Instagram video policy — deterministic validation
@@ -744,10 +745,10 @@ and invalid video/dimensions/present-audio codecs fail. Existing limits, deadlin
 cancellation, output checks, rollback and unrelated-file preservation remain tested.
 
 Single-video integration explicitly supplies acodec="none", acquires the synthetic file
-unchanged and confirms actual H.264 video without audio. The unchanged Telegram helper
-then rejects it for missing audio as expected. This protects the future integration
-boundary: silent transport support is NOT IMPLEMENTED, not a successful delivery claim.
-Real silent/multi-video Instagram acquisition and Telegram albums remain NOT VERIFIED.
+unchanged and confirms actual H.264 video without audio. Default Telegram preparation
+rejects it for missing audio; the later optional-audio tests explicitly opt in and
+verify byte-preserving passthrough. Neither path proves Telegram delivery.
+The subsequent real acquisition and local preparation evidence are recorded below.
 No external extraction/download or Telegram API request is part of these tests.
 
 
@@ -759,4 +760,87 @@ Verification of silent-video support:
   coverage and explicit negative cases for audio-only/manifest content.
 - Existing YouTube, M4A, video delivery, callback fault handling, limits and cancellation
   regressions: PASS. Ruff lint/format, diff, documentation links and security/scope: PASS.
-- Real silent Instagram acquisition, Telegram silent preparation and albums: NOT VERIFIED.
+- At this stage real silent acquisition/preparation and albums were NOT VERIFIED;
+  subsequent evidence below closes only the explicitly tested acquisition/preparation scope.
+
+
+### First real silent carousel acquisition — narrowly verified
+
+After PR #50, one authorized three-video experiment on production main
+`055fced0bdf337a5b04132600cc803321db59c80` passed through the real planning and async
+acquisition services. Two metadata extractions (planning and fresh revalidation), six
+observed metadata HTTP opens, three media requests, zero retries or Telegram calls.
+READY / issue=None; VIDEO 1/2/3, no PHOTO/UNKNOWN, three direct MP4 candidates each;
+identity/order passed before and after acquisition.
+
+| Original position | Bytes | Actual streams | Dimensions | Duration | ffprobe |
+|---|---:|---|---|---:|---|
+| 1 | 613050 | H.264, no audio | 720x960 | 5.041667 s | PASS |
+| 2 | 738479 | H.264, no audio | 720x960 | 5.041667 s | PASS |
+| 3 | 609669 | H.264, no audio | 720x960 | 5.041667 s | PASS |
+
+All containers were MP4. Total 1,961,198 bytes; planning 2.22 s, acquisition 6.90 s,
+validation complete at 9.53 s (12.42 s including disposable runtime lifecycle).
+Limits 3 videos, 30 MiB/file, 75 MiB received, 90 MiB temporary, 180 s held. HTTP body/file
+hashes matched, proving no transformation of those bytes. Nonfatal csrf_token_unavailable
+warnings only. Successful files, scripts and runtime were removed; original Compose IDs,
+start times and mounts were unchanged. No real Telegram preparation or playback occurred.
+Only this small acquisition gate is closed; larger collections/general reliability remain open.
+
+### Optional-audio video preparation — local generated media
+
+`tests/test_telegram_media.py` exercises the explicit opt-in, audio-required default,
+actual-container checks, malformed codecs/dimensions/stream metadata, both remux-fallback
+audio states, rejected audio-only media, absent versus invalid audio, accidental output
+audio changes, partial-file cleanup/interruption, and preservation of existing outputs.
+
+`tests/integration/test_video_preparation.py` uses real local FFmpeg/ffprobe on generated
+H.264/AAC and silent H.264 MP4/MKV, incompatible silent MPEG-4 and audio-bearing sources.
+Passthrough keeps the exact source path/bytes and invokes no FFmpeg; remux preserves
+encoded packet hashes; conversion uses existing H.264/AAC settings and never adds audio.
+Prepared route fixtures pass full local decoding. Rotated fixtures verify displayed
+orientation through passthrough, remux and transcode. Video-only upload dimensions and
+duration need no audio. Synthetic Reel and single-video `/p/` integration retains default
+silent rejection and separately verifies explicit opt-in passthrough.
+
+These are offline helper/provider tests, not Telegram sends. Instagram remains disabled;
+Telegram albums, actual client playback, larger-carousel reliability and broader platform
+availability remain NOT VERIFIED. No live Instagram or Telegram calls in this stage.
+
+
+Optional-audio stage verification (offline, existing local dependencies):
+
+- Focused helper/local-media/synthetic Instagram integration tests: 98 passed.
+- Full suite: 1112 passed, 1 skipped (external YouTube matrix disabled); net +80 cases.
+- Sixteen real local media integration cases used FFmpeg/ffprobe 9.0.2; synthetic files
+  only. Six route cases also passed full local decode; no subjective/client playback claim.
+- Ruff lint/format, diff, documentation links/anchors and security/scope review: PASS.
+- YouTube, M4A/audio, callback/delivery, Instagram and acquisition regressions passed.
+- Only the preparation module changed in application code; handlers, registry, providers,
+  acquisition, dependencies and Compose are unchanged. No live platform requests.
+
+### PR #51 P2 — collision-safe derivative ownership
+
+The previous destination existence check did not establish ownership: FFmpeg `-y`
+and failure cleanup could overwrite/delete a file created later by another operation.
+Regression tests reproduced this before the fix. Each conversion now stages privately
+on the destination filesystem and validates that file before atomic exclusive hard-link
+publication. FFmpeg never receives the shared destination path. Publication failure
+does not trigger another conversion, and cleanup only removes private staging paths.
+Hard links are required; unsupported filesystems fail safely without a copy/overwrite
+fallback. A successful link transfers the final name to the request/caller workspace;
+there is no filesystem-wide transaction or crash-recovery claim.
+
+Deterministic tests cover pre-existing and late destinations (remux and transcode),
+a file/symlink created at the publication boundary, two preparations synchronized
+after output validation (exactly one winner), unsupported-link failure, remux fallback
+within one private directory, and KeyboardInterrupt/CancelledError while an unrelated
+final file exists. Existing failure cleanup/passthrough tests remain; real local media
+tests verify final filename, private FFmpeg paths, silent remux/transcode and cleanup.
+
+
+P2 correction verification (offline): net +10 deterministic cases; focused preparation/
+local-media/Instagram pipeline suite 108 passed; full suite 1122 passed, 1 skipped
+(external YouTube matrix disabled). Sixteen real local FFmpeg/ffprobe cases still pass,
+including silent remux/transcode and audio-bearing defaults. Ruff lint/format, diff,
+documentation and security/scope review PASS. No external platform or Telegram calls.
