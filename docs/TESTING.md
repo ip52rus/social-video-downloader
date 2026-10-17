@@ -600,8 +600,9 @@ Current offline verification with the external YouTube matrix explicitly disable
 
 No live Instagram/YouTube requests, dependency changes, Docker operations or Telegram
 calls are part of this extension. Real `/p/` support remains UNVERIFIED pending a separately
-authorized smoke. Future carousel media groups/order/splitting requirements are product
-scope only; no carousel/image acquisition or delivery is implemented.
+authorized smoke. At that stage carousel groups/order/splitting were product scope only;
+later video-only acquisition and offline delivery evidence is recorded below. Photos
+remain outside acquisition/delivery scope.
 
 ### Carousel inspection/selection — deterministic validation
 
@@ -804,8 +805,8 @@ duration need no audio. Synthetic Reel and single-video `/p/` integration retain
 silent rejection and separately verifies explicit opt-in passthrough.
 
 These are offline helper/provider tests, not Telegram sends. Instagram remains disabled;
-Telegram albums, actual client playback, larger-carousel reliability and broader platform
-availability remain NOT VERIFIED. No live Instagram or Telegram calls in this stage.
+Real Telegram albums, actual client playback, larger-carousel reliability and broader
+platform availability remain NOT VERIFIED; later offline transport tests are recorded below. No live Instagram or Telegram calls in this stage.
 
 
 Optional-audio stage verification (offline, existing local dependencies):
@@ -844,3 +845,42 @@ local-media/Instagram pipeline suite 108 passed; full suite 1122 passed, 1 skipp
 (external YouTube matrix disabled). Sixteen real local FFmpeg/ffprobe cases still pass,
 including silent remux/transcode and audio-bearing defaults. Ruff lint/format, diff,
 documentation and security/scope review PASS. No external platform or Telegram calls.
+
+
+### Offline carousel Telegram delivery
+
+`tests/test_telegram_carousel.py` uses an injected sender and actual aiogram models,
+with network connections forbidden. Transport unit tests mock only the preparation
+boundary; real local preparation/limits are separately exercised below. Sizes 1,2,3,9,
+10,11,12,20,21,25 verify exact operation sequence/order, FSInputFile paths, streaming
+flags and per-video upload metadata. Mixed PHOTO positions retain video order. Any
+first/middle/last preparation failure prevents every send. Invalid/incomplete plans,
+files, outputs, resource bounds, source IDs/order, ambiguous responses and timeouts
+fail safely. Send failure after confirmed batches reports partial progress and stops;
+there is no automatic retry or rollback of successful Telegram requests. Tests verify
+cleanup of owned prepared files and preservation of originals/unrelated collision files,
+including cancellation and repeated cancellation while reaping a preparation child.
+
+`tests/integration/test_carousel_delivery.py` uses generated local silent/audio MP4,
+H.264 MKV and incompatible MPEG-4 MKV through the actual preparation child/FFmpeg/ffprobe,
+then mocked senders. It checks byte-preserving passthrough, mixed audio states, remux/
+transcode, upload metadata, preparation failures at every position, real OS output caps,
+per-file/aggregate/workspace/count limits and cleanup. No real Telegram, Instagram
+extraction/acquisition, bot polling or deployment changes are part of these tests.
+
+PR #51 is merged; the earlier real three-video acquisition remains narrow external
+evidence only. Mock send success does not establish real Telegram album delivery,
+client playback, larger Instagram collection reliability or production readiness.
+
+
+Offline delivery verification:
+
+- Net +80 deterministic cases: 66 transport/validation/process tests and 14 actual local
+  preparation integration cases. All passed; aiogram 3.31.0 objects/interfaces inspected.
+- Full suite: 1202 passed, 1 skipped (external YouTube matrix explicitly disabled).
+- Existing local video preparation, M4A/audio, YouTube, callback/delivery and Instagram
+  acquisition regressions passed. Full suite ran with external socket connections denied
+  in the pytest process; preparation children only execute local file/pipe media commands.
+- Ruff lint/format, diff, local documentation links/anchors and security/scope review: PASS.
+- Original Compose container IDs/start times/mounts unchanged. No live Instagram/Telegram
+  requests, polling, deployment, provider registration or dependency changes.
