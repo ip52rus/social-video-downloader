@@ -156,6 +156,10 @@ async def test_enabled_reel_uses_provider_and_one_send_then_cleans(message, monk
     message.answer_video.assert_awaited_once()
     assert message.answer_video.call_args.kwargs["supports_streaming"] is True
     assert message.answer_video.call_args.kwargs["width"] == 64
+    method = response(1).answer_video(
+        *message.answer_video.call_args.args, **message.answer_video.call_args.kwargs
+    )
+    assert "request_timeout" not in method.model_dump(exclude_none=True)
     assert message.answer_video.call_args.args[0].path.name.endswith(".mp4")
     assert all(not p.parent.parent.exists() for p in paths)
     assert not handler._active

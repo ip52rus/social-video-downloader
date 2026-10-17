@@ -230,7 +230,6 @@ class InstagramReelHandler:
                         FSInputFile(prepared),
                         **parameters,
                         supports_streaming=True,
-                        request_timeout=_SEND_SECONDS,
                     )
                 if not isinstance(sent, Message) or sent.video is None:
                     raise MediaProcessingError("Unconfirmed Telegram video response.")
