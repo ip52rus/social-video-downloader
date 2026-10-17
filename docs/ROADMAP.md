@@ -164,14 +164,15 @@ transport now has offline coverage for preparation-before-upload, ordered batche
 bounded resources and safe partial progress. No handlers/default routing were enabled.
 PR #52 transport was independently reviewed and merged. A narrow Reel-only Telegram
 integration is now implemented offline behind `INSTAGRAM_TELEGRAM_ENABLED=false`;
-PR #53 is merged. `/p/` and carousel wiring remain pending. The next planned smoke
-uses the existing main bot, with a short bot-only restart accepted by the user. A new
-Compose mapping defaults the flag to false; current APP_ENV=development and the Settings
-production guard remain. Next: review/merge the configuration PR, then separately perform
-the controlled main-bot deployment and one Reel upload/playback check. No enablement,
-restart or live validation is performed during preparation.
-Larger-carousel acquisition, broad reliability and real Telegram playback remain
-NOT VERIFIED. Item-specific semantics remain
+PRs #53/#54 are merged. The separately authorized bot-only deployment and one canonical
+Reel delivery smoke passed; the user confirmed playback, orientation and sound.
+The initial shared URL failed on the irrelevant `psln` query key. Next: independently
+review the narrow share-link admission fix, then authorize its merge/deployment separately.
+The fix strips ordinary queries/harmless fragments, retains known item-selector rejection
+and leaves carousel policy unchanged. No restart, environment change or live request is
+part of this correction. Compose defaults false; APP_ENV=development and the production
+guard remain unchanged. `/p/`/carousel routing, larger-carousel acquisition, broad
+reliability and real Telegram album playback remain NOT VERIFIED. Item-specific semantics remain
 blocked pending separate validation; the installed extractor ignores `img_index`.
 No running-stack rebuild/restart is authorized by this stage.
 See [the scope and acceptance record](PHASE5_INSTAGRAM_REELS.md).

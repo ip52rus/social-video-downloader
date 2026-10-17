@@ -44,7 +44,7 @@ Use Conventional Commit prefixes. One coherent change per commit.
 ## Synchronization
 After each commit, verify the commit SHA and branch state. After each push, verify the remote branch and CI. Do not overwrite unrelated local work while synchronizing.
 
-## Controlled main-bot Reel smoke (planned only)
+## Controlled main-bot Reel smoke
 
 PR #53 is merged. The user chose the existing main Telegram bot for one approved public
 Reel smoke and accepted a short planned bot-container restart. No separate bot,
@@ -70,4 +70,9 @@ After independent PR review/merge, the separately performed deployment procedure
 Do not restart/recreate telegram-bot-api or modify its volume. The 25 MiB Reel limit
 and cooperative thread-cancellation limitation remain; no hard whole-request watchdog
 or production-reliability guarantee is introduced. `/p/` and carousel routing stay pending.
-Actual Reel-to-Telegram delivery/playback is NOT VERIFIED. See PHASE5_INSTAGRAM_REELS.md.
+After PR #54, the separately authorized bot-only deployment and one canonical-Reel smoke
+passed. The user confirmed delivery, playback, orientation and sound; temporary files
+were cleaned and Local Bot API was unchanged. Exact size/time were not recorded. The
+initial share URL was rejected on `psln`; the focused admission correction is offline-only
+and must be reviewed, merged and deployed separately. No further restart or live test is
+authorized by that code change. See PHASE5_INSTAGRAM_REELS.md for the evidence boundaries.

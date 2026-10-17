@@ -899,7 +899,8 @@ conversion helper without adding audio. Existing YouTube/callback suites remain 
 
 No actual Instagram extraction/download or Telegram API call is evidence for this stage.
 The prior real Reel provider smoke is unchanged evidence. Full request hard deadlines,
-production capacity, real Telegram upload/playback and `/p/`/carousel routing remain open.
+production capacity and `/p/`/carousel routing remain open. A subsequent separately
+authorized one-Reel delivery/client smoke is recorded below.
 
 Verification on this branch: 32 new Reel MVP cases passed; focused handler/config/bot/
 YouTube regression suite 142 passed; full suite 1234 passed, 1 skipped (external YouTube
@@ -910,9 +911,11 @@ dependencies and Compose are unchanged.
 
 ## Main-bot Compose smoke preparation
 
-PR #53 is merged; the next planned Reel smoke uses the existing main bot with an accepted
-short bot-only restart after review/merge of the Compose flag PR. It does not use another
-bot, standalone container or poller. The real upload/playback gate remains OPEN.
+PRs #53/#54 are merged. The separately authorized smoke used the existing main bot with
+a bot-only restart, not another bot or poller. One canonical Reel was delivered and the
+user confirmed playback, orientation and sound. Temporary Reel files were removed;
+polling and Local Bot API stayed healthy. Exact file size/time were not captured. This
+is one external case, not broad reliability or `/p/`/album validation.
 
 Validate Compose using an empty env file and synthetic credential placeholders, retaining
 resolved JSON only in process memory. Check absent flag -> false, explicit true -> true,
@@ -925,3 +928,21 @@ Verification: Compose false/true resolution and full base-config comparison PASS
 synthetic placeholders with real `.env` excluded. Existing offline suite: 1234 passed,
 1 skipped; Ruff lint/format, diff, documentation and security/scope checks PASS. No live
 requests, environment changes or container lifecycle operations were performed.
+
+## Reel share-link regression
+
+The initial full share URL failed before acquisition because of `psln`. The correction
+uses the existing provider canonicalizer, accepting/removing irrelevant query keys, bare
+flags and harmless anchors. Known item selectors remain rejected in query keys and
+selector-shaped fragments, including case/percent-encoded forms. The 32-field parsing
+bound, approved hosts, HTTP(S), Reel paths, credential and unsupported-port checks remain.
+Carousel query policy is unchanged. Network-forbidden handler tests assert that the
+provider receives only the canonical URL and a successful synthetic acquisition sends
+exactly once and cleans its workspace. The exact reported URL is also checked offline;
+committed fixtures use a synthetic tracking value instead of the original opaque value.
+This correction has no live Instagram/Telegram evidence and no deployment changes.
+
+Verification: net +34 cases; Reel handler 66 passed, combined handler/config/bot suite
+176 passed, full suite 1268 passed and 1 skipped (external YouTube matrix disabled).
+Full pytest forbids socket connections. Local FFmpeg/ffprobe, YouTube, callbacks and
+delivery regressions passed. Ruff lint/format, diff, documentation and scope/security PASS.
