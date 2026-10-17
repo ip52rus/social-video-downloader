@@ -884,3 +884,26 @@ Offline delivery verification:
 - Ruff lint/format, diff, local documentation links/anchors and security/scope review: PASS.
 - Original Compose container IDs/start times/mounts unchanged. No live Instagram/Telegram
   requests, polling, deployment, provider registration or dependency changes.
+
+## Reel-only Telegram MVP offline checks
+
+`tests/test_instagram_reel_handler.py` uses existing synthetic provider fixtures and
+forbids socket connections. It verifies disabled/default behavior, explicit per-dispatcher
+injection, strict configuration, raw URL intent and `/p/` rejection, playlist/photo/private/
+redirect rejection, acquisition/preparation failure, one send with real FSInputFile and
+probe parameters, no send retry, cleanup, and repeated cancellation while the worker
+still owns admission/workspace. Response-body accounting is tested without size headers;
+real exec'd FFmpeg demonstrates the per-file write backstop. Generated local silent and
+audio-bearing H.264 MP4 pass unchanged; an incompatible silent sample uses the existing
+conversion helper without adding audio. Existing YouTube/callback suites remain required.
+
+No actual Instagram extraction/download or Telegram API call is evidence for this stage.
+The prior real Reel provider smoke is unchanged evidence. Full request hard deadlines,
+production capacity, real Telegram upload/playback and `/p/`/carousel routing remain open.
+
+Verification on this branch: 32 new Reel MVP cases passed; focused handler/config/bot/
+YouTube regression suite 142 passed; full suite 1234 passed, 1 skipped (external YouTube
+live matrix disabled). Full pytest ran with socket connections forbidden. Ruff lint and
+format, diff, local documentation links and security/scope checks PASS. Existing YouTube
+delivery/callback function bodies, provider registry, acquisition/preparation APIs,
+dependencies and Compose are unchanged.

@@ -19,13 +19,21 @@ class Settings:
     log_level: str = "INFO"
     telegram_api_base_url: str | None = None
     telegram_api_timeout_seconds: int = 1800
+    instagram_telegram_enabled: bool = False
 
     def __post_init__(self) -> None:
+        if type(self.instagram_telegram_enabled) is not bool:
+            raise ConfigurationError("INSTAGRAM_TELEGRAM_ENABLED must be true or false.")
         if not self.telegram_bot_token.strip():
             raise ConfigurationError("TELEGRAM_BOT_TOKEN must not be empty.")
 
         if self.app_env not in {"development", "test", "production"}:
             raise ConfigurationError("APP_ENV must be one of: development, test, production.")
+
+        if self.instagram_telegram_enabled and self.app_env == "production":
+            raise ConfigurationError(
+                "Instagram Reel MVP is restricted to isolated development/test."
+            )
 
         normalized_log_level = self.log_level.upper()
         if normalized_log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
@@ -76,10 +84,14 @@ class Settings:
             ) from error
 
         api_base_url = source.get("TELEGRAM_API_BASE_URL", "").strip() or None
+        instagram_enabled = source.get("INSTAGRAM_TELEGRAM_ENABLED", "false").strip().lower()
+        if instagram_enabled not in {"true", "false"}:
+            raise ConfigurationError("INSTAGRAM_TELEGRAM_ENABLED must be true or false.")
         return cls(
             telegram_bot_token=token,
             app_env=source.get("APP_ENV", "development").strip().lower(),
             log_level=source.get("LOG_LEVEL", "INFO").strip(),
             telegram_api_base_url=api_base_url,
             telegram_api_timeout_seconds=api_timeout_seconds,
+            instagram_telegram_enabled=instagram_enabled == "true",
         )

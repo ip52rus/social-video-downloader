@@ -21,7 +21,8 @@ The `telegram-bot-api` service stores its working state and data in a named volu
 Environment-based settings are validated before starting the application. The Telegram token is required, excluded from the settings representation, and must never be written to logs. The package entry point is python -m social_video_downloader; it configures standard-library logging, creates an aiogram bot and dispatcher, registers the Telegram router, and starts polling. Bot session cleanup runs when polling stops.
 
 ## Telegram layer
-The aiogram router owns commands and text intake, user-facing validation responses, and result delivery. It does not contain provider-specific download logic. Membership/access control is deferred to a future monetization or business-model layer and is not part of the current implementation. The /start response describes current platform support. Text messages are validated against supported platform domains. YouTube URLs are passed to the application service; Instagram and TikTok URLs are recognized but receive an explicit message that downloading is not yet available.
+
+The aiogram router owns commands and text intake, user-facing validation responses, and result delivery. It does not contain provider-specific download logic. Membership/access control is deferred to a future monetization or business-model layer and is not part of the current implementation. The /start response describes current platform support. Text messages are validated against supported platform domains. By default, YouTube URLs are passed to the application service; Instagram and TikTok URLs receive an explicit not-connected response. The isolated Reel-only opt-in described below delegates only Instagram Reels to its own handler; `/p/` stays unsupported.
 
 The implemented option UX is capability-driven. Telegram shows only meaningful choices for
 the current platform/content and keeps a consistent visual language without forcing every
@@ -73,6 +74,19 @@ The synchronous download and media-preparation operations run in worker threads 
 4. Telegram upload parameters, including duration and dimensions, continue to be derived with ffprobe from the prepared file.
 
 The remux path is an optimization for compatible streams when only the container needs conversion; it is not a claim that all media can be remuxed. The transcode path remains the compatibility fallback. No scaling filter is applied, and FFmpeg autorotation is retained. The bot sends the prepared file as a Telegram video with streaming support. A per-request temporary directory holds the media while Telegram uploads it, and is removed after delivery or failure. Telegram upload errors and expected downloader errors are mapped to safe user-facing messages; detailed source exceptions are not sent to the user.
+
+### Reel-only opt-in MVP design
+
+The narrow Reel integration reuses `InstagramProvider`, `DownloadedMedia` and the
+existing optional-audio helper/sendVideo path. A dispatcher-owned Reel handler is
+enabled only by `INSTAGRAM_TELEGRAM_ENABLED=true` (default false). It validates raw
+reference intent before canonicalization and rejects `/p/`; no carousel integration
+or default registry change is included. A single active operation owns its worker and
+temporary files until the worker really exits, including after cancellation. Scoped
+yt-dlp invocation controls bound received media bytes; cooperative deadline checks and
+socket timeouts are not a hard thread-termination guarantee. Preparation uses the
+existing runner injection with subprocess timeouts and a POSIX per-file write backstop.
+This is an isolated-test MVP, not permission for production activation.
 
 ### Optional-audio preparation design
 
