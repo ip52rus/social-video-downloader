@@ -20,7 +20,11 @@ from yt_dlp.networking.common import Response
 import social_video_downloader.telegram_instagram as integration
 from social_video_downloader.bot import create_dispatcher
 from social_video_downloader.config import ConfigurationError, Settings
-from social_video_downloader.domain.errors import DownloadFailedError, MediaProcessingError
+from social_video_downloader.domain.errors import (
+    DownloadFailedError,
+    InvalidMediaURLError,
+    MediaProcessingError,
+)
 from social_video_downloader.handlers import handle_text
 from tests.integration.test_video_preparation import generate
 from tests.test_instagram_provider import INFO, Factory
@@ -144,14 +148,36 @@ def test_invalid_flag_fails_closed(value):
 
 
 @pytest.mark.asyncio
-async def test_enabled_reel_uses_provider_and_one_send_then_cleans(message, monkeypatch):
+@pytest.mark.parametrize(
+    "suffix",
+    [
+        "",
+        "?utm_source=fixture",
+        "?utm_source=ig_web_copy_link&psln=fixture==",
+        "?dlrf=fixture&unrecognized=ignored",
+        "?flag&empty=",
+        "#share",
+        "?psln=fixture#watch",
+        "?note=img_index#note=slide",
+    ],
+)
+async def test_enabled_reel_uses_provider_and_one_send_then_cleans(message, monkeypatch, suffix):
     handler, fixture, paths = runtime(monkeypatch)
+    downloaded_urls = []
+    download = integration.InstagramProvider.download
+
+    def traced_download(self, url, *args, **kwargs):
+        downloaded_urls.append(url)
+        return download(self, url, *args, **kwargs)
+
+    monkeypatch.setattr(integration.InstagramProvider, "download", traced_download)
     prepare = MagicMock(side_effect=lambda p, **kw: p)
     monkeypatch.setattr(integration, "prepare_telegram_video", prepare)
-    message.text += "?utm_source=fixture"
+    message.text += suffix
     await handle_text(message, instagram_reels=handler)
     assert len(fixture.extractions) == len(fixture.processed) == 1
     assert fixture.extractions[0][0] == URL
+    assert downloaded_urls == [URL]
     assert prepare.call_args.kwargs["allow_silent"] is True
     message.answer_video.assert_awaited_once()
     assert message.answer_video.call_args.kwargs["supports_streaming"] is True
@@ -166,13 +192,68 @@ async def test_enabled_reel_uses_provider_and_one_send_then_cleans(message, monk
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("suffix", ["?img_index=2", "?dlrf=fixture", "#slide", "?bad", "?index=1"])
+@pytest.mark.parametrize(
+    "suffix",
+    [
+        "?img_index=2",
+        "?media_id=fixture",
+        "?item_id=fixture",
+        "?carousel_index=2",
+        "?index=1",
+        "?slide=2",
+        "?psln=fixture&IMG_INDEX=2",
+        "?%69mg_index=2",
+        "?img_index=",
+        "#slide",
+        "#slide=2",
+        "#slide/2",
+        "#slide:2",
+        "#?img_index=2",
+        "#share&item_id=fixture",
+        "#%69mg_index=2",
+    ],
+)
 async def test_raw_reference_is_rejected_before_extraction(message, monkeypatch, suffix):
     handler, fixture, _ = runtime(monkeypatch)
     message.text += suffix
     await handle_text(message, instagram_reels=handler)
     assert not fixture.extractions
     message.answer_video.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "http://m.instagram.com/reel/Fixture_01/?psln=fixture",
+        "https://instagram.com/reel/Fixture_01?other=ignored#share",
+        "https://www.instagram.com:443/reel/Fixture_01/?psln=fixture",
+    ],
+)
+def test_share_links_reuse_provider_canonicalization(raw):
+    assert integration._reel_url(raw) == URL
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "https://www.instagram.com/p/Fixture_01/?psln=fixture",
+        "https://www.instagram.com/stories/Fixture_01/",
+        "https://www.instagram.com/reel/Fixture_01/extra/",
+        "https://www.instagram.com/reel/",
+        "ftp://www.instagram.com/reel/Fixture_01/",
+        "https://instagram.com.evil.invalid/reel/Fixture_01/",
+        "https://evil.instagram.com/reel/Fixture_01/",
+        "https://www.instagram.com@evil.invalid/reel/Fixture_01/",
+        "https://user@www.instagram.com/reel/Fixture_01/",
+        "https://www.instagram.com:8443/reel/Fixture_01/",
+        "https://www.instagram.com:invalid/reel/Fixture_01/",
+        "https://[malformed/reel/Fixture_01/",
+        URL + "?" + "&".join(f"key{i}=value" for i in range(33)),
+    ],
+)
+def test_invalid_or_unsupported_share_links_fail_closed(raw):
+    with pytest.raises(InvalidMediaURLError):
+        integration._reel_url(raw)
 
 
 @pytest.mark.asyncio

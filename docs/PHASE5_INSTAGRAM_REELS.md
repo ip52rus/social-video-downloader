@@ -361,8 +361,14 @@ A narrow `InstagramReelHandler` connects only public `/reel/<id>/` URLs to the e
 InstagramProvider, DownloadedMedia, `prepare_telegram_video(..., allow_silent=True)`,
 ffprobe upload metadata and aiogram sendVideo. No menus, carousel-shaped single results
 or default-provider registration are introduced. Query intent is checked before stripping:
-only the existing tracking allowlist is accepted; item references, unknown queries and
-fragments fail before extraction. `/p/` and carousel integration remain pending.
+known item selectors (`img_index`, `media_id`, `item_id`, `carousel_index`, `index`,
+`slide`) fail case-insensitively before extraction, including selector-shaped fragments
+such as `#slide`, `#slide/2` and `#?img_index=2`. Ordinary share parameters (`psln`,
+`utm_source`, unknown irrelevant keys or bare flags) and harmless fragments are accepted
+and removed by the existing provider canonicalizer. Raw query strings never reach the
+provider download call or yt-dlp. The 32-query-field bound and strict host/path/credential/
+port validation remain. `/p/` and carousel integration and their separate conservative
+query policy remain unchanged.
 
 `INSTAGRAM_TELEGRAM_ENABLED` defaults to false and accepts only true/false. Settings
 reject enabled+production. The planned controlled smoke uses the existing main bot;
@@ -389,14 +395,16 @@ An initial free-space check requires three file caps of headroom; it does not re
 space against other processes. Per-file caps are not a physical disk quota. A send
 error/timeout/unconfirmed response is never retried automatically.
 
-The existing real Reel evidence remains one H.264/AAC provider smoke, not validation of
-this integration. New tests use synthetic acquisition, generated local media and mock
-Telegram sends. Actual Reel-to-Telegram upload/client playback remains NOT VERIFIED.
-The user subsequently chose one controlled smoke with the existing main bot and accepted
-a short planned bot-only restart. The Compose mapping defaults to false and forwards the
-flag only to bot; current `APP_ENV=development`, Local Bot API and the Settings
-production-mode guard remain unchanged. No new bot, standalone runtime, alternate poller
-or watchdog framework is introduced. This prepares configuration only: do not enable,
-rebuild/restart or test until PR review/merge and the deployment procedure in DEVELOPMENT.md.
-The existing 25 MiB limit and cooperative-deadline limitations remain. Real Reel delivery
-and Telegram playback are NOT VERIFIED; this is not a general production rollout.
+After PR #54, a separately authorized deployment recreated only the existing bot and
+enabled the flag in its protected environment. One canonical public Reel was delivered;
+the user confirmed playback, orientation and sound. Temporary Reel files were cleaned,
+polling remained healthy and the Local Bot API container was unchanged. Exact file size
+and processing time were not captured. This closes only the one-Reel delivery/client
+smoke, not `/p/`, albums, broad availability or production reliability.
+
+The full share URL initially failed before acquisition because `psln` was outside the
+old tracking allowlist. The share-link correction is verified offline using the exact
+reported URL without network access; committed fixtures replace the opaque tracking
+value with synthetic data. Synthetic provider/send tests confirm a canonical URL and
+one send. This correction has not been deployed or live-tested. The 25 MiB limit,
+cooperative deadlines, disabled-by-default configuration and production guard remain.

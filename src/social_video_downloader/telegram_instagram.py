@@ -7,10 +7,11 @@ import subprocess
 import sys
 from contextlib import suppress
 from pathlib import Path
+from re import findall
 from tempfile import TemporaryDirectory
 from threading import Event
 from time import monotonic
-from urllib.parse import parse_qsl, urlsplit
+from urllib.parse import parse_qsl, unquote, urlsplit
 
 import yt_dlp
 from aiogram.exceptions import TelegramAPIError
@@ -46,15 +47,17 @@ def _reel_url(raw: str) -> str:
         raise InvalidMediaURLError("Reel URLs only.")
     parts = urlsplit(raw.strip())
     try:
-        query = parse_qsl(
-            parts.query, keep_blank_values=True, strict_parsing=True, max_num_fields=32
-        )
+        query = parse_qsl(parts.query, keep_blank_values=True, max_num_fields=32)
     except ValueError:
         raise InvalidMediaURLError("Ambiguous reference.") from None
-    if parts.fragment or any(
-        key not in {"igsh", "igshid", "fbclid"} and not key.startswith("utm_") for key, _ in query
+    reference_keys = {"img_index", "media_id", "item_id", "carousel_index", "index", "slide"}
+    # Recognize selector-shaped fragments (e.g. #slide, #slide/2, #?img_index=2),
+    # while ordinary anchors and share parameters never reach the provider.
+    fragment_keys = findall(r"(?:^|[?&/])([^=:/?&]+)", unquote(parts.fragment))
+    if any(key.casefold() in reference_keys for key, _ in query) or any(
+        key.casefold() in reference_keys for key in fragment_keys
     ):
-        raise InvalidMediaURLError("Item references and unknown parameters are unsupported.")
+        raise InvalidMediaURLError("Item references are unsupported.")
     return canonical
 
 

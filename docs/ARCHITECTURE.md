@@ -81,17 +81,24 @@ The narrow Reel integration reuses `InstagramProvider`, `DownloadedMedia` and th
 existing optional-audio helper/sendVideo path. A dispatcher-owned Reel handler is
 enabled only by `INSTAGRAM_TELEGRAM_ENABLED=true` (default false). It validates raw
 reference intent before canonicalization and rejects `/p/`; no carousel integration
-or default registry change is included. A single active operation owns its worker and
+or default registry change is included. Reel share queries (including `psln`, `utm_*`
+and other irrelevant keys) and harmless fragments are stripped. Known selectors
+`img_index`, `media_id`, `item_id`, `carousel_index`, `index` and `slide` remain blocked
+case-insensitively in query keys and selector-shaped fragments. Only the provider's
+validated HTTPS/www canonical Reel URL reaches acquisition. Carousel query policy is
+unchanged. A single active operation owns its worker and
 temporary files until the worker really exits, including after cancellation. Scoped
 yt-dlp invocation controls bound received media bytes; cooperative deadline checks and
 socket timeouts are not a hard thread-termination guarantee. Preparation uses the
 existing runner injection with subprocess timeouts and a POSIX per-file write backstop.
 Compose passes `INSTAGRAM_TELEGRAM_ENABLED` only to bot with an absent-value default
 of false. Its existing `APP_ENV=development` and Local Bot API endpoint are unchanged;
-the Settings guard against enabled+production remains. The user approved planning one
-main-bot Reel smoke with a short bot-only restart after PR review/merge. No restart,
-enablement or live validation is performed by this configuration change; general
-production rollout remains outside scope.
+the Settings guard against enabled+production remains. After PR #54, the separately
+authorized bot-only deployment and one canonical-Reel smoke succeeded; the user confirmed
+delivery, playback, orientation and sound. The original share URL was blocked by `psln`
+before acquisition; this correction has offline evidence only and requires separate
+deployment. No container or environment changes are part of the correction. One Reel
+does not establish general production reliability.
 
 ### Optional-audio preparation design
 
