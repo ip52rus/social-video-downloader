@@ -104,6 +104,9 @@ def test_actual_preparation_routes(tmp_path, extension, video, audio, allow_sile
         assert hashlib.sha256(prepared.read_bytes()).digest() == hashlib.sha256(original).digest()
         assert list(tmp_path.iterdir()) == [source]
     else:
+        assert prepared == source.with_name(f"{source.stem}.telegram-compatible.mp4")
+        assert set(tmp_path.iterdir()) == {source, prepared}
+        assert type(source)(ffmpeg[0][-1]).parent != tmp_path
         assert len(ffmpeg) == 1
         assert ("copy" in ffmpeg[0]) == (route == "remux")
         assert ("libx264" in ffmpeg[0]) == (route == "transcode")

@@ -818,3 +818,29 @@ Optional-audio stage verification (offline, existing local dependencies):
 - YouTube, M4A/audio, callback/delivery, Instagram and acquisition regressions passed.
 - Only the preparation module changed in application code; handlers, registry, providers,
   acquisition, dependencies and Compose are unchanged. No live platform requests.
+
+### PR #51 P2 — collision-safe derivative ownership
+
+The previous destination existence check did not establish ownership: FFmpeg `-y`
+and failure cleanup could overwrite/delete a file created later by another operation.
+Regression tests reproduced this before the fix. Each conversion now stages privately
+on the destination filesystem and validates that file before atomic exclusive hard-link
+publication. FFmpeg never receives the shared destination path. Publication failure
+does not trigger another conversion, and cleanup only removes private staging paths.
+Hard links are required; unsupported filesystems fail safely without a copy/overwrite
+fallback. A successful link transfers the final name to the request/caller workspace;
+there is no filesystem-wide transaction or crash-recovery claim.
+
+Deterministic tests cover pre-existing and late destinations (remux and transcode),
+a file/symlink created at the publication boundary, two preparations synchronized
+after output validation (exactly one winner), unsupported-link failure, remux fallback
+within one private directory, and KeyboardInterrupt/CancelledError while an unrelated
+final file exists. Existing failure cleanup/passthrough tests remain; real local media
+tests verify final filename, private FFmpeg paths, silent remux/transcode and cleanup.
+
+
+P2 correction verification (offline): net +10 deterministic cases; focused preparation/
+local-media/Instagram pipeline suite 108 passed; full suite 1122 passed, 1 skipped
+(external YouTube matrix disabled). Sixteen real local FFmpeg/ffprobe cases still pass,
+including silent remux/transcode and audio-bearing defaults. Ruff lint/format, diff,
+documentation and security/scope review PASS. No external platform or Telegram calls.

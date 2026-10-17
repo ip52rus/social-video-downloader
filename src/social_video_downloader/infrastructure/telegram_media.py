@@ -1,9 +1,11 @@
 """Prepare MP4 files for reliable playback in Telegram clients."""
 
 import json
+import os
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
 
 from social_video_downloader.domain.errors import MediaProcessingError
@@ -182,8 +184,7 @@ def prepare_telegram_video(
     source = Path(path)
     if not source.is_file():
         raise MediaProcessingError("Downloaded media file is missing.")
-    output = None
-    completed = False
+    staging = None
     try:
         video_codec, audio_codec, is_mp4 = _probe_streams(
             source, execute, allow_silent=allow_silent
@@ -200,13 +201,17 @@ def prepare_telegram_video(
         destination = source.with_name(f"{source.stem}.telegram-compatible.mp4")
         if destination.exists() or destination.is_symlink():
             raise MediaProcessingError("Compatible video output already exists.")
-        output = destination
+        # A pre-check avoids wasted conversion, but only os.link below arbitrates
+        # concurrent publication. Never give FFmpeg another operation's final path.
+        staging = TemporaryDirectory(prefix=".telegram-preparation-", dir=source.parent)
+        output = Path(staging.name) / destination.name
         audio_map = ["-map", "0:a:0"] if audio_codec is not None else ["-an"]
 
         # If the streams are already compatible, try a stream-copy remux first.
         # This avoids expensive lossy re-encoding for files such as MKV containers
         # that already contain H.264 video and AAC audio.
         if video_codec == _COMPATIBLE_VIDEO_CODEC and compatible_audio:
+            remux_ready = False
             try:
                 execute(
                     [
@@ -232,22 +237,23 @@ def prepare_telegram_video(
                     capture_output=True,
                     text=True,
                 )
-                if output.is_file() and output.stat().st_size > 0:
+                if not output.is_symlink() and output.is_file() and output.stat().st_size > 0:
                     remuxed_video, remuxed_audio, remuxed_mp4 = _probe_streams(
                         output, execute, allow_silent=allow_silent
                     )
-                    if (
+                    remux_ready = (
                         output.suffix.lower() == ".mp4"
                         and remuxed_mp4
                         and remuxed_video == _COMPATIBLE_VIDEO_CODEC
                         and remuxed_audio == audio_codec
-                    ):
-                        completed = True
-                        return output
+                    )
             except (OSError, subprocess.SubprocessError, MediaProcessingError):
                 # Some otherwise compatible streams cannot be copied into MP4.
                 # Fall back to transcoding rather than failing the download.
                 pass
+            if remux_ready:
+                os.link(output, destination, follow_symlinks=False)
+                return destination
             output.unlink(missing_ok=True)
 
         execute(
@@ -281,7 +287,7 @@ def prepare_telegram_video(
             capture_output=True,
             text=True,
         )
-        if not output.is_file() or output.stat().st_size == 0:
+        if output.is_symlink() or not output.is_file() or output.stat().st_size == 0:
             raise MediaProcessingError("FFmpeg did not produce a usable compatible video.")
         converted_video, converted_audio, converted_mp4 = _probe_streams(
             output, execute, allow_silent=allow_silent
@@ -293,12 +299,17 @@ def prepare_telegram_video(
             or converted_audio != (_COMPATIBLE_AUDIO_CODEC if audio_codec is not None else None)
         ):
             raise MediaProcessingError("Converted video does not use compatible codecs.")
-        completed = True
-        return output
+        os.link(output, destination, follow_symlinks=False)
+        return destination
     except MediaProcessingError:
         raise
+    except FileExistsError as exc:
+        raise MediaProcessingError("Compatible video output already exists.") from exc
     except (OSError, subprocess.SubprocessError) as exc:
         raise MediaProcessingError("Unable to prepare video for Telegram playback.") from exc
     finally:
-        if output is not None and not completed:
-            output.unlink(missing_ok=True)
+        if staging is not None:
+            try:
+                staging.cleanup()
+            except OSError as exc:
+                raise MediaProcessingError("Unable to clean video preparation staging.") from exc

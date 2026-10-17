@@ -407,6 +407,14 @@ Verification: focused suite 98 passed; full suite 1112 passed, 1 skipped; net +8
 Real local FFmpeg/ffprobe fixtures passed, including silent remux/transcode and rotation.
 Ruff lint/format, diff, documentation and security/scope checks PASS; no live requests.
 
+PR #51 P2 correction: replace non-atomic output ownership with private same-filesystem
+staging and atomic no-overwrite hard-link publication. Cleanup never unlinks the shared
+destination. Late/concurrent collisions, failed publication and interruption have
+specific deterministic regression coverage; API, routing and optional-audio policy stay
+unchanged. Correction verification: focused 108 passed; full 1122 passed, 1 skipped;
+net +10 cases, real local FFmpeg/ffprobe still passing. Ruff lint/format, diff and
+security/scope checks PASS; no live requests. Details are recorded in TESTING.md.
+
 ## Phase 6 - TikTok Provider
 - [ ] Run a technical spike.
 - [ ] Assess real-world reliability and extraction stability.

@@ -410,7 +410,13 @@ remux and video-only H.264 conversion when necessary. AAC audio is retained/prod
 when audio exists; silent sources have no audio mapping and never gain a track.
 Actual container, valid stream codecs and positive video dimensions are probed locally;
 output checks require MP4/H.264 and preserve source audio presence. Failed derivatives
-are removed; existing destination files are not overwritten. Upload metadata remains
+are removed; existing destination files are not overwritten. Preparation uses a private
+staging directory beside the destination so FFmpeg's `-y` only touches owned files.
+After validation, exclusive same-filesystem `os.link` publication retains the existing
+derivative name and atomically fails on any destination collision. Hard-link support is
+required; failure is safe, with no overwrite/copy fallback. Only staging paths are cleaned;
+the destination is never unlinked by preparation. A successful link transfers the final
+file to the caller, whose request workspace owns its lifetime. Upload metadata remains
 video-derived. Callers own successful derivatives inside their request workspace.
 Future Instagram callers must explicitly opt in; handlers/routing and albums are unchanged.
 Local generated fixtures verify preparation, not real Telegram delivery or playback.

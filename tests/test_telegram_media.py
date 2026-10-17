@@ -1,8 +1,12 @@
 """Deterministic tests for Telegram playback compatibility preparation."""
 
+import asyncio
 import json
+import os
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier, current_thread
 from types import SimpleNamespace
 
 import pytest
@@ -238,10 +242,18 @@ def test_missing_audio_is_rejected(tmp_path: Path) -> None:
         prepare_telegram_video(source, runner=runner)
 
 
-def test_silent_mp4_opt_in_is_byte_preserving_without_ffmpeg(tmp_path):
+def test_silent_mp4_opt_in_is_byte_preserving_without_ffmpeg(tmp_path, monkeypatch):
     source = tmp_path / "video.mp4"
     source.write_bytes(b"original video bytes")
     calls = []
+
+    def forbidden_staging(*args, **kwargs):
+        raise AssertionError("Passthrough must not create staging")
+
+    monkeypatch.setattr(
+        "social_video_downloader.infrastructure.telegram_media.TemporaryDirectory",
+        forbidden_staging,
+    )
 
     def runner(command, **kwargs):
         calls.append(command)
@@ -276,9 +288,12 @@ def test_optional_audio_remux_and_failure_fallback(tmp_path, audio, fallback):
     assert len(commands) == (2 if fallback else 1)
     assert commands[0][commands[0].index("-c") + 1] == "copy"
     for command in commands:
+        assert Path(command[-1]).parent != tmp_path
         assert ("0:a:0" in command) == (audio is not None)
         assert ("-an" in command) == (audio is None)
         assert "anullsrc" not in command
+    assert len({Path(c[-1]).parent for c in commands}) == 1
+    assert set(tmp_path.iterdir()) == {source, prepared}
 
 
 @pytest.mark.parametrize("allow_silent", [False, True])
@@ -426,19 +441,23 @@ def test_remux_cannot_change_audio_presence(tmp_path, audio):
     assert len(commands) == 2 and "copy" in commands[0] and "libx264" in commands[1]
 
 
-def test_interrupted_conversion_cleans_up_partial_file(tmp_path):
+@pytest.mark.parametrize("interruption", [KeyboardInterrupt, asyncio.CancelledError])
+def test_interrupted_conversion_cleans_up_partial_file(tmp_path, interruption):
     source = tmp_path / "video.mkv"
     source.write_bytes(b"original")
+    destination = tmp_path / "video.telegram-compatible.mp4"
 
     def runner(command, **kwargs):
         if command[0] == "ffprobe":
             return _probe(video="vp9", audio=None, container="matroska")
         Path(command[-1]).write_bytes(b"partial")
-        raise KeyboardInterrupt
+        destination.write_bytes(b"late unrelated file")
+        raise interruption
 
-    with pytest.raises(KeyboardInterrupt):
+    with pytest.raises(interruption):
         prepare_telegram_video(source, runner, allow_silent=True)
-    assert list(tmp_path.iterdir()) == [source]
+    assert set(tmp_path.iterdir()) == {source, destination}
+    assert destination.read_bytes() == b"late unrelated file"
 
 
 def test_existing_derivative_is_not_overwritten_or_removed(tmp_path):
@@ -449,3 +468,121 @@ def test_existing_derivative_is_not_overwritten_or_removed(tmp_path):
     with pytest.raises(MediaProcessingError, match="already exists"):
         prepare_telegram_video(source, lambda *a, **k: _probe(container="matroska"))
     assert existing.read_bytes() == b"unrelated"
+
+
+@pytest.mark.parametrize("when", ["before_ffmpeg_write", "output_probe"])
+@pytest.mark.parametrize("video", ["h264", "vp9"])
+def test_late_destination_collision_preserves_other_operations_output(tmp_path, when, video):
+    source = tmp_path / "video.mkv"
+    source.write_bytes(b"original")
+    destination = tmp_path / "video.telegram-compatible.mp4"
+
+    def runner(command, **kwargs):
+        if command[0] == "ffprobe":
+            if Path(command[-1]) != source and when == "output_probe":
+                destination.write_bytes(b"other operation")
+            return _probe(video=video if Path(command[-1]) == source else "h264", audio=None)
+        if when == "before_ffmpeg_write":
+            destination.write_bytes(b"other operation")
+        Path(command[-1]).write_bytes(b"prepared")
+
+    with pytest.raises(MediaProcessingError, match="already exists"):
+        prepare_telegram_video(source, runner, allow_silent=True)
+    assert destination.read_bytes() == b"other operation"
+    assert source.read_bytes() == b"original"
+    assert set(tmp_path.iterdir()) == {source, destination}
+
+
+@pytest.mark.parametrize("collision", ["file", "symlink"])
+def test_collision_at_atomic_publication_does_not_remove_destination(
+    tmp_path, monkeypatch, collision
+):
+    source = tmp_path / "video.mkv"
+    source.write_bytes(b"original")
+    destination = tmp_path / "video.telegram-compatible.mp4"
+    unrelated = tmp_path / "unrelated.mp4"
+    unrelated.write_bytes(b"other operation")
+    real_link = os.link
+    publication_calls = []
+
+    def collide(staged, final, **kwargs):
+        publication_calls.append((staged, final))
+        assert Path(staged).parent != tmp_path and Path(final) == destination
+        if collision == "file":
+            destination.write_bytes(b"other operation")
+        else:
+            destination.symlink_to(unrelated)
+        return real_link(staged, final, **kwargs)
+
+    def runner(command, **kwargs):
+        if command[0] == "ffprobe":
+            return _probe(audio=None)
+        Path(command[-1]).write_bytes(b"prepared")
+
+    monkeypatch.setattr(os, "link", collide)
+    with pytest.raises(MediaProcessingError, match="already exists"):
+        prepare_telegram_video(source, runner, allow_silent=True)
+    assert len(publication_calls) == 1
+    assert destination.is_symlink() == (collision == "symlink")
+    assert destination.read_bytes() == unrelated.read_bytes() == b"other operation"
+    assert set(tmp_path.iterdir()) == {source, destination, unrelated}
+
+
+@pytest.mark.parametrize("audio", [None, "aac"])
+def test_concurrent_preparations_publish_exactly_one_complete_derivative(tmp_path, audio):
+    source = tmp_path / "video.mkv"
+    source.write_bytes(b"original")
+    destination = tmp_path / "video.telegram-compatible.mp4"
+    validated = Barrier(2, timeout=5)
+
+    def prepare():
+        staged_paths = []
+        payload = current_thread().name.encode()
+
+        def runner(command, **kwargs):
+            if command[0] == "ffprobe":
+                if Path(command[-1]) != source:
+                    validated.wait()
+                return _probe(audio=audio)
+            staged_paths.append(Path(command[-1]))
+            Path(command[-1]).write_bytes(payload)
+
+        try:
+            result = prepare_telegram_video(source, runner, allow_silent=True)
+            return "success", result, payload, staged_paths
+        except MediaProcessingError as error:
+            assert "already exists" in str(error)
+            return "collision", None, payload, staged_paths
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: prepare(), range(2)))
+    assert sorted(x[0] for x in results) == ["collision", "success"]
+    winner = next(x for x in results if x[0] == "success")
+    assert winner[1] == destination and destination.read_bytes() == winner[2]
+    stages = [x[3][0].parent for x in results]
+    assert len(set(stages)) == 2 and all(not stage.exists() for stage in stages)
+    assert source.read_bytes() == b"original"
+    assert set(tmp_path.iterdir()) == {source, destination}
+
+
+def test_failed_publication_cleans_only_private_staging(tmp_path, monkeypatch):
+    source = tmp_path / "video.mkv"
+    source.write_bytes(b"original")
+    unrelated = tmp_path / "unrelated"
+    unrelated.write_bytes(b"keep")
+
+    def failed_link(staged, final, **kwargs):
+        assert Path(staged).parent != tmp_path
+        raise OSError("private filesystem error")
+
+    def runner(command, **kwargs):
+        if command[0] == "ffprobe":
+            return _probe(audio=None)
+        Path(command[-1]).write_bytes(b"prepared")
+
+    monkeypatch.setattr(os, "link", failed_link)
+    with pytest.raises(MediaProcessingError, match="Unable to prepare") as error:
+        prepare_telegram_video(source, runner, allow_silent=True)
+    assert "private filesystem error" not in str(error.value)
+    assert set(tmp_path.iterdir()) == {source, unrelated}
+    assert unrelated.read_bytes() == b"keep"
