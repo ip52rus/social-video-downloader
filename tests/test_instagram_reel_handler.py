@@ -323,6 +323,8 @@ async def test_actual_local_silent_and_audio_passthrough(message, monkeypatch, t
 async def test_actual_conversion_uses_existing_helper_and_preserves_silence(
     message, monkeypatch, tmp_path
 ):
+    if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
+        pytest.skip("Local FFmpeg/ffprobe unavailable")
     source = tmp_path / "source.mp4"
     generate(source, video="mpeg4")
     handler, _, _ = runtime(monkeypatch, source=source)
