@@ -421,13 +421,30 @@ security/scope checks PASS; no live requests. Details are recorded in TESTING.md
 - [x] Prepare/probe every selected video with optional audio before any send; preserve sources and bound generated output/time/workspace use.
 - [x] Implement deterministic sequential batching and safe confirmed/uncertain partial progress without send retries.
 - [x] Add network-forbidden transport and actual local preparation/resource/cleanup regression coverage.
-- [ ] Independently review the inactive transport before wiring it into live routing.
+- [x] Independently review and merge the inactive transport (PR #52; user-confirmed review PASS).
 - [ ] Validate real Telegram albums/playback under separate authorization; existing real evidence is acquisition of three videos only.
 
 Offline transport verification: 80 new passing cases (66 transport/process, 14 real local
 preparation); full suite 1202 passed, 1 skipped. Ruff lint/format, diff, documentation and
 security/scope checks PASS. Current handlers, acquisition, models, dependencies and Compose
 are unchanged. No live external-platform or Telegram calls.
+
+### Reel-only Telegram MVP (offline)
+
+- [x] Connect public Reels to the existing provider, optional-audio preparation and sendVideo behind an explicit disabled-by-default flag.
+- [x] Reject raw item-reference/ambiguous URLs and `/p/` before extraction; retain default YouTube behavior.
+- [x] Add scoped media-byte/preparation limits and one active Reel per handler instance; keep admission/workspace until a cancelled worker actually exits.
+- [x] Verify the narrow integration offline, including local silent/audio passthrough and video-only conversion.
+- [ ] Independently review the Reel MVP before separately authorized isolated live testing.
+- [ ] Validate real Reel upload and Telegram client playback; previous real evidence is provider acquisition/preparation only.
+- [ ] Integrate single-video `/p/` and carousels separately.
+
+Production activation is forbidden. Cooperative network deadlines do not force-stop a
+thread or bound DNS; no restart-proof deduplication, global quotas or production capacity
+is claimed. See the concise MVP scope/limits in PHASE5_INSTAGRAM_REELS.md.
+
+Reel MVP verification: 32 new cases; focused 142 passed; full 1234 passed, 1 skipped.
+Ruff lint/format, diff, documentation and security/scope review PASS; no live requests.
 
 ## Phase 6 - TikTok Provider
 - [ ] Run a technical spike.

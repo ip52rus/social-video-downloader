@@ -162,8 +162,11 @@ PR #51 merged explicit optional-audio preparation and atomic derivative ownershi
 existing callers keep the audio-required default. A separate reusable carousel
 transport now has offline coverage for preparation-before-upload, ordered batches,
 bounded resources and safe partial progress. No handlers/default routing were enabled.
-Next: independent transport review, separately approved routing integration, then
-authorized real Telegram upload/playback validation.
+PR #52 transport was independently reviewed and merged. A narrow Reel-only Telegram
+integration is now implemented offline behind `INSTAGRAM_TELEGRAM_ENABLED=false`;
+production activation is forbidden. `/p/` and carousel wiring remain pending. Next:
+independent Reel integration review and separately authorized isolated Reel-to-Telegram
+upload/playback validation; no deployment or live validation was performed here.
 Larger-carousel acquisition, broad reliability and real Telegram playback remain
 NOT VERIFIED. Item-specific semantics remain
 blocked pending separate validation; the installed extractor ignores `img_index`.

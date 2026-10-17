@@ -354,3 +354,43 @@ preparation is merged. The only real carousel acquisition remains the three-vide
 1,961,198-byte case above; no new Instagram or Telegram calls occurred. Live albums,
 client playback, larger-carousel reliability and broad availability remain NOT VERIFIED.
 Independent review and separately authorized routing/client validation remain required.
+
+## Reel-only Telegram MVP (offline)
+
+A narrow `InstagramReelHandler` connects only public `/reel/<id>/` URLs to the existing
+InstagramProvider, DownloadedMedia, `prepare_telegram_video(..., allow_silent=True)`,
+ffprobe upload metadata and aiogram sendVideo. No menus, carousel-shaped single results
+or default-provider registration are introduced. Query intent is checked before stripping:
+only the existing tracking allowlist is accepted; item references, unknown queries and
+fragments fail before extraction. `/p/` and carousel integration remain pending.
+
+`INSTAGRAM_TELEGRAM_ENABLED` defaults to false and accepts only true/false. Settings
+reject enabled+production; only explicitly approved isolated development/test use is
+allowed. Dispatcher-local injection owns one Reel handler/admission slot; fresh routers
+avoid cross-dispatcher attachment. Existing YouTube callbacks/options are unchanged.
+No live environment, Compose or dependencies were changed.
+
+MVP guards: 25 MiB received media and final upload file, 20 s yt-dlp socket timeout,
+180 s cooperative acquisition/preparation deadline, 120 s per send. The normal provider
+still selects one direct MP4 and performs extraction once; no acquisition retry/fallback
+is added. A scoped response reader caps media-body reads independently of Content-Length,
+with yt-dlp max_filesize/progress checks as backstops. This is not a cap on HTTP/TLS
+wire bytes or upstream buffering/metadata memory. Exact-cap unknown-length responses may
+fail closed. Preparation uses existing runner injection with subprocess timeout and a
+POSIX RLIMIT_FSIZE for FFmpeg outputs; exhaustion fails, never returns a deliberately
+truncated conversion or attempts a fallback. No new process-management framework exists.
+
+Cancellation signals the worker and waits for it to really finish before releasing the
+slot or deleting its workspace. It does not terminate a network thread; DNS/native stalls
+can exceed the cooperative deadline. There is no hard whole-request watchdog, global
+quota, restart-proof deduplication or concurrent YouTube/Local Bot API storage budget.
+An initial free-space check requires three file caps of headroom; it does not reserve
+space against other processes. Per-file caps are not a physical disk quota. A send
+error/timeout/unconfirmed response is never retried automatically.
+
+The existing real Reel evidence remains one H.264/AAC provider smoke, not validation of
+this integration. New tests use synthetic acquisition, generated local media and mock
+Telegram sends. Actual Reel-to-Telegram upload/client playback remains NOT VERIFIED.
+Before a separately authorized live experiment: independent review, approved Reel/test
+bot, disposable runtime and independent outer watchdog to cover the thread limitation.
+Production activation remains forbidden.

@@ -7,7 +7,7 @@ from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
 
 from social_video_downloader.config import Settings
-from social_video_downloader.handlers import router
+from social_video_downloader.handlers import create_router
 from social_video_downloader.logging_config import configure_logging
 
 
@@ -24,17 +24,23 @@ def create_bot(settings: Settings) -> Bot:
     return Bot(token=settings.telegram_bot_token, session=session)
 
 
-def create_dispatcher() -> Dispatcher:
+def create_dispatcher(settings: Settings | None = None, *, instagram_reels=None) -> Dispatcher:
     """Create the root dispatcher and register Telegram handlers."""
     dispatcher = Dispatcher()
-    dispatcher.include_router(router)
+    if settings is not None and settings.instagram_telegram_enabled:
+        from social_video_downloader.telegram_instagram import InstagramReelHandler
+
+        dispatcher["instagram_reels"] = (
+            instagram_reels if instagram_reels is not None else InstagramReelHandler()
+        )
+    dispatcher.include_router(create_router())
     return dispatcher
 
 
 async def run_bot(settings: Settings) -> None:
     """Start polling and close the bot session when polling stops."""
     bot = create_bot(settings)
-    dispatcher = create_dispatcher()
+    dispatcher = create_dispatcher(settings)
     try:
         await dispatcher.start_polling(bot)
     finally:

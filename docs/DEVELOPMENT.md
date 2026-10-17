@@ -43,3 +43,11 @@ Use Conventional Commit prefixes. One coherent change per commit.
 
 ## Synchronization
 After each commit, verify the commit SHA and branch state. After each push, verify the remote branch and CI. Do not overwrite unrelated local work while synchronizing.
+
+## Isolated Instagram Reel MVP
+
+`INSTAGRAM_TELEGRAM_ENABLED=false` is the default. Only explicit `true` enables the
+Reel-only handler in development/test; enabled+production is rejected. Do not set this
+on the running deployment. `/p/` and carousels are not routed. Unit/integration tests
+inject a dispatcher-local handler and forbid network calls; real upload/playback requires
+separate authorization and a test bot. See PHASE5_INSTAGRAM_REELS.md for guard limitations.

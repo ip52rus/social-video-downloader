@@ -56,7 +56,6 @@ from social_video_downloader.telegram_interactions import (
 )
 
 logger = logging.getLogger(__name__)
-router = Router(name="telegram-handlers")
 download_service = DownloadService()
 pending_interaction_store = InMemoryPendingInteractionStore()
 
@@ -114,14 +113,18 @@ async def _notify_download_error(message: Message, error: DownloaderError) -> No
         )
 
 
-@router.message(CommandStart())
-async def handle_start(message: Message) -> None:
+async def handle_start(message: Message, instagram_reels=None) -> None:
     """Explain current capabilities and how to submit a link."""
-    await message.answer(_START_MESSAGE)
+    if instagram_reels is None:
+        await message.answer(_START_MESSAGE)
+    else:
+        await message.answer(
+            "Отправь ссылку на YouTube или публичный Instagram Reel. "
+            "Instagram /p/ и карусели пока не подключены."
+        )
 
 
-@router.message(F.text)
-async def handle_text(message: Message) -> None:
+async def handle_text(message: Message, instagram_reels=None) -> None:
     """Validate a submitted URL, download YouTube media, and deliver the file."""
     submitted_text = (message.text or "").strip()
 
@@ -148,6 +151,9 @@ async def handle_text(message: Message) -> None:
         return
 
     platform_label = _PLATFORM_LABELS[platform]
+    if platform is Platform.INSTAGRAM and instagram_reels is not None:
+        await instagram_reels.handle(message, submitted_text)
+        return
     if platform is not Platform.YOUTUBE:
         await message.answer(
             f"Ссылка {platform_label} распознана, но скачивание "
@@ -185,7 +191,6 @@ async def handle_text(message: Message) -> None:
     await message.answer(_BLOCKED_CHOICE_MESSAGE)
 
 
-@router.callback_query(F.data)
 async def handle_choice_callback(callback: CallbackQuery) -> None:
     """Resolve mode and quality callbacks against stored pending interaction state."""
     parse_result = parse_callback_data(callback.data or "")
@@ -508,3 +513,12 @@ def _callback_status_message(status: PendingInteractionStatus) -> str:
     if status is PendingInteractionStatus.CONSUMED:
         return "Запрос уже обрабатывается."
     return _STALE_CALLBACK_MESSAGE
+
+
+def create_router() -> Router:
+    """Fresh registration state for each dispatcher; callback behavior is unchanged."""
+    router = Router(name="telegram-handlers")
+    router.message.register(handle_start, CommandStart())
+    router.message.register(handle_text, F.text)
+    router.callback_query.register(handle_choice_callback, F.data)
+    return router
