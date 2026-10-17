@@ -26,7 +26,7 @@ Use Python 3.13 and uv. Install dependencies with uv sync, set TELEGRAM_BOT_TOKE
 The bot responds to /start. Send a public YouTube video URL, choose Video or Audio when
 offered, and select an available video quality if needed. Video uses Telegram-compatible
 MP4 preparation; audio is delivered as verified M4A/AAC with reliable duration when
-available. Instagram and TikTok are recognition-only by default. A Reel-only isolated-test opt-in
+available. Instagram and TikTok are recognition-only by default. A disabled-by-default Reel-only opt-in
 is documented in [Phase 5](docs/PHASE5_INSTAGRAM_REELS.md#reel-only-telegram-mvp-offline).
 Optional settings are
 APP_ENV (development, test, or production), LOG_LEVEL (DEBUG, INFO, WARNING, ERROR, or

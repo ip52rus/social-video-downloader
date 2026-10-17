@@ -435,13 +435,24 @@ are unchanged. No live external-platform or Telegram calls.
 - [x] Reject raw item-reference/ambiguous URLs and `/p/` before extraction; retain default YouTube behavior.
 - [x] Add scoped media-byte/preparation limits and one active Reel per handler instance; keep admission/workspace until a cancelled worker actually exits.
 - [x] Verify the narrow integration offline, including local silent/audio passthrough and video-only conversion.
-- [ ] Independently review the Reel MVP before separately authorized isolated live testing.
+- [ ] Independently review the Reel MVP before the controlled main-bot smoke.
 - [ ] Validate real Reel upload and Telegram client playback; previous real evidence is provider acquisition/preparation only.
 - [ ] Integrate single-video `/p/` and carousels separately.
 
-Production activation is forbidden. Cooperative network deadlines do not force-stop a
-thread or bound DNS; no restart-proof deduplication, global quotas or production capacity
-is claimed. See the concise MVP scope/limits in PHASE5_INSTAGRAM_REELS.md.
+The user chose one controlled smoke with the existing main bot and accepted a short
+planned bot-only restart after PR review/merge. General production rollout is not approved.
+Cooperative network deadlines do not force-stop a thread or bound DNS; no restart-proof
+deduplication, global quotas or production capacity is claimed.
+
+- [x] Prepare disabled-by-default bot-only Compose flag forwarding; preserve APP_ENV=development, Local Bot API and the Settings production-mode guard.
+  Verification: Compose absent/true resolution and unchanged remaining config PASS; offline pytest 1234 passed, 1 skipped; Ruff/diff/security PASS.
+- [ ] Review/merge the configuration PR before changing the protected server environment.
+- [ ] Deploy only bot with --no-deps after confirming no active download; verify existing polling/YouTube behavior.
+- [ ] Execute one approved Reel smoke and verify actual client playback; the 25 MiB limit remains.
+- [ ] Restore false and recreate only bot if rollback is needed.
+
+No environment change, restart, new poller or live smoke is part of configuration preparation.
+See DEVELOPMENT.md for the planned procedure.
 
 Reel MVP verification: 32 new cases; focused 142 passed; full 1234 passed, 1 skipped.
 Ruff lint/format, diff, documentation and security/scope review PASS; no live requests.

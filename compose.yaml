@@ -20,6 +20,7 @@ services:
     environment:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?Set TELEGRAM_BOT_TOKEN in .env}
       APP_ENV: development
+      INSTAGRAM_TELEGRAM_ENABLED: ${INSTAGRAM_TELEGRAM_ENABLED:-false}
       LOG_LEVEL: INFO
       TELEGRAM_API_BASE_URL: http://telegram-bot-api:8081
       TELEGRAM_API_TIMEOUT_SECONDS: "1800"

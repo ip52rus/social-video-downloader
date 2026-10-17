@@ -365,10 +365,11 @@ only the existing tracking allowlist is accepted; item references, unknown queri
 fragments fail before extraction. `/p/` and carousel integration remain pending.
 
 `INSTAGRAM_TELEGRAM_ENABLED` defaults to false and accepts only true/false. Settings
-reject enabled+production; only explicitly approved isolated development/test use is
-allowed. Dispatcher-local injection owns one Reel handler/admission slot; fresh routers
+reject enabled+production. The planned controlled smoke uses the existing main bot;
+current Compose explicitly sets `APP_ENV=development`, which is preserved. Dispatcher-local
+injection owns one Reel handler/admission slot; fresh routers
 avoid cross-dispatcher attachment. Existing YouTube callbacks/options are unchanged.
-No live environment, Compose or dependencies were changed.
+No live environment or dependencies were changed by the offline integration stage.
 
 MVP guards: 25 MiB received media and final upload file, 20 s yt-dlp socket timeout,
 180 s cooperative acquisition/preparation deadline, 120 s per send. The normal provider
@@ -391,6 +392,11 @@ error/timeout/unconfirmed response is never retried automatically.
 The existing real Reel evidence remains one H.264/AAC provider smoke, not validation of
 this integration. New tests use synthetic acquisition, generated local media and mock
 Telegram sends. Actual Reel-to-Telegram upload/client playback remains NOT VERIFIED.
-Before a separately authorized live experiment: independent review, approved Reel/test
-bot, disposable runtime and independent outer watchdog to cover the thread limitation.
-Production activation remains forbidden.
+The user subsequently chose one controlled smoke with the existing main bot and accepted
+a short planned bot-only restart. The Compose mapping defaults to false and forwards the
+flag only to bot; current `APP_ENV=development`, Local Bot API and the Settings
+production-mode guard remain unchanged. No new bot, standalone runtime, alternate poller
+or watchdog framework is introduced. This prepares configuration only: do not enable,
+rebuild/restart or test until PR review/merge and the deployment procedure in DEVELOPMENT.md.
+The existing 25 MiB limit and cooperative-deadline limitations remain. Real Reel delivery
+and Telegram playback are NOT VERIFIED; this is not a general production rollout.

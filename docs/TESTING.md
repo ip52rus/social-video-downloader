@@ -907,3 +907,21 @@ live matrix disabled). Full pytest ran with socket connections forbidden. Ruff l
 format, diff, local documentation links and security/scope checks PASS. Existing YouTube
 delivery/callback function bodies, provider registry, acquisition/preparation APIs,
 dependencies and Compose are unchanged.
+
+## Main-bot Compose smoke preparation
+
+PR #53 is merged; the next planned Reel smoke uses the existing main bot with an accepted
+short bot-only restart after review/merge of the Compose flag PR. It does not use another
+bot, standalone container or poller. The real upload/playback gate remains OPEN.
+
+Validate Compose using an empty env file and synthetic credential placeholders, retaining
+resolved JSON only in process memory. Check absent flag -> false, explicit true -> true,
+only bot receives it, and all other settings/services equal the base configuration.
+Current APP_ENV=development, Local Bot API, Settings production guard and 25 MiB Reel
+limit are preserved. Do not print resolved real credentials or run up/build/restart.
+This configuration check is not live Telegram or Instagram evidence.
+
+Verification: Compose false/true resolution and full base-config comparison PASS using
+synthetic placeholders with real `.env` excluded. Existing offline suite: 1234 passed,
+1 skipped; Ruff lint/format, diff, documentation and security/scope checks PASS. No live
+requests, environment changes or container lifecycle operations were performed.
