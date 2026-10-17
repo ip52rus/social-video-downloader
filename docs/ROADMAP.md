@@ -164,9 +164,12 @@ transport now has offline coverage for preparation-before-upload, ordered batche
 bounded resources and safe partial progress. No handlers/default routing were enabled.
 PR #52 transport was independently reviewed and merged. A narrow Reel-only Telegram
 integration is now implemented offline behind `INSTAGRAM_TELEGRAM_ENABLED=false`;
-production activation is forbidden. `/p/` and carousel wiring remain pending. Next:
-independent Reel integration review and separately authorized isolated Reel-to-Telegram
-upload/playback validation; no deployment or live validation was performed here.
+PR #53 is merged. `/p/` and carousel wiring remain pending. The next planned smoke
+uses the existing main bot, with a short bot-only restart accepted by the user. A new
+Compose mapping defaults the flag to false; current APP_ENV=development and the Settings
+production guard remain. Next: review/merge the configuration PR, then separately perform
+the controlled main-bot deployment and one Reel upload/playback check. No enablement,
+restart or live validation is performed during preparation.
 Larger-carousel acquisition, broad reliability and real Telegram playback remain
 NOT VERIFIED. Item-specific semantics remain
 blocked pending separate validation; the installed extractor ignores `img_index`.

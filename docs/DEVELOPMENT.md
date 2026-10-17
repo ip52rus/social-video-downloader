@@ -44,10 +44,30 @@ Use Conventional Commit prefixes. One coherent change per commit.
 ## Synchronization
 After each commit, verify the commit SHA and branch state. After each push, verify the remote branch and CI. Do not overwrite unrelated local work while synchronizing.
 
-## Isolated Instagram Reel MVP
+## Controlled main-bot Reel smoke (planned only)
 
-`INSTAGRAM_TELEGRAM_ENABLED=false` is the default. Only explicit `true` enables the
-Reel-only handler in development/test; enabled+production is rejected. Do not set this
-on the running deployment. `/p/` and carousels are not routed. Unit/integration tests
-inject a dispatcher-local handler and forbid network calls; real upload/playback requires
-separate authorization and a test bot. See PHASE5_INSTAGRAM_REELS.md for guard limitations.
+PR #53 is merged. The user chose the existing main Telegram bot for one approved public
+Reel smoke and accepted a short planned bot-container restart. No separate bot,
+standalone container, watchdog framework or alternate poller is part of this plan.
+
+Compose forwards `INSTAGRAM_TELEGRAM_ENABLED: ${INSTAGRAM_TELEGRAM_ENABLED:-false}`
+only to bot. An absent flag stays false. Compose already sets `APP_ENV=development`;
+the existing Settings enabled+production guard is retained. Local Bot API routing,
+credentials, dependencies and volumes stay unchanged. Do not edit a real `.env` as
+part of this PR or run deployment commands during configuration preparation.
+
+After independent PR review/merge, the separately performed deployment procedure is:
+
+1. Confirm no active user download; plan the short main-bot interruption.
+2. Update server source to reviewed main.
+3. Set `INSTAGRAM_TELEGRAM_ENABLED=true` in the existing protected server environment.
+4. Rebuild/recreate only bot using `docker compose up -d --build --no-deps bot`.
+5. Confirm normal polling and YouTube behavior before the Reel smoke.
+6. Submit exactly one explicitly approved public Reel to the existing main bot.
+7. Inspect errors, file size and actual Telegram client playback; do not retry an ambiguous send.
+8. If rollback is needed, restore the flag to false and recreate only bot with `--no-deps`.
+
+Do not restart/recreate telegram-bot-api or modify its volume. The 25 MiB Reel limit
+and cooperative thread-cancellation limitation remain; no hard whole-request watchdog
+or production-reliability guarantee is introduced. `/p/` and carousel routing stay pending.
+Actual Reel-to-Telegram delivery/playback is NOT VERIFIED. See PHASE5_INSTAGRAM_REELS.md.

@@ -22,7 +22,7 @@ Environment-based settings are validated before starting the application. The Te
 
 ## Telegram layer
 
-The aiogram router owns commands and text intake, user-facing validation responses, and result delivery. It does not contain provider-specific download logic. Membership/access control is deferred to a future monetization or business-model layer and is not part of the current implementation. The /start response describes current platform support. Text messages are validated against supported platform domains. By default, YouTube URLs are passed to the application service; Instagram and TikTok URLs receive an explicit not-connected response. The isolated Reel-only opt-in described below delegates only Instagram Reels to its own handler; `/p/` stays unsupported.
+The aiogram router owns commands and text intake, user-facing validation responses, and result delivery. It does not contain provider-specific download logic. Membership/access control is deferred to a future monetization or business-model layer and is not part of the current implementation. The /start response describes current platform support. Text messages are validated against supported platform domains. By default, YouTube URLs are passed to the application service; Instagram and TikTok URLs receive an explicit not-connected response. The controlled Reel-only opt-in described below delegates only Instagram Reels to its own handler; `/p/` stays unsupported.
 
 The implemented option UX is capability-driven. Telegram shows only meaningful choices for
 the current platform/content and keeps a consistent visual language without forcing every
@@ -86,7 +86,12 @@ temporary files until the worker really exits, including after cancellation. Sco
 yt-dlp invocation controls bound received media bytes; cooperative deadline checks and
 socket timeouts are not a hard thread-termination guarantee. Preparation uses the
 existing runner injection with subprocess timeouts and a POSIX per-file write backstop.
-This is an isolated-test MVP, not permission for production activation.
+Compose passes `INSTAGRAM_TELEGRAM_ENABLED` only to bot with an absent-value default
+of false. Its existing `APP_ENV=development` and Local Bot API endpoint are unchanged;
+the Settings guard against enabled+production remains. The user approved planning one
+main-bot Reel smoke with a short bot-only restart after PR review/merge. No restart,
+enablement or live validation is performed by this configuration change; general
+production rollout remains outside scope.
 
 ### Optional-audio preparation design
 
