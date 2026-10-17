@@ -158,9 +158,12 @@ resource limits remain. PR #50 was independently reviewed and merged. A separate
 authorized production smoke then passed on one three-video carousel: 3/3 silent
 H.264 MP4 files, 720x960, 1,961,198 bytes total, exact order, ffprobe PASS, no conversion
 or Telegram calls. Only that small real-acquisition gate is closed.
-Optional-audio preparation now has offline coverage behind `allow_silent=True`;
-existing callers keep the audio-required default. Next: independent review, then
-separate Instagram routing/ordered group delivery and authorized client validation.
+PR #51 merged explicit optional-audio preparation and atomic derivative ownership;
+existing callers keep the audio-required default. A separate reusable carousel
+transport now has offline coverage for preparation-before-upload, ordered batches,
+bounded resources and safe partial progress. No handlers/default routing were enabled.
+Next: independent transport review, separately approved routing integration, then
+authorized real Telegram upload/playback validation.
 Larger-carousel acquisition, broad reliability and real Telegram playback remain
 NOT VERIFIED. Item-specific semantics remain
 blocked pending separate validation; the installed extractor ignores `img_index`.

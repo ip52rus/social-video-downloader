@@ -335,7 +335,7 @@ Analytics requirements for this phase:
 - [x] Independently review and merge bounded acquisition (PR #49).
 - [x] Validate one separately authorized bounded three-video silent carousel acquisition: 3/3 files, original order, MP4/H.264 720x960, 1,961,198 bytes total, ffprobe PASS; no conversion or Telegram calls. Larger collections remain unverified.
 - [x] Implement explicit optional-audio Telegram preparation with default audio-required behavior: silent passthrough/remux/transcode, output validation, cleanup and upload metadata verified on local generated media; no artificial audio. Future Instagram callers must opt in.
-- [ ] Implement ordered Telegram video groups separately: 2–10 per group, more than 10 split sequentially, a final single video sent individually.
+- [x] Implement reusable offline Telegram carousel transport: prepare all videos first; 2–10 per group, more than 10 split sequentially, a single remainder sent individually; no routing activation.
 - [ ] Validate real Telegram delivery/playback after separately authorized deployment changes.
 - [ ] Assess broader extraction stability and recovery; production reliability remains open.
 
@@ -344,7 +344,7 @@ GO; full Gates 1–3B evidence was unavailable here. Gate 3C demonstrates metada
 five-element `/p/` playlist, which remains excluded from single-file download.
 Those early gates acquired no carousel media; the later three-video smoke is recorded below.
 PR 1 tests do not substitute for real Instagram or Telegram validation. Meaningful
-Instagram quality choices, DASH/HLS assembly, Telegram routing/albums, Stories, private
+Instagram quality choices, DASH/HLS assembly, live Telegram routing, Stories, private
 content and authentication remain outside the implemented scope. Single-video `/p/`
 support is implemented offline; carousel inspection is implemented separately, while
 bounded acquisition has deterministic coverage and one real three-video PASS; larger
@@ -400,9 +400,9 @@ Local generated fixtures verify silent passthrough, stream-copy remux, H.264 con
 optional audio preservation, output/container/stream checks, rotation/upload metadata and
 partial-file cleanup. No synthetic audio, routing changes or external calls in this stage.
 
-- [ ] Independently review optional-audio preparation before wiring future callers.
+- [x] Independently review and merge optional-audio preparation and P2 collision fix (PR #51).
 
-Real Telegram delivery/playback and ordered groups remain the open tasks above.
+Live Telegram delivery/playback and routing of ordered groups remain the open tasks above.
 Verification: focused suite 98 passed; full suite 1112 passed, 1 skipped; net +80 cases.
 Real local FFmpeg/ffprobe fixtures passed, including silent remux/transcode and rotation.
 Ruff lint/format, diff, documentation and security/scope checks PASS; no live requests.
@@ -414,6 +414,20 @@ specific deterministic regression coverage; API, routing and optional-audio poli
 unchanged. Correction verification: focused 108 passed; full 1122 passed, 1 skipped;
 net +10 cases, real local FFmpeg/ffprobe still passing. Ruff lint/format, diff and
 security/scope checks PASS; no live requests. Details are recorded in TESTING.md.
+
+### Offline carousel Telegram transport
+
+- [x] Implement explicit reusable transport consuming acquired collection plus expected plan/workspace; no downloader or handler changes.
+- [x] Prepare/probe every selected video with optional audio before any send; preserve sources and bound generated output/time/workspace use.
+- [x] Implement deterministic sequential batching and safe confirmed/uncertain partial progress without send retries.
+- [x] Add network-forbidden transport and actual local preparation/resource/cleanup regression coverage.
+- [ ] Independently review the inactive transport before wiring it into live routing.
+- [ ] Validate real Telegram albums/playback under separate authorization; existing real evidence is acquisition of three videos only.
+
+Offline transport verification: 80 new passing cases (66 transport/process, 14 real local
+preparation); full suite 1202 passed, 1 skipped. Ruff lint/format, diff, documentation and
+security/scope checks PASS. Current handlers, acquisition, models, dependencies and Compose
+are unchanged. No live external-platform or Telegram calls.
 
 ## Phase 6 - TikTok Provider
 - [ ] Run a technical spike.

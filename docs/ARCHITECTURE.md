@@ -122,6 +122,18 @@ functionally ACCEPTED as of 2026-10-15; see
 This changes validation status only. Live fault recovery, broader format/client coverage,
 and Phase 9 production reliability remain open; obsolete choice-prompt cleanup is Phase 8.
 
+### Offline carousel delivery design
+
+Offline carousel delivery design: a separate Telegram infrastructure component consumes
+`DownloadedCarousel` plus the original READY selection plan and an approved request
+workspace. The plan supplies expected identities/positions absent from the acquired
+result; comparison checks completeness without extraction or reselection. Preparation
+runs in a killable POSIX process with private same-filesystem hard-link aliases, existing
+optional-audio preparation and bounded FFmpeg output. Only a fully validated prepared
+collection crosses the upload barrier. Injected Telegram sends are sequential and
+nontransactional; uncertain responses stop subsequent batches without retries. No live
+routing/handler or downloader contract changes are required.
+
 ## Application layer
 
 DownloadService normalizes the URL, detects its platform, selects a registered MediaProvider, and returns the provider's transport-neutral DownloadedMedia result. The default registry contains the YouTube provider. The experimental `InstagramProvider` can be explicitly injected for development/testing; default registration and Telegram activation are deferred to a separate integration stage. A recognized platform without a registered provider raises a domain-level UnsupportedPlatformError. The service does not depend on Telegram.
@@ -283,7 +295,8 @@ The approved carousel scope is VIDEO ONLY: never acquire or deliver photos. Even
 video delivery preserves original order, splits more than 10 videos into sequential
 Telegram groups and sends a single remainder as one video. A selected video must never
 be silently omitted. Bounded carousel acquisition is a separate explicit operation;
-media-group delivery remains unimplemented and the single-file contract stays intact.
+an explicit offline-tested media-group component is described below. Live routing
+remains disabled and the single-file contract stays intact.
 See [the accepted plan and evidence boundary](PHASE5_INSTAGRAM_REELS.md).
 
 ### Carousel inspection design decision
@@ -418,5 +431,54 @@ required; failure is safe, with no overwrite/copy fallback. Only staging paths a
 the destination is never unlinked by preparation. A successful link transfers the final
 file to the caller, whose request workspace owns its lifetime. Upload metadata remains
 video-derived. Callers own successful derivatives inside their request workspace.
-Future Instagram callers must explicitly opt in; handlers/routing and albums are unchanged.
+PR #51, including the P2 ownership correction, was independently reviewed and merged.
+Future Instagram callers must explicitly opt in; existing handlers/routing are unchanged.
+The separate carousel transport below opts in without activating live delivery.
 Local generated fixtures verify preparation, not real Telegram delivery or playback.
+
+
+### Explicit offline carousel Telegram transport
+
+`TelegramCarouselDelivery(sender, limits=None).deliver(collection, *, plan, workspace,
+chat_id)` consumes acquired videos and the original READY whole-publication plan. It
+compares all selected positions/IDs and requires complete, unique ordered inputs; PHOTO
+entries are never given to preparation. No extractor, acquisition or sender is constructed.
+The injected sender implements the installed aiogram `send_video`/`send_media_group` API.
+
+The preparation barrier validates regular nonempty source files inside the caller-owned
+approved local workspace (no symlink traversal or duplicate file identities). A private
+workspace contains hard-link aliases; originals are never transformed or deleted. One
+short-lived POSIX process runs existing `prepare_telegram_video(..., allow_silent=True)`
+and real local ffprobe. All outputs require MP4/H.264, optional AAC and positive video
+dimensions. Video-derived upload parameters and actual `InputMediaVideo`/`FSInputFile`
+objects for the whole collection exist before the first send. H.264 MP4 passthrough
+preserves bytes; incompatible containers/codecs use the existing helper and settings.
+
+Configurable per-operation defaults: 25 videos, 50,000,000 bytes per upload file,
+200 MiB aggregate upload, 1 GiB logical workspace bytes, 2048 workspace entries,
+180 seconds preparation and 120 seconds per Telegram send. The workspace count includes
+all caller originals, unrelated regular files, aliases, derivatives and FFmpeg staging;
+hard links count once per inode. Sequential FFmpeg output inherits a POSIX per-file limit
+bounded by the remaining upload/workspace budgets; cap exhaustion fails, never silently
+returns a shortened movie. An independent async deadline kills/reaps the preparation
+process group before cleanup, including on repeated cancellation. This requires local
+same-filesystem hard links and exclusive caller ownership for the operation's lifetime.
+These are adjustable initial limits, not product-wide acquisition limits, physical disk
+quotas, global memory/concurrency enforcement or validated production capacity.
+
+Batch sizes follow ordered slices of 10: singleton uses sendVideo, 2–10 use sendMediaGroup;
+11 -> 10+1, 12 -> 10+2, 20 -> 10+10, 21 -> 10+10+1, 25 -> 10+10+5. Streaming support and
+probed dimensions/duration are supplied; captions are omitted. Calls are strictly awaited.
+Responses require the expected number of video Messages, unique message IDs, matching
+numeric chat targets and coherent distinct album IDs. Any send error, timeout or malformed
+response stops subsequent batches without retry. Confirmed positions remain confirmed;
+the current batch is uncertain. `CarouselDeliveryError.progress` and cancellation progress
+expose positions/counts only; final user communication/recovery belongs to the caller.
+Telegram batches are not transactional: earlier confirmed sends are not rolled back, and
+callers must not blindly replay the collection after an ambiguous result.
+
+Private aliases, derivatives and staging are removed after success/failure/cancellation;
+caller originals and unrelated existing files remain. The caller eventually removes its
+acquired outputs. Live handlers/YouTube/default registration remain unchanged. Only the
+prior real three-video acquisition is verified externally; real album upload/playback,
+larger carousels and broad Instagram reliability remain NOT VERIFIED.

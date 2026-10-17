@@ -119,13 +119,14 @@ video blocks the operation. Preserve the original ordering of videos. One video 
 Telegram message; 2–10 use a group; larger selections use sequential groups with a single
 remainder sent individually. Never silently omit a selected video.
 Multi-file acquisition uses the separate bounded operation described below, not the
-single-file provider contract. Telegram delivery remains a separate future integration. Photos and all collections still fail safely through its
-single-file download path; metadata-only carousel inspection is described below.
+single-file provider contract. Live routing remains a separate future integration;
+the offline transport is described below. Photos and all collections still fail safely
+through the single-file download path.
 
 Stories, private-content access, authentication and additional formats require separate
 scope decisions. Silent-video acquisition is included; optional-audio preparation is
-implemented offline with explicit opt-in. Routing, albums and real-client validation
-remain separate unfinished work. Phase 5 and production reliability remain open.
+implemented offline with explicit opt-in. A separate offline carousel transport now
+builds ordered albums; routing activation and real-client validation remain unfinished. Phase 5 and production reliability remain open.
 
 ## Carousel inspection and selection — metadata only
 
@@ -204,8 +205,8 @@ Deterministic tests reproduce the source shape and a 20-item mixed plan: 17 VIDE
 PHOTO at 8/9/18, READY with selected positions 1–7, 10–17, 19–20 and no acquisition.
 This is an offline result, not a retest of the corrected adapter against Instagram.
 That initial implementation left the live mixed-selection gate open; the subsequent
-real validation below closes it for one publication. Item references, Telegram groups
-and production reliability remain unfinished. Photos will never be acquired or delivered.
+real validation below closes it for one publication. Item references, live Telegram
+group validation and production reliability remain unfinished. Photos will never be acquired or delivered.
 
 
 ## Final mixed-carousel metadata gate — PASS, 2026-10-16
@@ -246,9 +247,9 @@ streams fail closed. Filesystem overhead, process memory, concurrent-operation q
 crash recovery are outside these limits. These defaults are not production capacity claims.
 
 The narrow real three-video acquisition gate passed (record below); larger collections
-remain NOT VERIFIED. Telegram media-group delivery is NOT IMPLEMENTED / NOT VERIFIED.
-Real item-reference selection remains blocked. Next: independent optional-audio
-preparation review, separate routing/group integration and authorized real-client
+remain NOT VERIFIED. Telegram media-group transport is implemented offline below;
+real delivery is NOT VERIFIED. Real item-reference selection remains blocked. Next:
+independent transport review, separate routing activation and authorized real-client
 validation. No deployment changes in this stage.
 
 
@@ -286,8 +287,9 @@ single-video file checks remain unchanged. Limits remain 25 videos, 100 MiB/file
 revalidation, all-or-nothing cleanup and caller output ownership are unchanged.
 
 Telegram remains disabled for Instagram. Default preparation still requires audio;
-explicit optional-audio preparation is implemented and tested locally below. No albums,
-img_index selection, real Telegram playback or production readiness is claimed.
+explicit optional-audio preparation is implemented and tested locally below. Album
+batching is now implemented offline; img_index selection, real Telegram playback and
+production readiness are not claimed.
 
 
 ## First real silent three-video acquisition — PASS
@@ -319,5 +321,36 @@ pre-existing destinations preserved. Orientation and video-derived upload parame
 are covered by generated local FFmpeg/ffprobe fixtures, not real Telegram sends.
 
 Future Instagram callers must opt in and own successful derivatives inside their request
-workspace. Routing, albums and client playback remain unimplemented/unverified. No new
-Instagram extraction, media acquisition or Telegram request occurred in this offline stage.
+workspace. PR #51 and its P2 ownership correction were independently reviewed and merged.
+Routing remains disabled and client playback remains unverified; offline album delivery
+is described below. No new Instagram extraction, acquisition or Telegram request
+occurred in the optional-audio preparation stage.
+
+
+## Offline ordered Telegram carousel delivery
+
+An explicit reusable `TelegramCarouselDelivery` now consumes `DownloadedCarousel`, its
+original selection plan, an approved caller workspace and an injected aiogram-compatible
+sender. All selected files are prepared with `allow_silent=True` and probed before any
+send. Only actual H.264 MP4 with optional AAC passes; no photo selection or new extraction
+occurs. Source positions/IDs and all files are validated; no missing video is skipped.
+
+One video is sent individually; 2–10 form one ordered album; larger selections use
+sequential slices of ten with a final singleton sent individually. No captions expose
+source metadata. Telegram failures/timeouts/malformed responses stop all later requests,
+never retry, and return safe confirmed/uncertain progress via the error. Prior successful
+albums cannot be rolled back as part of a transaction. Caller owns user communication.
+
+Preparation uses private hard-link aliases and a killable POSIX child, preserving original
+files. Defaults: 25 videos, 50,000,000 bytes/file and 200 MiB total upload; workspace logical
+bytes 1 GiB (unique inodes, including originals/staging), 2048 entries; 180 s preparation,
+120 s/send. Existing acquisition limits are unchanged. Remaining-byte OS output limits
+and whole-preparation deadline prevent unbounded conversion. Filesystem overhead, global
+memory/concurrency quotas and production capacity are not claimed. Private outputs are
+removed on every normal completion/failure/cancellation; caller cleans original files.
+
+This is offline transport implementation, not activation. PR #51 optional-audio/P2
+preparation is merged. The only real carousel acquisition remains the three-video
+1,961,198-byte case above; no new Instagram or Telegram calls occurred. Live albums,
+client playback, larger-carousel reliability and broad availability remain NOT VERIFIED.
+Independent review and separately authorized routing/client validation remain required.
