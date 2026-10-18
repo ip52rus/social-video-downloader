@@ -508,3 +508,26 @@ caller originals and unrelated existing files remain. The caller eventually remo
 acquired outputs. Live handlers/YouTube/default registration remain unchanged. Only the
 prior real three-video acquisition is verified externally; real album upload/playback,
 larger carousels and broad Instagram reliability remain NOT VERIFIED.
+
+## Draft opt-in /p/ Telegram integration
+
+The feature branch `feat/instagram-post-carousel-telegram` adds a separate
+Telegram `InstagramPostHandler` behind the existing `InstagramReelHandler`
+and unchanged opt-in flag, sharing one `_active` admission slot per dispatcher.
+The main transport-independent carousel contracts remain unchanged. Real
+`/p/` query intent is validated before canonical inspection; a BLOCKED
+UNSUPPORTED_CONTENT inspection may enter the existing single-video provider,
+which independently refuses playlists and private/invalid results. All other
+BLOCKED plans fail closed. READY plans pass to `InstagramCarouselAcquisition`
+and then `TelegramCarouselDelivery`, with caller-owned temporary workspace
+cleanup, sender obtained from the current Telegram Message, and safe partial
+delivery feedback (no retry).
+
+The experimental route deliberately narrows the reusable components' defaults:
+10 selected videos, 25 MiB source and upload file, 100 MiB total acquisition
+and upload, 130 MiB acquisition temporary budget and 400 MiB logical delivery
+workspace budget. This is per operation, not a physical disk quota or measured
+concurrent system capacity. Photos are excluded only when positively classified;
+unknown items and over-budget publications fail instead of being shortened.
+The real Telegram album and broader client playback gates are pending. No
+Compose/deployment change belongs to this branch.
