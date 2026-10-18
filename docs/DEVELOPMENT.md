@@ -87,13 +87,22 @@ review, passing CI and a separate merge/deployment decision.
 Accepted public `/p/` publication links pass through the conservative carousel
 selection policy. Only allowlisted tracking query parameters (including `psln`) are accepted; item
 selectors, unknown share keys, and ambiguous fragments are blocked
-before extraction. One actual single-video post falls back to the existing
-bounded single-file download. A READY video carousel goes through the bounded
+before extraction. A single-video post must be positively confirmed by the source
+adapter and existing video validators; it consumes the same verified snapshot in the
+bounded single-file worker. BLOCKED never authorizes fallback or another extraction.
+A READY video carousel goes through the bounded
 multi-file acquisition and Telegram delivery; PHOTOs are skipped only after
 positive classification, UNKNOWN items block everything, and no video is silently
 truncated. Initial limits are 10 selected videos, 25 MiB/file and 100 MiB total.
 One active Instagram operation per dispatcher; no automatic retry after a
 possibly delivered album.
+
+The initial inspection uses the existing cooperative guard and cancellation event.
+Its 300-second operation window starts before extraction and is not restarted for
+acquisition, preparation or upload; the single-file 180-second work and 120-second
+send caps remain. Pending native/network calls may delay cancellation, but the slot
+and workspace remain owned until real worker completion. Do not replace this with
+thread abandonment or claim hard native-call termination.
 
 Do not rebuild/restart either running container, edit server environment or
 perform real external calls as part of this Draft PR. A separately approved

@@ -432,14 +432,25 @@ are unchanged. No live external-platform or Telegram calls.
 ### Reel-only Telegram MVP (offline)
 
 - [x] Connect public Reels to the existing provider, optional-audio preparation and sendVideo behind an explicit disabled-by-default flag.
-- [x] Reject known raw item selectors and `/p/` before extraction; strip ordinary Reel share queries and harmless fragments; retain default YouTube behavior.
+- [x] Historical Reel-only stage: reject item selectors and `/p/`; strip ordinary Reel share queries and harmless fragments. Draft PR #56 adds guarded `/p/` routing separately below.
 - [x] Add scoped media-byte/preparation limits and one active Reel per handler instance; keep admission/workspace until a cancelled worker actually exits.
 - [x] Verify the narrow integration offline, including local silent/audio passthrough and video-only conversion.
 - [x] Independently review and merge the Reel MVP (PR #53).
 - [x] Validate one real canonical Reel upload; user confirmed client playback, orientation and sound. Exact file size/time were not recorded; broader reliability remains open.
-- [ ] Validate the isolated Draft PR connecting single-video `/p/` and whole-publication video carousels to the existing active Instagram handler. Implementation and network-forbidden routing tests are present on the feature branch; GitHub CI with FFmpeg passed (1277 tests, 1 skipped). Real album upload/playback, independent review, merge and deployment remain OPEN. Preserve the Reel flag/production guard and the unchanged single-file core.
+- [ ] Validate the isolated Draft PR connecting single-video `/p/` and whole-publication video carousels to the existing active Instagram handler. Implementation and network-forbidden routing tests are present on the feature branch; baseline GitHub CI before review corrections passed with FFmpeg (1277 tests, 1 skipped). Real album upload/playback, repeat independent review, merge and deployment remain OPEN. Preserve the Reel flag/production guard and the unchanged single-file core.
 - [ ] Confirm real Telegram album send for the previously tested three-silent-video publication, including order, playback, cleanup and no synthetic sound, only after separate deployment/smoke approval.
 - [ ] Reassess initial 10-video / 25 MiB-per-file / 100 MiB-total limits and source-query policy using test evidence before expansion.
+- Review correction P1: use source-confirmed single-video metadata and the same cached
+  snapshot; BLOCKED never permits fallback. Domain/download contracts and media policy stay unchanged.
+- Review correction P2: initial inspection shares cancellation/deadline with later stages;
+  keep admission/workspace until worker exit, and preserve uncertain-send progress on timeout.
+- Review correction P3: current architecture describes `/reel/` and `/p/`; Reel-only
+  statements are historical. New live `/p/`/album gates and re-review remain OPEN.
+- Local correction verification: net +43 deterministic cases; full suite 1320 passed,
+  1 skipped (external YouTube opt-in); focused post/Reel/preparation tests 204 passed,
+  extended Instagram/local-media tests 777 passed, YouTube/handler/config regressions 242 passed.
+  Ruff lint/format and diff checks PASS. Tests forbid socket connections and include
+  real local FFmpeg/ffprobe; no new external-platform or Telegram evidence.
 
 The user chose one controlled smoke with the existing main bot and accepted a short
 planned bot-only restart after PR review/merge. General production rollout is not approved.

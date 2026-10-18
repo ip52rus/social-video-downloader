@@ -176,7 +176,7 @@ reliability and real Telegram album playback remain NOT VERIFIED. Item-specific 
 blocked pending separate validation; the installed extractor ignores `img_index`.
 No running-stack rebuild/restart is authorized by this stage.
 A subsequent opt-in feature branch `feat/instagram-post-carousel-telegram` now connects
-public `/p/` URLs to existing post/provider single-video download or existing
+public `/p/` URLs to positively inspected post/provider single-video download or existing
 carousel inspection/acquisition and Telegram album transport, without changing the
 YouTube flow or the production-only Settings guard. The route shares the current
 Reel admission slot. Initial bounded carousel scope is at most 10 videos, 25 MiB
@@ -184,10 +184,16 @@ per source/upload file and 100 MiB total; oversize/unknown selections are blocke
 not truncated. Only allowlisted carousel share queries (including `psln`) are accepted; item selectors
 and ambiguous queries remain blocked. The implementation is not live until reviewed,
 merged and separately deployed. The external three-video acquisition gate is not
-proof of Telegram album playback. GitHub Actions lint, formatting and offline/FFmpeg integration tests passed
+proof of Telegram album playback. Before review corrections, GitHub Actions lint, formatting and offline/FFmpeg integration tests passed
 (1277 passed, one optional external YouTube test skipped) before any real
 album smoke. A controlled real Instagram-to-Telegram album/client playback
 check, independent review, merge and deployment remain outstanding.
+Review corrections remove the UNSUPPORTED_CONTENT-to-single fallback: only explicit
+available VIDEO evidence and coherent identity seed the single-file snapshot, and no
+second extraction can override a block. Initial inspection uses the existing guard/event
+and a shared operation deadline; slot/workspace ownership survives cancellation until
+worker completion. Further independent review of these corrections is required before
+any merge decision. Real `/p/` and album delivery gates remain open.
 See [the scope and acceptance record](PHASE5_INSTAGRAM_REELS.md).
 
 The general gated sequence remains:

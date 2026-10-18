@@ -355,7 +355,7 @@ preparation is merged. The only real carousel acquisition remains the three-vide
 client playback, larger-carousel reliability and broad availability remain NOT VERIFIED.
 Independent review and separately authorized routing/client validation remain required.
 
-## Reel-only Telegram MVP (offline)
+## Historical Reel-only Telegram MVP (offline)
 
 A narrow `InstagramReelHandler` connects only public `/reel/<id>/` URLs to the existing
 InstagramProvider, DownloadedMedia, `prepare_telegram_video(..., allow_silent=True)`,
@@ -417,8 +417,12 @@ the running bot without review. The branch
 `feat/instagram-post-carousel-telegram` wires `/p/` to the existing
 Instagram handler and the same disabled-by-default flag.
 
-A normal single-video publication reuses the existing provider's single-file
-download/prepare/send route after a non-playlist inspection. A complete READY
+A single-video publication now requires positive source VIDEO evidence, coherent
+source/mapped identity, public availability and admissible direct formats. The existing
+adapter and `_single_video` validators make this decision; absent or conflicting
+metadata does not establish support. Its existing single-file worker consumes that
+same validated provider snapshot without another extraction. All BLOCKED results,
+including UNSUPPORTED_CONTENT, stay blocked. A complete READY
 carousel uses `InstagramCarouselAcquisition` and `TelegramCarouselDelivery`
 in one owned operation; 2–10 videos form a Telegram album, and a singleton is
 delivered as a video. Known item selectors and non-allowlisted/ambiguous
@@ -434,8 +438,18 @@ Initial route limits are smaller than the reusable components' defaults:
 They are safety caps, not production throughput guarantees. Existing
 `INSTAGRAM_TELEGRAM_ENABLED=false` default and the production guard remain.
 
-Network-forbidden routing and local FFmpeg/ffprobe integration suites passed on
-GitHub Actions (1277 passed, 1 optional real YouTube test skipped), along with
-Ruff lint and formatting. Independent code review remains pending. The previous real three-silent-video
+The P2 correction shares the existing cooperative guard/event with initial metadata
+requests. A common 300-second window starts before inspection and covers later stages;
+single-file work keeps its 180-second cap from that start and sending keeps its
+120-second cap within the original window. Acquisition receives remaining time;
+preparation/upload cancellation preserves existing cleanup and uncertain-delivery
+progress. No new request or media stage starts after a cooperative stop is observed.
+A pending native/network call is not forcibly interrupted: ownership remains until
+the worker finishes. No new process manager, product byte/count limit or dependency.
+
+Before these corrections, network-forbidden routing and local FFmpeg/ffprobe suites
+passed on GitHub Actions (1277 passed, 1 optional real YouTube test skipped), along with
+Ruff lint and formatting. Independent review identified P1/P2/P3; the corrected diff
+requires another independent review. The previous real three-silent-video
 acquisition still proves only files/ffprobe, not live album sending or client
 playback. No live test, environment change, merge or deployment is included.

@@ -68,7 +68,8 @@ class _PreparationStopped(BaseException):
 class _Guard:
     def __init__(self, cancelled, *, max_bytes=_MAX_BYTES, seconds=_WORK_SECONDS):
         self.cancelled = cancelled
-        self.deadline = monotonic() + seconds
+        self.started = monotonic()
+        self.deadline = self.started + seconds
         self.max_bytes = max_bytes
         self.received = 0
 
@@ -175,12 +176,15 @@ class InstagramReelHandler:
         self._ydl_factory = ydl_factory or yt_dlp.YoutubeDL
         self._active = False
 
-    def _prepare(self, url, workspace, guard):
+    def _prepare(self, url, workspace, guard, *, provider=None):
         if os.name != "posix":
             raise MediaProcessingError("Limited Reel testing requires POSIX.")
         if shutil.disk_usage(workspace).free < 3 * guard.max_bytes:
             raise MediaProcessingError("Insufficient isolated Reel workspace space.")
-        provider = InstagramProvider(lambda options: guard.ydl(self._ydl_factory, options))
+        guard.check()
+        provider = provider or InstagramProvider(
+            lambda options: guard.ydl(self._ydl_factory, options)
+        )
         downloaded = provider.download(url, workspace)
         guard.check()
         source = downloaded.file_path

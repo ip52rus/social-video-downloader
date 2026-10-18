@@ -2,16 +2,21 @@
 
 import asyncio
 from contextlib import suppress
+from dataclasses import replace
+from functools import partial
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Event
+from time import monotonic
 
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import FSInputFile, Message
 
 from social_video_downloader.domain.carousel import CarouselIssue, CarouselPlanState
 from social_video_downloader.domain.errors import DownloaderError, MediaProcessingError
+from social_video_downloader.domain.models import MediaMetadata
 from social_video_downloader.infrastructure.telegram_carousel import (
+    CarouselDeliveryCancelled,
     CarouselDeliveryError,
     CarouselDeliveryLimits,
     TelegramCarouselDelivery,
@@ -22,7 +27,12 @@ from social_video_downloader.services.instagram_acquisition import (
     InstagramCarouselAcquisition,
 )
 from social_video_downloader.services.instagram_carousel import InstagramCarouselService
-from social_video_downloader.telegram_instagram import _SEND_SECONDS, _Guard, _owned_worker
+from social_video_downloader.telegram_instagram import (
+    _SEND_SECONDS,
+    _WORK_SECONDS,
+    _Guard,
+    _owned_worker,
+)
 
 # Conservative initial opt-in gate. Refuse an oversized publication; never truncate it.
 _ACQUISITION_LIMITS = CarouselAcquisitionLimits(
@@ -43,26 +53,47 @@ _DELIVERY_LIMITS = CarouselDeliveryLimits(
 )
 
 
+def _remaining(guard):
+    guard.check()
+    return max(0, guard.deadline - monotonic())
+
+
 class InstagramPostHandler:
     """One /p/ request shares the Reel handler's active slot and single-file worker."""
 
     def __init__(self, reel_handler):
         self._reel_handler = reel_handler
 
-    async def _send_single(self, message: Message, url: str) -> None:
-        """Keep the existing single-file acquisition and Telegram video preparation."""
+    async def _send_single(self, message: Message, metadata, provider, guard) -> None:
+        """Consume the positively inspected snapshot through the existing worker."""
         sending = False
+        operation_deadline = guard.deadline
+        # Preserve the 180-second work cap and 120-second send cap. Both consume
+        # the same operation window, rather than starting a new timer after inspection.
+        guard.deadline = min(guard.deadline, guard.started + _WORK_SECONDS)
         try:
-            await message.answer("Одиночное видео Instagram распознано. Начинаю скачивание…")
+            guard.check()
+            async with asyncio.timeout(_remaining(guard)):
+                await message.answer("Одиночное видео Instagram распознано. Начинаю скачивание…")
+            guard.check()
             with TemporaryDirectory(prefix="instagram-post-") as directory:
-                cancelled = Event()
-                guard = _Guard(cancelled)
-                task = asyncio.get_running_loop().run_in_executor(
-                    None, self._reel_handler._prepare, url, Path(directory).resolve(), guard
-                )
-                prepared, parameters = await _owned_worker(task, cancelled)
+                async with asyncio.timeout(_remaining(guard)):
+                    task = asyncio.get_running_loop().run_in_executor(
+                        None,
+                        partial(
+                            self._reel_handler._prepare,
+                            metadata.source_url,
+                            Path(directory).resolve(),
+                            guard,
+                            provider=provider,
+                        ),
+                    )
+                    prepared, parameters = await _owned_worker(task, guard.cancelled)
+                guard.check()
+                guard.deadline = operation_deadline
+                send_seconds = min(_SEND_SECONDS, _remaining(guard))
                 sending = True
-                async with asyncio.timeout(_SEND_SECONDS):
+                async with asyncio.timeout(send_seconds):
                     sent = await message.answer_video(
                         FSInputFile(prepared),
                         **parameters,
@@ -79,27 +110,56 @@ class InstagramPostHandler:
             with suppress(TelegramAPIError):
                 await message.answer(text)
 
+    async def _send_carousel(self, message, plan, guard):
+        interrupted_delivery = None
+        with TemporaryDirectory(prefix="instagram-carousel-") as directory:
+            workspace = Path(directory).resolve()
+            try:
+                async with asyncio.timeout(_remaining(guard)):
+                    limits = replace(_ACQUISITION_LIMITS, max_seconds=_remaining(guard))
+                    collection = await InstagramCarouselAcquisition(limits).acquire(plan, workspace)
+                    guard.check()
+                    try:
+                        progress = await TelegramCarouselDelivery(
+                            message.bot, _DELIVERY_LIMITS
+                        ).deliver(
+                            collection, plan=plan, workspace=workspace, chat_id=message.chat.id
+                        )
+                    except CarouselDeliveryCancelled as error:
+                        interrupted_delivery = error.progress
+                        raise
+                    if not progress.complete:
+                        raise MediaProcessingError("Unconfirmed complete carousel delivery.")
+            except TimeoutError:
+                # The shared deadline may interrupt an upload. Retain the transport's
+                # uncertainty instead of describing this as a pre-delivery failure.
+                if interrupted_delivery is not None:
+                    raise CarouselDeliveryError("deadline", interrupted_delivery) from None
+                raise
+
     async def handle(self, message: Message, raw_url: str, canonical: str) -> None:
         owner = self._reel_handler
         if owner._active:
             await message.answer("Уже обрабатываю Instagram-ссылку. Отправь следующую позже.")
             return
         owner._active = True
+        guard = _Guard(Event(), seconds=_ACQUISITION_LIMITS.max_seconds)
         try:
             # The service validates the RAW query and fragment before using canonical identity.
             # The metadata extractor runs outside the event loop; cancellation waits for it.
-            provider = InstagramProvider(owner._ydl_factory)
+            provider = InstagramProvider(lambda options: guard.ydl(owner._ydl_factory, options))
             service = InstagramCarouselService(provider)
-            task = asyncio.get_running_loop().run_in_executor(
-                None, service.create_selection_plan, raw_url
-            )
-            plan = await _owned_worker(task, Event())
+            async with asyncio.timeout(_remaining(guard)):
+                task = asyncio.get_running_loop().run_in_executor(
+                    None, service.inspect_publication, raw_url
+                )
+                plan = await _owned_worker(task, guard.cancelled)
+            guard.check()
+            if isinstance(plan, MediaMetadata):
+                await self._send_single(message, plan, provider, guard)
+                return
             if plan.state is CarouselPlanState.BLOCKED:
-                if plan.issue is CarouselIssue.UNSUPPORTED_CONTENT:
-                    # A genuine single-video /p/ is not a playlist. The existing
-                    # single-file provider independently rejects every collection.
-                    await self._send_single(message, canonical)
-                elif plan.issue in {
+                if plan.issue in {
                     CarouselIssue.ITEM_REFERENCE_UNSUPPORTED,
                     CarouselIssue.AMBIGUOUS_REFERENCE,
                 }:
@@ -123,17 +183,11 @@ class InstagramPostHandler:
                 )
                 return
 
-            await message.answer("Карусель распознана. Подготавливаю видео к отправке…")
-            with TemporaryDirectory(prefix="instagram-carousel-") as directory:
-                workspace = Path(directory).resolve()
-                collection = await InstagramCarouselAcquisition(_ACQUISITION_LIMITS).acquire(
-                    plan, workspace
-                )
-                progress = await TelegramCarouselDelivery(message.bot, _DELIVERY_LIMITS).deliver(
-                    collection, plan=plan, workspace=workspace, chat_id=message.chat.id
-                )
-                if not progress.complete:
-                    raise MediaProcessingError("Unconfirmed complete carousel delivery.")
+            guard.check()
+            async with asyncio.timeout(_remaining(guard)):
+                await message.answer("Карусель распознана. Подготавливаю видео к отправке…")
+            guard.check()
+            await self._send_carousel(message, plan, guard)
         except CarouselDeliveryError as error:
             progress = error.progress
             confirmed = len(progress.confirmed_positions)

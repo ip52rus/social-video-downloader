@@ -16,6 +16,7 @@ from social_video_downloader.domain.carousel import (
     CarouselInspection,
     CarouselIssue,
     CarouselItem,
+    CarouselItemKind,
 )
 from social_video_downloader.domain.errors import (
     DownloaderError,
@@ -296,21 +297,65 @@ class InstagramProvider:
         Child metadata stays in the acquisition process and never enters public results.
         The same adapter and factual guards as metadata-only inspection are used.
         """
-        canonical = self._media_url(url)
-        if url != canonical or not urlsplit(canonical).path.startswith("/p/"):
-            raise InvalidMediaURLError("Carousel acquisition requires a canonical publication URL.")
         try:
-            with self._new_ydl(
-                {**self._base_options(), "skip_download": True, "getcomments": False}
-            ) as ydl:
-                ydl.add_info_extractor(CarouselInstagramIE(ydl))
-                raw = ydl.extract_info(canonical, download=False, process=False, ie_key="Instagram")
-            facts = self._carousel_facts(canonical, raw)
+            raw = self._extract_post(url)
+            facts = self._carousel_facts(url, raw)
             return facts, tuple(raw["entries"]) if facts.issue is None else ()
         except DownloaderError:
             raise
         except Exception as exc:
             raise MetadataExtractionError("Unable to inspect the Instagram carousel.") from exc
+
+    def _extract_post(self, url: str) -> Any:
+        canonical = self._media_url(url)
+        if url != canonical or not urlsplit(canonical).path.startswith("/p/"):
+            raise InvalidMediaURLError("Post inspection requires a canonical publication URL.")
+        with self._new_ydl(
+            {**self._base_options(), "skip_download": True, "getcomments": False}
+        ) as ydl:
+            ydl.add_info_extractor(CarouselInstagramIE(ydl))
+            return ydl.extract_info(canonical, download=False, process=False, ie_key="Instagram")
+
+    def inspect_post(self, url: str) -> MediaMetadata | CarouselInspection:
+        """Positively identify a single video or return guarded carousel facts.
+
+        A blocked result is never permission to re-extract through another path.
+        Single-video acquisition consumes this validated snapshot from the usual cache.
+        """
+        try:
+            self._inspection_cache.pop(url, None)
+            raw = self._extract_post(url)
+            if isinstance(raw, Mapping) and raw.get("_type") == "playlist":
+                return self._carousel_facts(url, raw)
+            if (
+                not isinstance(raw, Mapping)
+                or not isinstance(evidence := raw.get("_carousel_item_evidence"), ItemEvidence)
+                or evidence.kind is not CarouselItemKind.VIDEO
+                or evidence.unavailable
+                or evidence.item_id is None
+                or evidence.mapped_id is None
+                or raw.get("id") != evidence.mapped_id
+                or raw.get("_carousel_unavailable")
+                or raw.get("needs_auth")
+                or "_carousel_source_count" in raw
+            ):
+                return CarouselInspection(url, None, issue=CarouselIssue.UNSUPPORTED_CONTENT)
+            try:
+                info = self._single_video(raw)
+            except MetadataExtractionError:
+                return CarouselInspection(url, None, issue=CarouselIssue.UNSUPPORTED_VIDEO)
+            # Source evidence has already been checked; do not pass adapter internals
+            # into yt-dlp processing or a public result.
+            info.pop("_carousel_item_evidence", None)
+            info.pop("_carousel_unavailable", None)
+            if len(self._inspection_cache) >= self._INSPECTION_CACHE_MAX_ENTRIES:
+                self._inspection_cache.pop(next(iter(self._inspection_cache)))
+            self._inspection_cache[url] = (monotonic(), info)
+            return self._metadata(info, url)
+        except DownloaderError:
+            raise
+        except Exception as exc:
+            raise MetadataExtractionError("Unable to inspect the Instagram publication.") from exc
 
     @classmethod
     def _carousel_facts(cls, canonical: str, raw: Any) -> CarouselInspection:

@@ -3,6 +3,7 @@
 from urllib.parse import parse_qsl, urlsplit
 
 from social_video_downloader.domain.carousel import (
+    CarouselInspection,
     CarouselIssue,
     CarouselItemKind,
     CarouselPlanState,
@@ -10,6 +11,7 @@ from social_video_downloader.domain.carousel import (
     CarouselSelectionPlan,
 )
 from social_video_downloader.domain.errors import InvalidMediaURLError
+from social_video_downloader.domain.models import MediaMetadata
 from social_video_downloader.domain.urls import normalize_media_url
 from social_video_downloader.providers.instagram import InstagramProvider
 
@@ -19,6 +21,20 @@ class InstagramCarouselService:
         self._provider = provider
 
     def create_selection_plan(self, url: str) -> CarouselSelectionPlan:
+        canonical, blocked = self._publication_url(url)
+        return blocked or self._selection_plan(self._provider.inspect_carousel(canonical))
+
+    def inspect_publication(self, url: str) -> MediaMetadata | CarouselSelectionPlan:
+        """Share the URL/type policy; only positive single-video evidence returns metadata."""
+        canonical, blocked = self._publication_url(url)
+        if blocked is not None:
+            return blocked
+        inspection = self._provider.inspect_post(canonical)
+        if isinstance(inspection, MediaMetadata):
+            return inspection
+        return self._selection_plan(inspection)
+
+    def _publication_url(self, url: str) -> tuple[str, CarouselSelectionPlan | None]:
         normalized = normalize_media_url(url)
         parts = urlsplit(normalized)
         if not parts.path.startswith("/p/"):
@@ -42,7 +58,7 @@ class InstagramCarouselService:
         ):
             issue = CarouselIssue.AMBIGUOUS_REFERENCE
         if issue is not None:
-            return CarouselSelectionPlan(
+            return canonical, CarouselSelectionPlan(
                 canonical,
                 None,
                 (),
@@ -51,7 +67,10 @@ class InstagramCarouselService:
                 CarouselPlanState.BLOCKED,
                 issue,
             )
-        inspection = self._provider.inspect_carousel(canonical)
+        return canonical, None
+
+    @staticmethod
+    def _selection_plan(inspection: CarouselInspection) -> CarouselSelectionPlan:
         items = inspection.items
         issue = inspection.issue
         if issue is None:
@@ -70,7 +89,7 @@ class InstagramCarouselService:
             else ()
         )
         return CarouselSelectionPlan(
-            canonical,
+            inspection.publication_url,
             inspection.total_entries,
             items,
             selected,

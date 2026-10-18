@@ -958,7 +958,7 @@ shared per-dispatcher Instagram admission slot. The prior
 `test_posts_stay_outside_this_integration` expectation is replaced with
 a positive delegation check; public Reels retain their existing tests.
 
-Verification on the feature branch with GitHub Actions: Ruff lint PASS, Ruff
+Baseline before review corrections on the feature branch with GitHub Actions: Ruff lint PASS, Ruff
 format PASS, and full pytest with FFmpeg/ffprobe installed: 1277 passed,
 1 skipped (opt-in external YouTube matrix). The prior GitHub run without
 FFmpeg skipped 114 additional media cases, which motivated this CI change.
@@ -967,3 +967,32 @@ client album playback. No new real Instagram extraction, media acquisition or li
 Telegram album send has been performed. The three-silent-video media
 acquisition gate remains separately verified; real album delivery and playback
 remain unverified.
+
+### PR #56 independent-review corrections — offline
+
+The post-routing tests now use the installed extractor/production source adapter with
+synthetic JSON to verify positive single-video and mixed/all-video inspection. Single
+silent/audio MP4 fixtures run actual local FFmpeg/ffprobe preparation and consume one
+validated snapshot without duplicate extraction. Negative cases preserve is_private,
+needs_auth and DRM evidence, UNKNOWN/unsupported entries, malformed/missing source facts,
+identity loss and selector rejection. A permissive second extraction is deliberately
+available in the fixture and must never be called for a blocked result.
+
+Event-controlled metadata tests cancel during the first request, repeat cancellation,
+expire the inspection timeout and inject a request failure. No second request, media
+stage or send starts; the shared slot remains held until the blocked worker exits.
+Clock-controlled tests account for inspection time before acquisition and single-file
+work. Acknowledgement timeouts cannot start media stages after the deadline. Deadline
+tests cover preparation and in-flight upload, caller-file preservation,
+workspace cleanup and uncertain-delivery feedback without retry. These checks do not
+claim forced interruption of native calls, live `/p/` delivery or client album playback.
+
+Local correction verification: net +43 deterministic cases over the 1277-case baseline;
+full suite **1320 passed, 1 skipped** (external YouTube opt-in), and focused
+post/Reel/Telegram-preparation tests **204 passed**. The extended Instagram
+provider/inspection/acquisition/delivery and local FFmpeg/ffprobe suite passed
+**777 tests**; YouTube/provider/handler/bot/config regressions passed **242 tests**.
+Python 3.13.12, yt-dlp
+2026.08.19, aiogram 3.31.0 and local FFmpeg/ffprobe 9.0.2 were used. Socket
+connections were forbidden in the pytest process. Ruff lint/format and diff checks
+PASS. These local results do not replace exact-head CI or repeat independent review.
