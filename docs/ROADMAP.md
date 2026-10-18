@@ -181,7 +181,7 @@ carousel inspection/acquisition and Telegram album transport, without changing t
 YouTube flow or the production-only Settings guard. The route shares the current
 Reel admission slot. Initial bounded carousel scope is at most 10 videos, 25 MiB
 per source/upload file and 100 MiB total; oversize/unknown selections are blocked,
-not truncated. Only allowlisted carousel share queries are accepted; item selectors
+not truncated. Only allowlisted carousel share queries (including `psln`) are accepted; item selectors
 and ambiguous queries remain blocked. The implementation is not live until reviewed,
 merged and separately deployed. The external three-video acquisition gate is not
 proof of Telegram album playback. Deterministic tests and CI are required before
