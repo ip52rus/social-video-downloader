@@ -432,12 +432,44 @@ are unchanged. No live external-platform or Telegram calls.
 ### Reel-only Telegram MVP (offline)
 
 - [x] Connect public Reels to the existing provider, optional-audio preparation and sendVideo behind an explicit disabled-by-default flag.
-- [x] Reject known raw item selectors and `/p/` before extraction; strip ordinary Reel share queries and harmless fragments; retain default YouTube behavior.
+- [x] Historical Reel-only stage: reject item selectors and `/p/`; strip ordinary Reel share queries and harmless fragments. Draft PR #56 adds guarded `/p/` routing separately below.
 - [x] Add scoped media-byte/preparation limits and one active Reel per handler instance; keep admission/workspace until a cancelled worker actually exits.
 - [x] Verify the narrow integration offline, including local silent/audio passthrough and video-only conversion.
 - [x] Independently review and merge the Reel MVP (PR #53).
 - [x] Validate one real canonical Reel upload; user confirmed client playback, orientation and sound. Exact file size/time were not recorded; broader reliability remains open.
-- [ ] Integrate single-video `/p/` and carousels separately.
+- [ ] Validate the isolated Draft PR connecting single-video `/p/` and whole-publication video carousels to the existing active Instagram handler. Implementation and network-forbidden routing tests are present on the feature branch; baseline GitHub CI before review corrections passed with FFmpeg (1277 tests, 1 skipped). Real album upload/playback, repeat independent review, merge and deployment remain OPEN. Preserve the Reel flag/production guard and the unchanged single-file core.
+- [ ] Confirm real Telegram album send for the previously tested three-silent-video publication, including order, playback, cleanup and no synthetic sound, only after separate deployment/smoke approval.
+- [ ] Reassess initial 10-video / 25 MiB-per-file / 100 MiB-total limits and source-query policy using test evidence before expansion.
+- Review correction P1: use source-confirmed single-video metadata and the same cached
+  snapshot; BLOCKED never permits fallback. Domain/download contracts and media policy stay unchanged.
+- Review correction P2: initial inspection shares cancellation/deadline with later stages;
+  keep admission/workspace until worker exit, and preserve uncertain-send progress on timeout.
+- Review correction P3: current architecture describes `/reel/` and `/p/`; Reel-only
+  statements are historical. New live `/p/`/album gates and re-review remain OPEN.
+- Prior correction verification: net +43 deterministic cases; full suite 1320 passed,
+  1 skipped (external YouTube opt-in); focused post/Reel/preparation tests 204 passed,
+  extended Instagram/local-media tests 777 passed, YouTube/handler/config regressions 242 passed.
+  Ruff lint/format and diff checks PASS. Tests forbid socket connections and include
+  real local FFmpeg/ffprobe; no new external-platform or Telegram evidence.
+- Source-shape follow-up: validate present carousel fields before mapping and require
+  complete count/identity/order preservation afterward. Malformed collections must not
+  become single videos; empty lists remain NO_VIDEOS. Offline verification PASS:
+  net +42 cases, focused source-shape 40 passed (29 failed before the fix), combined
+  carousel/post/Reel 303 passed, extended Instagram/local-media 819 passed,
+  YouTube/handlers/config 242 passed, full pytest 1362 passed and 1 external opt-in skipped.
+  Ruff lint/format, diff, documentation and security/scope checks PASS. Repeat independent
+  review is required; merge/deployment and live `/p/`/album gates remain OPEN.
+- Immutable-source follow-up: freeze the original count and ordered ItemEvidence
+  before mapping, then compare every mapped identity, kind, evidence signal and
+  availability flag with those initial facts. Do not derive expectations from a
+  source list that upstream may have mutated. Eleven synthetic mutation scenarios
+  cover inspection and handler refusal without acquisition, media sends or repeat
+  extraction. These are mapper fault-injection cases, not observed upstream mutation
+  or a live exploit; repeat independent review and live `/p/`/album gates remain OPEN.
+  Verification: net +35 cases; new subset 35 passed (33 failed/2 passed before the fix),
+  extended Instagram/local FFmpeg/ffprobe 854 passed, YouTube/handlers/config 242 passed,
+  full pytest 1397 passed and 1 external opt-in skipped. Ruff lint/format, diff and
+  security/scope checks PASS. No new external-platform requests or delivery evidence.
 
 The user chose one controlled smoke with the existing main bot and accepted a short
 planned bot-only restart after PR review/merge. General production rollout is not approved.
@@ -450,11 +482,12 @@ deduplication, global quotas or production capacity is claimed.
 - [x] Deploy only bot with --no-deps after confirming no active download; verify polling, retained YouTube code and unchanged Local Bot API. Live YouTube was not retested.
 - [x] Execute one approved canonical Reel smoke and verify client playback; temporary files cleaned, 25 MiB limit retained.
 - [x] Correct share-link admission offline: accept/strip `psln` and irrelevant query keys/anchors, retain known item selectors and strict URL validation. Canonical URL reaches provider; one synthetic send; no deployment changes.
-- [ ] Independently review, merge and separately deploy the share-link fix; full shared-URL live validation remains pending.
+- [x] Merge PR #55 at `0a87beeaa8acb302b74e980946778608856b13f6` and separately deploy the share-link fix. The user confirmed full Reel share-link delivery, playback, orientation and sound with `utm_source`/`psln`. Size/time were not recorded; this does not validate `/p/`, albums or general reliability.
 - [ ] Restore false and recreate only bot if rollback is needed.
 
 The deployment/smoke above was separately authorized after configuration preparation.
-This share-link correction performs no environment change, restart, polling or live call.
+The share-link implementation was offline; its deployment/smoke followed separately.
+The current PR #56 corrections perform no environment change, restart, polling or live call.
 See DEVELOPMENT.md for the controlled procedure.
 
 Share-link correction verification: net +34 cases; Reel handler 66 passed; combined

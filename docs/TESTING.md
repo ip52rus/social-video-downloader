@@ -940,9 +940,129 @@ Carousel query policy is unchanged. Network-forbidden handler tests assert that 
 provider receives only the canonical URL and a successful synthetic acquisition sends
 exactly once and cleans its workspace. The exact reported URL is also checked offline;
 committed fixtures use a synthetic tracking value instead of the original opaque value.
-This correction has no live Instagram/Telegram evidence and no deployment changes.
+That implementation stage had no live calls or deployment changes. PR #55 was later
+merged at `0a87beeaa8acb302b74e980946778608856b13f6` and separately deployed. The
+user confirmed delivery, playback, orientation and sound for the full Reel URL with
+`utm_source`/`psln`; size/time were not recorded. This narrow evidence does not cover
+`/p/`, albums or broad reliability. No new live call occurs in the current correction.
 
 Verification: net +34 cases; Reel handler 66 passed, combined handler/config/bot suite
 176 passed, full suite 1268 passed and 1 skipped (external YouTube matrix disabled).
 Full pytest forbids socket connections. Local FFmpeg/ffprobe, YouTube, callbacks and
 delivery regressions passed. Ruff lint/format, diff, documentation and scope/security PASS.
+
+## Draft Instagram /p/ Telegram routing validation
+
+`tests/test_instagram_post_telegram.py` adds network-forbidden tests for
+whole-publication three-video route selection, position preservation, known
+`psln` tracking-key acceptance, owned
+workspace cleanup, conservative item/unknown-query rejection, blocked unknown
+items, single-video post reuse, uncertain album send without retry, and the
+shared per-dispatcher Instagram admission slot. The prior
+`test_posts_stay_outside_this_integration` expectation is replaced with
+a positive delegation check; public Reels retain their existing tests.
+
+Baseline before review corrections on the feature branch with GitHub Actions: Ruff lint PASS, Ruff
+format PASS, and full pytest with FFmpeg/ffprobe installed: 1277 passed,
+1 skipped (opt-in external YouTube matrix). The prior GitHub run without
+FFmpeg skipped 114 additional media cases, which motivated this CI change.
+This confirms offline and deterministic local-media checks, not Telegram
+client album playback. No new real Instagram extraction, media acquisition or live
+Telegram album send has been performed. The three-silent-video media
+acquisition gate remains separately verified; real album delivery and playback
+remain unverified.
+
+### PR #56 independent-review corrections — offline
+
+The post-routing tests now use the installed extractor/production source adapter with
+synthetic JSON to verify positive single-video and mixed/all-video inspection. Single
+silent/audio MP4 fixtures run actual local FFmpeg/ffprobe preparation and consume one
+validated snapshot without duplicate extraction. Negative cases preserve is_private,
+needs_auth and DRM evidence, UNKNOWN/unsupported entries, malformed/missing source facts,
+identity loss and selector rejection. A permissive second extraction is deliberately
+available in the fixture and must never be called for a blocked result.
+
+Event-controlled metadata tests cancel during the first request, repeat cancellation,
+expire the inspection timeout and inject a request failure. No second request, media
+stage or send starts; the shared slot remains held until the blocked worker exits.
+Clock-controlled tests account for inspection time before acquisition and single-file
+work. Acknowledgement timeouts cannot start media stages after the deadline. Deadline
+tests cover preparation and in-flight upload, caller-file preservation,
+workspace cleanup and uncertain-delivery feedback without retry. These checks do not
+claim forced interruption of native calls, live `/p/` delivery or client album playback.
+
+Local correction verification: net +43 deterministic cases over the 1277-case baseline;
+full suite **1320 passed, 1 skipped** (external YouTube opt-in), and focused
+post/Reel/Telegram-preparation tests **204 passed**. The extended Instagram
+provider/inspection/acquisition/delivery and local FFmpeg/ffprobe suite passed
+**777 tests**; YouTube/provider/handler/bot/config regressions passed **242 tests**.
+Python 3.13.12, yt-dlp
+2026.08.19, aiogram 3.31.0 and local FFmpeg/ffprobe 9.0.2 were used. Socket
+connections were forbidden in the pytest process. Ruff lint/format and diff checks
+PASS. These local results do not replace exact-head CI or repeat independent review.
+
+### PR #56 source-shape follow-up — offline
+
+The installed yt-dlp 2026.08.19 product mapper filters non-dictionary carousel members.
+With no remaining members it can return the parent's video formats as a single video,
+discarding evidence that carousel_media was present. Direct installed-mapper tests
+record this behavior; the production adapter now rejects invalid source shapes before
+that mapping and requires a complete, ordered, identity-consistent playlist afterward.
+
+New negative fixtures include `[None]`, strings, empty/nonempty objects, empty lists,
+invalid members before/after valid ones, present null, booleans, numbers and nested
+collections, all with admissible parent video_versions. An absent field is tested by
+the existing successful single-post path; present null is explicitly not absence.
+Additional mapper-drift cases remove entries, drop/reorder items or produce a false
+single result. Both carousel inspection APIs are covered for drift. Handler checks
+assert zero single-worker calls, carousel acquisition/delivery, media sends and repeat
+extraction. Invalid list counts remain available; empty lists stay blocked as NO_VIDEOS.
+
+Before the fix, the new 40-case source-shape subset produced **29 failed, 11 passed**;
+after the fix, **40 passed**. Two additional positive variants inspect three silent
+videos, alone or mixed with a confirmed PHOTO, preserving every video position/identity.
+Focused carousel/post/Reel tests: **303 passed**. All fixtures are synthetic and
+network-forbidden; no new live Instagram or Telegram evidence is introduced.
+
+Final local verification: net **+42 cases**, full pytest **1362 passed, 1 skipped**
+(external YouTube opt-in); extended Instagram/provider/inspection/acquisition/delivery
+and local FFmpeg/ffprobe **819 passed**; YouTube/handlers/bot/config **242 passed**.
+Socket connections were forbidden. Ruff lint/format, diff, documentation and
+security/scope checks PASS. Only `_extract_product` changes in application code;
+format/classification policies, product limits, cancellation and transport are unchanged.
+Exact-head GitHub CI and a separate independent review remain required after publication.
+
+### PR #56 immutable source facts — offline fault injection
+
+Before calling the installed product mapper, the adapter snapshots the original
+count and ordered frozen ItemEvidence values: source ID, expected mapped ID,
+VIDEO/PHOTO/UNKNOWN kind, evidence signals and unavailability. Parent availability
+is also retained before mapping. Expected values are never recomputed from the
+mutable source after mapping; mismatches produce INVALID_METADATA, not a single
+fallback or a shortened READY selection. The classifier and identity policy are reused
+unchanged; no full upstream payload is copied in production.
+
+Eleven fault-injection scenarios mutate the input in place before the real installed
+yt-dlp mapper runs: remove UNKNOWN, reorder entries, replace an ID, promote UNKNOWN,
+change PHOTO to VIDEO, change video/image evidence, or remove is_private, needs_auth,
+has_drm or restricted availability. Both inspection APIs assert INVALID_METADATA,
+the initial count and empty selection/cache. Handler tests assert no acquisition,
+preparation, Telegram media send, repeated extraction or partial delivery. Two
+unmodified mapper controls preserve all-video and mixed VIDEO/PHOTO selections;
+existing real-local single-post, silent-video, Reel and cancellation tests are retained.
+
+These 35 new cases produced **33 failed, 2 passed** before the correction and
+**35 passed** afterward. This is synthetic fault injection, not evidence that
+unmodified yt-dlp 2026.08.19 mutates these facts, nor an observed Instagram exploit.
+There is no new live Instagram acquisition or Telegram delivery evidence. Independent
+review is still required; live `/p/` and album playback remain NOT VERIFIED.
+
+Final local verification: net **+35 cases**, full pytest **1397 passed, 1 skipped**
+(external YouTube opt-in); extended Instagram/provider/inspection/acquisition/delivery
+and local FFmpeg/ffprobe **854 passed**; YouTube/handlers/bot/config **242 passed**.
+The existing Python 3.13.12 environment, yt-dlp 2026.08.19 and FFmpeg/ffprobe 9.0.2
+were used. All runs forbid socket connections; no dependencies were changed. Ruff
+lint/format, diff, documentation and security/scope checks PASS. Only the metadata
+adapter changes in application code; provider/service/transport contracts, resource
+limits and cancellation/deadline handling are unchanged. Exact-head GitHub CI is
+verified separately after push; it does not replace final independent review.

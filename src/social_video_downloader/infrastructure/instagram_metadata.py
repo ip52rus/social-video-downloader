@@ -111,6 +111,13 @@ def _classify(item):
     return CarouselItemKind.UNKNOWN, tuple(signals)
 
 
+def _item_evidence(item):
+    item_id = _identity(item.get("pk"))
+    mapped_id = _pk_to_id(item_id) if item_id is not None else None
+    kind, signals = _classify(item)
+    return ItemEvidence(item_id, mapped_id, kind, signals, _unavailable(item))
+
+
 class CarouselInstagramIE(InstagramIE):
     """Register explicitly on one YoutubeDL instance, never globally."""
 
@@ -128,11 +135,7 @@ class CarouselInstagramIE(InstagramIE):
             else {key: value for key, value in product_media.items() if key != "pk"}
         )
         result = super()._extract_product_media(safe_media)
-        mapped_id = _pk_to_id(item_id) if item_id is not None else None
-        kind, signals = _classify(product_media)
-        result["_carousel_item_evidence"] = ItemEvidence(
-            item_id, mapped_id, kind, signals, _unavailable(product_media)
-        )
+        result["_carousel_item_evidence"] = _item_evidence(product_media)
         return result
 
     def _extract_product(self, product_info, *args, **kwargs):
@@ -145,31 +148,52 @@ class CarouselInstagramIE(InstagramIE):
         )
         if not isinstance(product, Mapping):
             raise MetadataExtractionError("Unrecognized Instagram carousel metadata shape.")
-        source = product.get("carousel_media") if isinstance(product, Mapping) else None
-        if isinstance(product, Mapping) and _identity(product.get("pk")) is None:
+        has_source = "carousel_media" in product
+        source = product.get("carousel_media")
+        source_count = len(source) if isinstance(source, list) else None
+        # A guarded empty playlist is deliberately incomplete, so existing provider
+        # facts report INVALID_METADATA without exposing or processing a partial set.
+        invalid = {
+            "_type": "playlist",
+            "entries": [],
+            "_carousel_source_count": source_count,
+        }
+        if has_source and (
+            not isinstance(source, list)
+            or any(not isinstance(item, Mapping) or "carousel_media" in item for item in source)
+        ):
+            return invalid
+        # No mutable source references are used as expected facts after mapping.
+        # Reuse the same classifier/evidence representation as mapped children.
+        source_facts = tuple(_item_evidence(item) for item in source) if has_source else ()
+        unavailable = _unavailable(product)
+        if _identity(product.get("pk")) is None:
             product_info = {key: value for key, value in product.items() if key != "pk"}
-        if isinstance(source, list) and not source:
+        if has_source and source_count == 0:
             return {
                 "_type": "playlist",
                 "entries": [],
                 "_carousel_source_count": 0,
-                "_carousel_unavailable": _unavailable(product),
+                "_carousel_unavailable": unavailable,
             }
         result = super()._extract_product(product_info, *args, **kwargs)
-        if isinstance(product, Mapping) and _unavailable(product):
+        if unavailable:
             result["_carousel_unavailable"] = True
-        if isinstance(source, list) and all(isinstance(x, Mapping) for x in source):
-            entries = result.get("entries")
-            if (
-                isinstance(entries, list)
-                and len(entries) == len(source)
+        if has_source:
+            entries = result.get("entries") if isinstance(result, Mapping) else None
+            if not (
+                isinstance(result, Mapping)
+                and result.get("_type") == "playlist"
+                and isinstance(entries, list)
+                and len(entries) == source_count
                 and all(
                     isinstance(entry, Mapping)
                     and isinstance(evidence := entry.get("_carousel_item_evidence"), ItemEvidence)
-                    and evidence.item_id == _identity(original.get("pk"))
-                    and entry.get("id") == evidence.mapped_id
-                    for original, entry in zip(source, entries, strict=True)
+                    and evidence == expected
+                    and entry.get("id") == expected.mapped_id
+                    for expected, entry in zip(source_facts, entries, strict=True)
                 )
             ):
-                result["_carousel_source_count"] = len(source)
+                return invalid
+            result["_carousel_source_count"] = source_count
         return result

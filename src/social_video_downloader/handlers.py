@@ -119,8 +119,9 @@ async def handle_start(message: Message, instagram_reels=None) -> None:
         await message.answer(_START_MESSAGE)
     else:
         await message.answer(
-            "Отправь ссылку на YouTube или публичный Instagram Reel. "
-            "Instagram /p/ и карусели пока не подключены."
+            "Отправь ссылку на YouTube, публичный Instagram Reel или /p/. "
+            "Из каруселей скачиваются только видео, в исходном порядке; "
+            "ссылки на отдельные элементы пока не поддерживаются."
         )
 
 

@@ -355,7 +355,7 @@ preparation is merged. The only real carousel acquisition remains the three-vide
 client playback, larger-carousel reliability and broad availability remain NOT VERIFIED.
 Independent review and separately authorized routing/client validation remain required.
 
-## Reel-only Telegram MVP (offline)
+## Historical Reel-only Telegram MVP (offline)
 
 A narrow `InstagramReelHandler` connects only public `/reel/<id>/` URLs to the existing
 InstagramProvider, DownloadedMedia, `prepare_telegram_video(..., allow_silent=True)`,
@@ -406,5 +406,61 @@ The full share URL initially failed before acquisition because `psln` was outsid
 old tracking allowlist. The share-link correction is verified offline using the exact
 reported URL without network access; committed fixtures replace the opaque tracking
 value with synthetic data. Synthetic provider/send tests confirm a canonical URL and
-one send. This correction has not been deployed or live-tested. The 25 MiB limit,
-cooperative deadlines, disabled-by-default configuration and production guard remain.
+one send. PR #55 then merged at `0a87beeaa8acb302b74e980946778608856b13f6`
+and was separately deployed. The user confirmed delivery, playback, orientation and
+sound for the full Reel URL with `utm_source` and `psln`; file size/time were not
+recorded. This closes that full-share-link smoke only, not `/p/`, albums or broad
+Instagram reliability. The 25 MiB limit, cooperative deadlines, disabled-by-default
+configuration and production guard remain. No new live test is part of PR #56.
+
+## Opt-in /p/ Telegram integration — Draft review stage
+
+The user authorized connecting the already merged single-post, carousel
+acquisition and offline Telegram album components, **not** merging or restarting
+the running bot without review. The branch
+`feat/instagram-post-carousel-telegram` wires `/p/` to the existing
+Instagram handler and the same disabled-by-default flag.
+
+A single-video publication now requires positive source VIDEO evidence, coherent
+source/mapped identity, public availability and admissible direct formats. The existing
+adapter and `_single_video` validators make this decision; absent or conflicting
+metadata does not establish support. Its existing single-file worker consumes that
+same validated provider snapshot without another extraction. All BLOCKED results,
+including UNSUPPORTED_CONTENT, stay blocked. A complete READY
+carousel uses `InstagramCarouselAcquisition` and `TelegramCarouselDelivery`
+in one owned operation; 2–10 videos form a Telegram album, and a singleton is
+delivered as a video. Known item selectors and non-allowlisted/ambiguous
+carousel queries are BLOCKED before extraction. The known non-selector share key
+`psln` is accepted, while unknown keys remain blocked.
+No PHOTO is sent; UNKNOWNs and unsupported selected videos block the whole
+operation. Send uncertainty is reported without automatic retries. The per-
+dispatcher slot prevents simultaneous Reel and carousel handling.
+
+The source-shape correction validates `carousel_media` before yt-dlp can filter it:
+only an absent field permits single-video classification. Present null/non-list values,
+malformed members and nested collections give INVALID_METADATA without acquisition.
+An empty list remains NO_VIDEOS. A valid source collection must remain a playlist with
+the original count, identities and order; missing/dropped/reordered entries or a mapped
+single result fail closed. Parent video_versions never override this source evidence.
+
+Initial route limits are smaller than the reusable components' defaults:
+10 selected videos, 25 MiB per acquired/uploaded file, 100 MiB media total,
+130 MiB acquisition temporary budget, 400 MiB delivery workspace budget.
+They are safety caps, not production throughput guarantees. Existing
+`INSTAGRAM_TELEGRAM_ENABLED=false` default and the production guard remain.
+
+The P2 correction shares the existing cooperative guard/event with initial metadata
+requests. A common 300-second window starts before inspection and covers later stages;
+single-file work keeps its 180-second cap from that start and sending keeps its
+120-second cap within the original window. Acquisition receives remaining time;
+preparation/upload cancellation preserves existing cleanup and uncertain-delivery
+progress. No new request or media stage starts after a cooperative stop is observed.
+A pending native/network call is not forcibly interrupted: ownership remains until
+the worker finishes. No new process manager, product byte/count limit or dependency.
+
+Before these corrections, network-forbidden routing and local FFmpeg/ffprobe suites
+passed on GitHub Actions (1277 passed, 1 optional real YouTube test skipped), along with
+Ruff lint and formatting. Independent review identified P1/P2/P3; the corrected diff
+requires another independent review. The previous real three-silent-video
+acquisition still proves only files/ffprobe, not live album sending or client
+playback. No live test, environment change, merge or deployment is included.

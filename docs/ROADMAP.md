@@ -166,15 +166,40 @@ PR #52 transport was independently reviewed and merged. A narrow Reel-only Teleg
 integration is now implemented offline behind `INSTAGRAM_TELEGRAM_ENABLED=false`;
 PRs #53/#54 are merged. The separately authorized bot-only deployment and one canonical
 Reel delivery smoke passed; the user confirmed playback, orientation and sound.
-The initial shared URL failed on the irrelevant `psln` query key. Next: independently
-review the narrow share-link admission fix, then authorize its merge/deployment separately.
+The initial shared URL failed on the irrelevant `psln` query key. PR #55 subsequently
+merged at `0a87beeaa8acb302b74e980946778608856b13f6` and was separately deployed.
+The user confirmed full-share-link delivery, playback, orientation and sound;
+size/time were not recorded. This is narrow Reel evidence, not `/p/`/album reliability.
 The fix strips ordinary queries/harmless fragments, retains known item-selector rejection
 and leaves carousel policy unchanged. No restart, environment change or live request is
-part of this correction. Compose defaults false; APP_ENV=development and the production
-guard remain unchanged. `/p/`/carousel routing, larger-carousel acquisition, broad
+part of the current PR #56 correction. Compose defaults false; APP_ENV=development
+and the production guard remain unchanged. `/p/`/carousel routing, larger-carousel acquisition, broad
 reliability and real Telegram album playback remain NOT VERIFIED. Item-specific semantics remain
 blocked pending separate validation; the installed extractor ignores `img_index`.
 No running-stack rebuild/restart is authorized by this stage.
+A subsequent opt-in feature branch `feat/instagram-post-carousel-telegram` now connects
+public `/p/` URLs to positively inspected post/provider single-video download or existing
+carousel inspection/acquisition and Telegram album transport, without changing the
+YouTube flow or the production-only Settings guard. The route shares the current
+Reel admission slot. Initial bounded carousel scope is at most 10 videos, 25 MiB
+per source/upload file and 100 MiB total; oversize/unknown selections are blocked,
+not truncated. Only allowlisted carousel share queries (including `psln`) are accepted; item selectors
+and ambiguous queries remain blocked. The implementation is not live until reviewed,
+merged and separately deployed. The external three-video acquisition gate is not
+proof of Telegram album playback. Before review corrections, GitHub Actions lint, formatting and offline/FFmpeg integration tests passed
+(1277 passed, one optional external YouTube test skipped) before any real
+album smoke. A controlled real Instagram-to-Telegram album/client playback
+check, independent review, merge and deployment remain outstanding.
+Review corrections remove the UNSUPPORTED_CONTENT-to-single fallback: only explicit
+available VIDEO evidence and coherent identity seed the single-file snapshot, and no
+second extraction can override a block. Initial inspection uses the existing guard/event
+and a shared operation deadline; slot/workspace ownership survives cancellation until
+worker completion. Further independent review of these corrections is required before
+any merge decision. Real `/p/` and album delivery gates remain open.
+The source-shape follow-up rejects present malformed carousel fields before
+mapping and requires complete source-to-playlist count/identity/order preservation.
+It adds no downloader or metadata model; another independent review is required after
+offline verification. No merge/deployment or live `/p/`/album gate is closed here.
 See [the scope and acceptance record](PHASE5_INSTAGRAM_REELS.md).
 
 The general gated sequence remains:

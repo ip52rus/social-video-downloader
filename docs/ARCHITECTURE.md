@@ -22,7 +22,7 @@ Environment-based settings are validated before starting the application. The Te
 
 ## Telegram layer
 
-The aiogram router owns commands and text intake, user-facing validation responses, and result delivery. It does not contain provider-specific download logic. Membership/access control is deferred to a future monetization or business-model layer and is not part of the current implementation. The /start response describes current platform support. Text messages are validated against supported platform domains. By default, YouTube URLs are passed to the application service; Instagram and TikTok URLs receive an explicit not-connected response. The controlled Reel-only opt-in described below delegates only Instagram Reels to its own handler; `/p/` stays unsupported.
+The aiogram router owns commands and text intake, user-facing validation responses, and result delivery. It does not contain provider-specific download logic. Membership/access control is deferred to a future monetization or business-model layer and is not part of the current implementation. The /start response describes current platform support. Text messages are validated against supported platform domains. By default, YouTube URLs are passed to the application service; Instagram and TikTok URLs receive an explicit not-connected response. In Draft PR #56 the explicit Instagram opt-in delegates `/reel/` to the established Reel flow and `/p/` to positively inspected single-video or complete video-carousel flows. Both share one admission slot. Real `/p/` Telegram delivery and albums remain unverified; merge and deployment require separate decisions.
 
 The implemented option UX is capability-driven. Telegram shows only meaningful choices for
 the current platform/content and keeps a consistent visual language without forcing every
@@ -75,9 +75,9 @@ The synchronous download and media-preparation operations run in worker threads 
 
 The remux path is an optimization for compatible streams when only the container needs conversion; it is not a claim that all media can be remuxed. The transcode path remains the compatibility fallback. No scaling filter is applied, and FFmpeg autorotation is retained. The bot sends the prepared file as a Telegram video with streaming support. A per-request temporary directory holds the media while Telegram uploads it, and is removed after delivery or failure. Telegram upload errors and expected downloader errors are mapped to safe user-facing messages; detailed source exceptions are not sent to the user.
 
-### Reel-only opt-in MVP design
+### Historical Reel-only opt-in MVP design
 
-The narrow Reel integration reuses `InstagramProvider`, `DownloadedMedia` and the
+The original Reel-only stage reused `InstagramProvider`, `DownloadedMedia` and the
 existing optional-audio helper/sendVideo path. A dispatcher-owned Reel handler is
 enabled only by `INSTAGRAM_TELEGRAM_ENABLED=true` (default false). It validates raw
 reference intent before canonicalization and rejects `/p/`; no carousel integration
@@ -96,9 +96,11 @@ of false. Its existing `APP_ENV=development` and Local Bot API endpoint are unch
 the Settings guard against enabled+production remains. After PR #54, the separately
 authorized bot-only deployment and one canonical-Reel smoke succeeded; the user confirmed
 delivery, playback, orientation and sound. The original share URL was blocked by `psln`
-before acquisition; this correction has offline evidence only and requires separate
-deployment. No container or environment changes are part of the correction. One Reel
-does not establish general production reliability.
+before acquisition. PR #55 subsequently merged at
+`0a87beeaa8acb302b74e980946778608856b13f6` and was separately deployed; the user
+confirmed full-share-link delivery, playback, orientation and sound. Size/time were
+not recorded. No new deployment occurs in PR #56. One Reel does not establish `/p/`
+or album delivery or general production reliability.
 
 ### Optional-audio preparation design
 
@@ -508,3 +510,73 @@ caller originals and unrelated existing files remain. The caller eventually remo
 acquired outputs. Live handlers/YouTube/default registration remain unchanged. Only the
 prior real three-video acquisition is verified externally; real album upload/playback,
 larger carousels and broad Instagram reliability remain NOT VERIFIED.
+
+## Draft opt-in /p/ Telegram integration
+
+Source-shape correction design: validate the presence and complete list structure of
+`carousel_media` in the instance-local extractor adapter before yt-dlp can filter it.
+An absent field permits ordinary single-video inspection; a present malformed value
+or inconsistent mapped collection must produce the existing INVALID_METADATA result,
+never permission for a single-video path. Reuse the existing guarded playlist/count
+representation and source-to-mapped identity checks, without a new metadata model or
+handler-side reconstruction. A present null, non-list, invalid member or nested
+collection is rejected before calling the upstream mapper. Valid collections must
+map to a playlist of equal length, with matching item identities and order; otherwise
+the adapter returns an incomplete guarded playlist consumed as INVALID_METADATA.
+Known original list counts remain available even on rejection. Empty collections
+remain blocked as NO_VIDEOS. Single-post cache, format and cancellation rules stay unchanged.
+
+Immutable-source correction: keeping the original list by reference is insufficient
+if an upstream mapper mutates it in place. Before mapping, retain only a tuple of
+existing frozen ItemEvidence values (ordered source/mapped IDs, kind, signals and
+availability), the original count and parent availability. Compare mapped entries
+against those initial facts, never against the possibly mutated source list. This
+adds no parallel classifier or raw-payload copy; mapper fault injection is offline
+contract testing, not observed mutation by unmodified yt-dlp or a live exploit.
+
+Review correction design: a generic BLOCKED issue cannot prove a single video.
+Reuse the instance-local adapter's ItemEvidence and existing MediaMetadata as the
+positive single-post result of a narrow provider/service inspection operation.
+Only a verified public VIDEO with stable source/mapped identity and direct formats
+may seed the existing single-file inspection cache. Acquisition consumes that same
+snapshot; blocked metadata never triggers a second interpretation. No domain model,
+downloader or transport layer is added. The initial inspection shares the existing
+cooperative guard/event and a deadline starting before extraction; asynchronous
+carousel stages consume the remaining budget while retaining their cleanup semantics.
+
+The feature branch `feat/instagram-post-carousel-telegram` adds a separate
+Telegram `InstagramPostHandler` behind the existing `InstagramReelHandler`
+and unchanged opt-in flag, sharing one `_active` admission slot per dispatcher.
+The main transport-independent carousel contracts remain unchanged.
+`InstagramCarouselService.inspect_publication` checks raw `/p/` query intent before
+calling `InstagramProvider.inspect_post` through the existing guarded adapter.
+An existing `MediaMetadata` result positively identifies a single video: source
+ItemEvidence must be VIDEO, available and identity-consistent, with admissible
+formats and no parent access/DRM conflict. Missing evidence fails closed. The same
+provider's bounded inspection cache supplies the single-file worker; no second
+extraction can reinterpret a blocked source. Every BLOCKED plan fails closed.
+READY carousel plans pass to `InstagramCarouselAcquisition`
+and then `TelegramCarouselDelivery`, with caller-owned temporary workspace
+cleanup, sender obtained from the current Telegram Message, and safe partial
+delivery feedback (no retry).
+
+The experimental route deliberately narrows the reusable components' defaults:
+10 selected videos, 25 MiB source and upload file, 100 MiB total acquisition
+and upload, 130 MiB acquisition temporary budget and 400 MiB logical delivery
+workspace budget. This is per operation, not a physical disk quota or measured
+concurrent system capacity. Photos are excluded only when positively classified;
+unknown items and over-budget publications fail instead of being shortened.
+One cooperative guard/event starts before initial metadata extraction. The existing
+300-second carousel operation window now covers inspection, acquisition, preparation
+and delivery; acquisition receives only the remaining time. Single-post work retains
+its 180-second cap from the same start, with up to 120 seconds for sending inside the
+original 300-second window. Preparation/send stage caps are also retained. Timeout or
+cancellation prevents subsequent metadata opens and later media stages, but cannot
+force-stop an already blocked native/network call. The executor slot/workspace stays
+owned until the worker exits; existing subprocess stages retain kill/reap cleanup.
+If the common deadline interrupts an upload, the transport's confirmed/uncertain
+progress survives; no retry or false pre-delivery-failure claim is introduced.
+Before these review corrections, GitHub Actions with FFmpeg/ffprobe passed 1277 offline tests (one external
+YouTube test opt-in skipped), plus Ruff lint/format. The real Telegram album
+and broader client playback gates are pending. No Compose/deployment change
+belongs to this branch.
