@@ -4,6 +4,25 @@ Instagram's current narrow live acceptance is recorded in
 [Instagram live acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
 Earlier sections retain the evidence and open gates at each historical stage.
 
+## Phase 6B-0 TikTok metadata-only diagnostics
+
+`tests/test_tiktok_metadata.py` exercises the real installed TikTok mapper and
+urllib redirect/error handling with synthetic HTTPS responses. Socket connections
+are forbidden. Coverage includes canonical and short URLs, pre-request redirect
+rejection, identity changes/loops/hop limits, request/extractor/body/deadline caps,
+403/429/login without retries, cookie/challenge/API/CDN refusal, absent/incomplete
+audio metadata, no format probes, private-output suppression, worker failure and
+process termination/reaping. No TikTok media, actual streams or Telegram delivery
+are validated. See [the separately authorized live procedure](PHASE6_TIKTOK_METADATA.md).
+
+Focused offline result: **46 passed**; full suite: **1516 passed, 1 skipped**
+(external YouTube opt-in). The full run forbids socket connections in pytest;
+local FFmpeg/ffprobe regressions execute normally. Worker tests run only local
+sleep/output/bootstrap commands; the real bootstrap also forbids sockets.
+Ruff lint/format, diff, documentation links and security/scope review passed.
+No external experiment has been executed. These checks use Python 3.13.12 and
+yt-dlp 2026.08.19 without dependency updates.
+
 ## Phase 4 functional acceptance (2026-10-15)
 
 Status: **ACCEPTED for the tested functional scope**, as confirmed by the user. This is

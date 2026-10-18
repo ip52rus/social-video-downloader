@@ -1,5 +1,10 @@
 # Architecture
 
+The standalone [Phase 6B TikTok metadata experiment](PHASE6_TIKTOK_METADATA.md)
+uses existing yt-dlp mapping behind a restricted HTTP boundary and a supervised
+worker. It is outside the application runtime and adds no provider or Telegram
+dependency. Its limits apply to a diagnostic series, not global bot resources.
+
 ## Target logical architecture
 Telegram -> Telegram handlers -> application/download service -> provider interface -> provider implementation -> media engine -> temporary storage.
 

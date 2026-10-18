@@ -229,6 +229,12 @@ Order:
 Where Instagram exposes meaningful format or quality choices, map them into the shared download-options model.
 
 ## Phase 6 - TikTok Provider
+Phase 6B-0 adds an isolated metadata-only harness, not a provider or Telegram route.
+Its bounded transport and supervised worker are verified offline before the next
+gate: a separately authorized A / A-short / B metadata series. No live TikTok
+result or technical GO for implementation is claimed. See the
+[experiment procedure and limits](PHASE6_TIKTOK_METADATA.md).
+
 Use the same gated process as Instagram:
 
 1. technical spike;

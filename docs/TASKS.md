@@ -530,6 +530,19 @@ Reel MVP verification: 32 new cases; focused 142 passed; full 1234 passed, 1 ski
 Ruff lint/format, diff, documentation and security/scope review PASS; no live requests.
 
 ## Phase 6 - TikTok Provider
+- [x] Phase 6B-0: implement and verify the isolated metadata-only harness offline.
+- [ ] Phase 6B-1: separately authorize and run one bounded A / A-short / B series.
+
+The [Phase 6B procedure](PHASE6_TIKTOK_METADATA.md) defines strict page/redirect,
+request/body/deadline limits, cookie/challenge refusal and sanitized output. It
+does not register TikTok, download media or change Telegram runtime. Real metadata
+availability, sound/silence and media acquisition remain unverified. No provider
+GO/NO-GO decision follows from synthetic responses alone.
+Verification: 46 new offline cases; full suite 1516 passed, 1 opt-in external
+YouTube test skipped; local FFmpeg/ffprobe regressions passed. Ruff lint/format,
+diff, documentation links and security/scope review passed. No dependencies,
+application providers, Telegram handlers or deployed configuration changed.
+
 - [ ] Run a technical spike.
 - [ ] Assess real-world reliability and extraction stability.
 - [ ] Make an explicit Go/No-Go decision before implementation.
