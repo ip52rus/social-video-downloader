@@ -543,6 +543,12 @@ YouTube test skipped; local FFmpeg/ffprobe regressions passed. Ruff lint/format,
 diff, documentation links and security/scope review passed. No dependencies,
 application providers, Telegram handlers or deployed configuration changed.
 
+- [x] PR #59 P2 corrections implemented and verified offline: source identity before web mapping and
+  process-group cleanup with an unreaped leader. Both old failures were reproduced;
+  66 harness tests and 22 independent diagnostics pass. Full suite: 1536 passed,
+  1 external opt-in skipped; Ruff lint/format, diff, documentation and security/scope
+  checks pass. Another independent review remains required before Phase 6B-1.
+
 - [ ] Run a technical spike.
 - [ ] Assess real-world reliability and extraction stability.
 - [ ] Make an explicit Go/No-Go decision before implementation.

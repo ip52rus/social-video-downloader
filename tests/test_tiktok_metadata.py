@@ -7,6 +7,8 @@ import signal
 import socket
 import subprocess
 import sys
+import time
+from contextlib import suppress
 from email.message import Message
 from time import monotonic
 from urllib.request import HTTPSHandler, ProxyHandler, build_opener
@@ -20,6 +22,7 @@ from scripts import tiktok_metadata as h
 FULL = "https://www.tiktok.com/@fixture/video/123456789"
 SHORT = "https://vm.tiktok.com/Fixture"
 MEDIA = "https://media.invalid/fixture.mp4"
+MISSING = object()
 
 
 @pytest.fixture(autouse=True)
@@ -31,9 +34,8 @@ def no_sockets(monkeypatch):
     monkeypatch.setattr(socket.socket, "connect_ex", forbidden)
 
 
-def page(*, status=0, video=None):
+def page(*, status=0, video=None, identity="123456789"):
     item = {
-        "id": "123456789",
         "desc": "PRIVATE DESCRIPTION MUST NOT LEAK",
         "author": {"uniqueId": "PRIVATE_USERNAME"},
         "video": video
@@ -46,6 +48,8 @@ def page(*, status=0, video=None):
             "duration": 5,
         },
     }
+    if identity is not MISSING:
+        item["id"] = identity
     data = {
         "__DEFAULT_SCOPE__": {
             "webapp.video-detail": {
@@ -99,6 +103,71 @@ def network(monkeypatch, routes):
 def execute(urls, limits=None):
     limits = limits or h.Limits()
     return h._execute(urls, limits, h.monotonic() + limits.max_seconds, lambda event: None)
+
+
+@pytest.fixture
+def owned_workers(monkeypatch):
+    """Emergency cleanup is independent of assertions and the tested supervisor."""
+    real_popen, owned = subprocess.Popen, []
+
+    def create(*args, **kwargs):
+        process = real_popen(*args, **kwargs)
+        owned.append(process)
+        return process
+
+    monkeypatch.setattr(h.subprocess, "Popen", create)
+    yield owned
+    for process in owned:
+        with suppress(ProcessLookupError):
+            os.killpg(process.pid, signal.SIGKILL)
+        process.wait(timeout=5)
+
+
+def assert_absent(pid):
+    deadline = monotonic() + 3
+    while monotonic() < deadline:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return
+        time.sleep(0.01)
+    pytest.fail("Operation-owned test process survived cleanup")
+
+
+@pytest.mark.parametrize("short", [False, True])
+@pytest.mark.parametrize("identity", ["123456789", "987654321"])
+def test_source_identity_before_real_mapper(monkeypatch, short, identity):
+    routes = {("GET", FULL): (200, page(identity=identity), {})}
+    if short:
+        routes.update(
+            {("HEAD", SHORT): (302, b"", {"Location": FULL}), ("HEAD", FULL): (200, b"", {})}
+        )
+    net = network(monkeypatch, routes)
+    original, mapped = h.TikTokIE._parse_aweme_video_web, []
+
+    def real_mapper(self, *args, **kwargs):
+        mapped.append(True)
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(h.TikTokIE, "_parse_aweme_video_web", real_mapper)
+    result = execute([SHORT if short else FULL])
+    assert result["success"] == (identity == "123456789")
+    assert len(mapped) == int(result["success"])
+    assert result["extractions"] == (2 if short else 1)
+    assert result["requests"] == len(net.calls) == (3 if short else 1)
+    if not result["success"]:
+        assert result["error"] == "identity_changed"
+        assert "formats" not in result["results"][0]
+    assert identity not in json.dumps(result)
+
+
+@pytest.mark.parametrize("identity", [MISSING, None, True, 123456789, "", "bad", {}, []])
+def test_unconfirmed_source_identity_stops_series(monkeypatch, identity):
+    net = network(monkeypatch, {("GET", FULL): (200, page(identity=identity), {})})
+    result = execute([FULL, FULL])
+    assert result["error"] == "invalid_identity"
+    assert not result["success"] and len(result["results"]) == 1
+    assert result["extractions"] == result["requests"] == len(net.calls) == 1
 
 
 def test_real_mapper_full_and_short_series_no_probes_or_private_output(monkeypatch):
@@ -313,39 +382,34 @@ def test_bounds_cannot_be_disabled(seconds):
 
 
 @pytest.mark.parametrize("interrupt", [False, True, "during_spawn"])
-def test_parent_terminates_and_reaps_stalled_worker(monkeypatch, interrupt):
+def test_parent_terminates_and_reaps_stalled_worker(monkeypatch, owned_workers, interrupt):
     monkeypatch.setattr(
         h, "_command", lambda: [sys.executable, "-c", "import time; time.sleep(30)"]
     )
-    real_popen, owned = subprocess.Popen, []
+    create = subprocess.Popen
+    exchange = h._exchange
 
     def popen(*args, **kwargs):
-        process = real_popen(*args, **kwargs)
-        owned.append(process)
+        process = create(*args, **kwargs)
         if interrupt == "during_spawn":
             os.kill(os.getpid(), signal.SIGINT)
-        elif interrupt:
-            communicate = process.communicate
-            first = [True]
-
-            def interrupted(*args, **kwargs):
-                if first.pop() if first else False:
-                    raise KeyboardInterrupt
-                return communicate(*args, **kwargs)
-
-            process.communicate = interrupted
         return process
 
+    def interrupted(*args):
+        if interrupt is True:
+            raise KeyboardInterrupt
+        return exchange(*args)
+
+    monkeypatch.setattr(h, "_exchange", interrupted)
     monkeypatch.setattr(h.subprocess, "Popen", popen)
     result = h.run([FULL], h.Limits(max_seconds=0.2))
     assert result["error"] == ("interrupted" if interrupt else "deadline")
     assert not result["counts_exact"]
-    assert owned[0].returncode is not None
-    with pytest.raises(ProcessLookupError):
-        os.kill(owned[0].pid, 0)
+    assert owned_workers[0].returncode is not None
+    assert_absent(owned_workers[0].pid)
 
 
-def test_supervisor_success_and_worker_crash_are_sanitized(monkeypatch):
+def test_supervisor_success_and_worker_crash_are_sanitized(monkeypatch, owned_workers):
     payload = {
         "success": True,
         "results": [],
@@ -405,3 +469,129 @@ def test_real_worker_bootstrap_without_urls_or_network():
     assert result["success"] and result["results"] == []
     assert result["requests"] == result["extractions"] == result["metadata_bytes"] == 0
     assert not process.stderr
+
+
+@pytest.mark.parametrize("holds_stdout", [True, False])
+def test_exited_leader_descendant_terminated(monkeypatch, tmp_path, owned_workers, holds_stdout):
+    pidfile = tmp_path / "descendant.pid"
+    body = f"""
+import os,time,pathlib
+child = os.fork()
+if child == 0:
+    if not {holds_stdout!r}:
+        os.close(1)
+    time.sleep(30)
+    os._exit(0)
+pathlib.Path({str(pidfile)!r}).write_text(str(child))
+os._exit(0)
+"""
+    monkeypatch.setattr(h, "_command", lambda: [sys.executable, "-c", body])
+    kill, signaled = os.killpg, []
+
+    def owned_group_only(pgid, sig):
+        if sig == signal.SIGKILL:
+            assert pgid == owned_workers[0].pid
+            assert owned_workers[0].returncode is None  # Leader is still an unreaped anchor.
+            signaled.append(pgid)
+        return kill(pgid, sig)
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr(h.os, "killpg", owned_group_only)
+        result = h.run([FULL], h.Limits(max_seconds=0.5))
+    assert result["error"] == ("deadline" if holds_stdout else "worker_error")
+    assert not result["success"] and not result["counts_exact"]
+    assert owned_workers[0].returncode == 0
+    assert signaled == [owned_workers[0].pid]
+    assert_absent(int(pidfile.read_text()))
+
+
+@pytest.mark.parametrize("fault", ["kill", "communicate"])
+def test_cleanup_exception_is_explicit_and_worker_reaped(monkeypatch, owned_workers, fault):
+    monkeypatch.setattr(
+        h, "_command", lambda: [sys.executable, "-c", "import time; time.sleep(30)"]
+    )
+    kill, create = os.killpg, subprocess.Popen
+    calls = []
+
+    def faulty_kill(*args):
+        calls.append(True)
+        if fault == "kill" and len(calls) == 1:
+            raise OSError("Synthetic cleanup failure")
+        return kill(*args)
+
+    def faulty_create(*args, **kwargs):
+        process = create(*args, **kwargs)
+        if fault == "communicate":
+
+            def failed(*args, **kwargs):
+                raise OSError("Synthetic pipe cleanup failure")
+
+            process.communicate = failed
+        return process
+
+    monkeypatch.setattr(h.os, "killpg", faulty_kill)
+    monkeypatch.setattr(h.subprocess, "Popen", faulty_create)
+    result = h.run([FULL], h.Limits(max_seconds=0.2))
+    assert result["error"] == "cleanup_failed" and not result["counts_exact"]
+    assert owned_workers[0].returncode is not None
+    assert_absent(owned_workers[0].pid)
+
+
+@pytest.mark.parametrize("signum", [signal.SIGINT, signal.SIGTERM])
+@pytest.mark.parametrize("repeat_cleanup", [False, True])
+def test_cli_signal_cleanup(monkeypatch, tmp_path, owned_workers, signum, repeat_cleanup):
+    pidfile = tmp_path / "worker.pid"
+    worker_code = (
+        f"import os,time,pathlib; pathlib.Path({str(pidfile)!r})"
+        ".write_text(str(os.getpid())); time.sleep(30)"
+    )
+    worker = [sys.executable, "-c", worker_code]
+    bootstrap = f"""
+import runpy,sys,os,signal
+m = runpy.run_path({str(h.Path(h.__file__).resolve())!r})
+g = m['_command'].__globals__
+g['_command'] = lambda: {worker!r}
+kill = os.killpg
+def during_cleanup(*args):
+    kill(*args)
+    if {repeat_cleanup!r}:
+        os.kill(os.getpid(), signal.SIGINT)
+        os.kill(os.getpid(), signal.SIGTERM)
+os.killpg = during_cleanup
+sys.exit(m['main']())
+"""
+    command = [
+        sys.executable,
+        "-c",
+        (
+            "import socket; socket.socket.connect = socket.socket.connect_ex = "
+            "lambda *a, **k: (_ for _ in ()).throw(AssertionError('No sockets'));\n" + bootstrap
+        ),
+    ]
+    controller = subprocess.Popen(
+        command,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=True,
+    )
+    try:
+        controller.stdin.write(json.dumps([FULL]))
+        controller.stdin.close()
+        controller.stdin = None
+        deadline = monotonic() + 5
+        while not pidfile.exists() and monotonic() < deadline:
+            time.sleep(0.01)
+        assert pidfile.exists()
+        os.kill(controller.pid, signum)
+        output, _ = controller.communicate(timeout=5)
+        assert controller.returncode != 0
+        if not repeat_cleanup:
+            result = json.loads(output)
+            assert result["error"] == "interrupted" and not result["counts_exact"]
+        assert_absent(int(pidfile.read_text()))
+    finally:
+        if pidfile.exists():
+            with suppress(ProcessLookupError):
+                os.killpg(int(pidfile.read_text()), signal.SIGKILL)

@@ -5,13 +5,14 @@ import json
 import math
 import os
 import re
+import selectors
 import signal
 import subprocess
 import sys
 from contextlib import suppress
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from time import monotonic
+from time import monotonic, sleep
 from urllib.error import HTTPError
 from urllib.parse import urljoin, urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
@@ -231,6 +232,26 @@ class _MetadataIE(TikTokIE):
     def _call_api(self, *args, **kwargs):
         raise Stop("mobile_api_forbidden")
 
+    def _parse_aweme_video_web(self, aweme_detail, webpage_url, video_id, extract_flat=False):
+        # Upstream replaces itemStruct.id with video_id in the mapped result.
+        source_id = aweme_detail.get("id")
+        if not isinstance(source_id, str) or not re.fullmatch(r"[0-9]+", source_id):
+            raise Stop("invalid_identity")
+        kind, canonical = _url(webpage_url)
+        if (
+            kind != "full"
+            or canonical != self._downloader.transport.expected
+            or source_id != video_id
+            or source_id != canonical.rsplit("/", 1)[-1]
+        ):
+            raise Stop("identity_changed")
+        return super()._parse_aweme_video_web(
+            aweme_detail,
+            webpage_url,
+            video_id,
+            extract_flat=extract_flat,
+        )
+
 
 class _YDL(yt_dlp.YoutubeDL):
     def __init__(self, transport):
@@ -388,6 +409,44 @@ def _command():
     ]
 
 
+def _exchange(process, payload, deadline, output):
+    """Exchange pipes without reaping the leader, keeping its group ID reserved."""
+    pending = memoryview(payload.encode())
+    with selectors.DefaultSelector() as selector:
+        for stream, event in (
+            (process.stdin, selectors.EVENT_WRITE),
+            (process.stdout, selectors.EVENT_READ),
+        ):
+            os.set_blocking(stream.fileno(), False)
+            selector.register(stream, event)
+        while selector.get_map():
+            remaining = deadline - monotonic()
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired("metadata-worker", 0)
+            for key, _ in selector.select(remaining):
+                if key.fileobj is process.stdin:
+                    try:
+                        pending = pending[os.write(key.fd, pending) :]
+                    except BrokenPipeError:
+                        pending = pending[len(pending) :]
+                    if not pending:
+                        selector.unregister(key.fileobj)
+                        process.stdin.close()
+                        process.stdin = None
+                else:
+                    chunk = os.read(key.fd, 65536)
+                    if chunk:
+                        output.extend(chunk)
+                    else:
+                        selector.unregister(key.fileobj)
+    # WNOWAIT observes exit without freeing/reusing the leader PID/PGID.
+    while os.waitid(os.P_PID, process.pid, os.WEXITED | os.WNOWAIT | os.WNOHANG) is None:
+        remaining = deadline - monotonic()
+        if remaining <= 0:
+            raise subprocess.TimeoutExpired("metadata-worker", 0)
+        sleep(min(0.01, remaining))
+
+
 def run(urls, limits=None):
     """The supported entry point: own one worker/process group through reap."""
     started = monotonic()
@@ -410,11 +469,11 @@ def run(urls, limits=None):
     except Stop as exc:
         result["error"] = str(exc)
         return result
-    if os.name != "posix":
+    if os.name != "posix" or not all(hasattr(os, name) for name in ("waitid", "WNOWAIT")):
         result["error"] = "posix_required"
         return result
     deadline = started + limits.max_seconds
-    process, output = None, ""
+    process, output = None, bytearray()
     result["error"] = "worker_start_error"
     try:
         # Do not allow a terminal interrupt between spawning and taking ownership.
@@ -431,9 +490,11 @@ def run(urls, limits=None):
         finally:
             signal.pthread_sigmask(signal.SIG_SETMASK, previous)
         result["error"] = "worker_error"
-        output, _ = process.communicate(
+        _exchange(
+            process,
             json.dumps({"urls": urls, "limits": asdict(limits), "deadline": deadline}),
-            timeout=max(0, deadline - monotonic()),
+            deadline,
+            output,
         )
     except (subprocess.TimeoutExpired, KeyboardInterrupt) as exc:
         result.update(
@@ -447,18 +508,45 @@ def run(urls, limits=None):
         previous = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT, signal.SIGTERM})
         try:
             if process is not None:
-                if process.poll() is None:
-                    with suppress(ProcessLookupError):
-                        os.killpg(process.pid, signal.SIGKILL)
+                cleanup_deadline = monotonic() + 5
+                # Never poll/wait/reap before signaling: the unreaped leader anchors PGID.
+                kill_failed, group_signaled = False, False
+                for _ in range(2):
+                    try:
+                        with suppress(ProcessLookupError):
+                            os.killpg(process.pid, signal.SIGKILL)
+                        group_signaled = True
+                        break
+                    except OSError:
+                        kill_failed = True
                 try:
-                    output, _ = process.communicate(timeout=5)
-                except subprocess.TimeoutExpired:
+                    tail, _ = process.communicate(timeout=max(0, cleanup_deadline - monotonic()))
+                    output.extend(tail.encode())
+                except (Exception, KeyboardInterrupt):
+                    result.update(error="cleanup_failed", counts_exact=False)
+                    # Pipe cleanup failure must not prevent direct-worker reap.
+                    with suppress(Exception, KeyboardInterrupt):
+                        process.wait(timeout=max(0, cleanup_deadline - monotonic()))
+                    for stream in (process.stdin, process.stdout):
+                        if stream is not None:
+                            with suppress(OSError):
+                                stream.close()
+                if kill_failed and not group_signaled and process.returncode is not None:
+                    # Darwin may report EPERM for a zombie-only group. Once reaped,
+                    # only probe absence: never terminate a potentially reused PGID.
+                    try:
+                        os.killpg(process.pid, 0)
+                    except ProcessLookupError:
+                        kill_failed = False
+                    except OSError:
+                        pass
+                if kill_failed:
                     result.update(error="cleanup_failed", counts_exact=False)
         finally:
             signal.pthread_sigmask(signal.SIG_SETMASK, previous)
     completed = False
     try:
-        for line in output.splitlines():
+        for line in output.decode(errors="replace").splitlines():
             event = json.loads(line)
             if "progress" in event:
                 result.update(event["progress"])

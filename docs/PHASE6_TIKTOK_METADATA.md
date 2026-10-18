@@ -34,8 +34,15 @@ returned by the response reader, not TLS overhead or kernel/network buffers.
 
 A parent process owns a private worker process group and kills/reaps it on deadline
 or interruption. This bounds stalled native/network calls without adding a bot
-runtime process manager. Startup counts toward the deadline; bounded cleanup can
-take up to five additional seconds. POSIX is required. Progress counters after a
+runtime process manager. To retain safe ownership of the group ID, pipe exchange
+and `waitid(..., WNOWAIT)` leave the leader unreaped until group termination,
+including when it has already exited but descendants remain. POSIX with `waitid`
+and `WNOWAIT` is required (available in the local macOS and Linux CI environments).
+Darwin's zombie-only-group error is accepted only after reaping and probing that
+the group is absent; no terminating signal is sent using a released PGID. Cleanup
+errors remain explicit `cleanup_failed` results, never successful inspection.
+Startup counts toward the deadline; bounded cleanup can
+take up to five additional seconds. Progress counters after a
 forced stop are marked inexact: received-byte counts may be lower bounds. There
 are no global memory, concurrency, wire-byte or production-capacity guarantees.
 
@@ -46,6 +53,9 @@ proof of silence. No ffprobe, remux or transcode occurs. Reports retain only cas
 numbers, within-series pseudonyms, technical format categories, counters, elapsed
 time and sanitized errors. URLs, actual IDs, usernames, descriptions and cookies
 are not printed or persisted. Input URLs exist transiently in process memory.
+The web mapper's source `itemStruct.id` must be a decimal string matching the
+validated full URL before mapping. Missing, malformed or mismatched identity
+blocks inspection, including after short-link resolution, without another request.
 
 ## Phase 6B-1: separate authorization required
 

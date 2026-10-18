@@ -23,6 +23,17 @@ Ruff lint/format, diff, documentation links and security/scope review passed.
 No external experiment has been executed. These checks use Python 3.13.12 and
 yt-dlp 2026.08.19 without dependency updates.
 
+PR #59 P2 corrections add 20 regression cases (66 harness cases total): matching,
+mismatching and unconfirmed source identities through the real web mapper, including
+short links; exited leaders with descendants retaining or closing stdout; retained
+PGID ownership until group termination; real SIGINT/SIGTERM, repeated cleanup
+interrupts and explicit cleanup-failure handling. Spawned-process tests have their
+own emergency cleanup. The independent 22-case review diagnostics also pass,
+including the two cases that failed before correction. Full corrected suite:
+**1536 passed, 1 skipped**, with external socket connections forbidden in pytest.
+Ruff lint/format, diff, documentation and security/scope checks pass. No live TikTok
+request is part of these checks; independent re-review remains pending.
+
 ## Phase 4 functional acceptance (2026-10-15)
 
 Status: **ACCEPTED for the tested functional scope**, as confirmed by the user. This is
