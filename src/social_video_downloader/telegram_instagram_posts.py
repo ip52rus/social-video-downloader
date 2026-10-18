@@ -119,12 +119,10 @@ class InstagramPostHandler:
             await message.answer("Карусель распознана. Подготавливаю видео к отправке…")
             with TemporaryDirectory(prefix="instagram-carousel-") as directory:
                 workspace = Path(directory).resolve()
-                collection = await InstagramCarouselAcquisition(
-                    _ACQUISITION_LIMITS
-                ).acquire(plan, workspace)
-                progress = await TelegramCarouselDelivery(
-                    message.bot, _DELIVERY_LIMITS
-                ).deliver(
+                collection = await InstagramCarouselAcquisition(_ACQUISITION_LIMITS).acquire(
+                    plan, workspace
+                )
+                progress = await TelegramCarouselDelivery(message.bot, _DELIVERY_LIMITS).deliver(
                     collection, plan=plan, workspace=workspace, chat_id=message.chat.id
                 )
                 if not progress.complete:
