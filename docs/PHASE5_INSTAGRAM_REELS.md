@@ -434,7 +434,8 @@ Initial route limits are smaller than the reusable components' defaults:
 They are safety caps, not production throughput guarantees. Existing
 `INSTAGRAM_TELEGRAM_ENABLED=false` default and the production guard remain.
 
-Network-forbidden route tests are committed for CI/review, but execution and
-independent code review remain pending. The previous real three-silent-video
+Network-forbidden routing and local FFmpeg/ffprobe integration suites passed on
+GitHub Actions (1277 passed, 1 optional real YouTube test skipped), along with
+Ruff lint and formatting. Independent code review remains pending. The previous real three-silent-video
 acquisition still proves only files/ffprobe, not live album sending or client
 playback. No live test, environment change, merge or deployment is included.

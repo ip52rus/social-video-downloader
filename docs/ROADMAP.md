@@ -184,8 +184,10 @@ per source/upload file and 100 MiB total; oversize/unknown selections are blocke
 not truncated. Only allowlisted carousel share queries (including `psln`) are accepted; item selectors
 and ambiguous queries remain blocked. The implementation is not live until reviewed,
 merged and separately deployed. The external three-video acquisition gate is not
-proof of Telegram album playback. Deterministic tests and CI are required before
-a controlled real album smoke; neither is claimed complete by this draft stage.
+proof of Telegram album playback. GitHub Actions lint, formatting and offline/FFmpeg integration tests passed
+(1277 passed, one optional external YouTube test skipped) before any real
+album smoke. A controlled real Instagram-to-Telegram album/client playback
+check, independent review, merge and deployment remain outstanding.
 See [the scope and acceptance record](PHASE5_INSTAGRAM_REELS.md).
 
 The general gated sequence remains:

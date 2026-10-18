@@ -529,5 +529,7 @@ and upload, 130 MiB acquisition temporary budget and 400 MiB logical delivery
 workspace budget. This is per operation, not a physical disk quota or measured
 concurrent system capacity. Photos are excluded only when positively classified;
 unknown items and over-budget publications fail instead of being shortened.
-The real Telegram album and broader client playback gates are pending. No
-Compose/deployment change belongs to this branch.
+GitHub Actions with FFmpeg/ffprobe passed 1277 offline tests (one external
+YouTube test opt-in skipped), plus Ruff lint/format. The real Telegram album
+and broader client playback gates are pending. No Compose/deployment change
+belongs to this branch.

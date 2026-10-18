@@ -958,9 +958,12 @@ shared per-dispatcher Instagram admission slot. The prior
 `test_posts_stay_outside_this_integration` expectation is replaced with
 a positive delegation check; public Reels retain their existing tests.
 
-This stage is under review; tests, Ruff and CI results have not yet been
-confirmed here, and should not be marked PASS solely because the test cases
-are committed. No new real Instagram extraction, media acquisition or live
+Verification on the feature branch with GitHub Actions: Ruff lint PASS, Ruff
+format PASS, and full pytest with FFmpeg/ffprobe installed: 1277 passed,
+1 skipped (opt-in external YouTube matrix). The prior GitHub run without
+FFmpeg skipped 114 additional media cases, which motivated this CI change.
+This confirms offline and deterministic local-media checks, not Telegram
+client album playback. No new real Instagram extraction, media acquisition or live
 Telegram album send has been performed. The three-silent-video media
 acquisition gate remains separately verified; real album delivery and playback
 remain unverified.
