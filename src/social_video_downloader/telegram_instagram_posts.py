@@ -22,7 +22,7 @@ from social_video_downloader.services.instagram_acquisition import (
     InstagramCarouselAcquisition,
 )
 from social_video_downloader.services.instagram_carousel import InstagramCarouselService
-from social_video_downloader.telegram_instagram import _Guard, _owned_worker, _SEND_SECONDS
+from social_video_downloader.telegram_instagram import _SEND_SECONDS, _Guard, _owned_worker
 
 # Conservative initial opt-in gate. Refuse an oversized publication; never truncate it.
 _ACQUISITION_LIMITS = CarouselAcquisitionLimits(
