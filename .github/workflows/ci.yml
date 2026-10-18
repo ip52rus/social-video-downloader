@@ -32,5 +32,10 @@ jobs:
       - name: Format check
         run: uv run ruff format --check .
 
+      - name: Install FFmpeg for media integration checks
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+
       - name: Tests
         run: uv run pytest
