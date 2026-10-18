@@ -4,7 +4,7 @@ Free Telegram bot-service for downloading media from popular social platforms.
 
 ## Project status
 
-The downloader core and YouTube provider are implemented, and the YouTube validation gate has passed within the documented test scope. Phase 3 (Telegram Functional MVP) is complete: the bot accepts supported YouTube URLs, downloads YouTube media, prepares Telegram-compatible video when necessary, and sends it as a video message. Automated tests cover deterministic download orchestration, media preparation, error handling, and cleanup. A real Telegram flow through the Local Bot API Server has been verified with a short video and an MP4 file of approximately 414.7 MB; the large file arrived in Telegram and was confirmed to open and play. Telegram documents a Local Bot API Server upload ceiling of 2000 MB, but this project does not claim validated 2 GB support. The current evidence is limited to the tested scenario, not all file sizes, codecs, clients, or deployment conditions. See [the changelog](CHANGELOG.md) and [testing strategy](docs/TESTING.md) for the recorded evidence and its limits. By default, Instagram and TikTok URLs remain recognition-only in the bot. An experimental Instagram provider supports Reels and single-video posts through explicit injection; one real Reel smoke passed, while live `/p/` acquisition remains unverified. It is not registered by default. See [Phase 5 scope](docs/PHASE5_INSTAGRAM_REELS.md).
+The downloader core and YouTube provider are implemented, and the YouTube validation gate has passed within the documented test scope. Phase 3 (Telegram Functional MVP) is complete: the bot accepts supported YouTube URLs, downloads YouTube media, prepares Telegram-compatible video when necessary, and sends it as a video message. Automated tests cover deterministic download orchestration, media preparation, error handling, and cleanup. A real Telegram flow through the Local Bot API Server has been verified with a short video and an MP4 file of approximately 414.7 MB; the large file arrived in Telegram and was confirmed to open and play. Telegram documents a Local Bot API Server upload ceiling of 2000 MB, but this project does not claim validated 2 GB support. The current evidence is limited to the tested scenario, not all file sizes, codecs, clients, or deployment conditions. See [the changelog](CHANGELOG.md) and [testing strategy](docs/TESTING.md) for the recorded evidence and its limits. By default, Instagram and TikTok URLs remain recognition-only in the bot. Instagram remains opt-in: real Reel delivery and, on 2026-10-18 after PR #57, one full-link single-video `/p/` and one ordered three-video silent Telegram album were owner-confirmed with normal playback. This limited acceptance does not establish broad reliability; the downloader registry remains YouTube-only by default. See [Phase 5 scope](docs/PHASE5_INSTAGRAM_REELS.md).
 
 Phase 4 functional scope is **ACCEPTED (2026-10-15)**: playlist-context watch links,
 Video/Audio choices, recorded landscape/portrait quality selections, M4A playback and
@@ -29,10 +29,12 @@ MP4 preparation; audio is delivered as verified M4A/AAC with reliable duration w
 available. Instagram and TikTok are recognition-only by default. A disabled-by-default Instagram Reel and public /p/ post/carousel opt-in
 is documented in [Phase 5](docs/PHASE5_INSTAGRAM_REELS.md). With merged PR #56, `/p/`
 requires positive public-video evidence or a complete READY carousel plan; blocked or
-ambiguous metadata never triggers a single-video fallback. Actual `/p/` Telegram delivery
-and album playback remain unverified. The follow-up share-link fix accepts irrelevant
-query keys/bare flags and harmless anchors while blocking known item selectors. It is
-offline-only until independently reviewed, merged and separately deployed.
+ambiguous metadata never triggers a single-video fallback. PR #57's merged and deployed
+share-link fix accepts irrelevant query keys/bare flags and harmless anchors while
+blocking known item selectors. On 2026-10-18 the owner confirmed one full-link single
+post and one ordered three-video silent album with normal Telegram playback. This is
+[narrow user acceptance](docs/TESTING.md#instagram-live-acceptance-2026-10-18), not broad
+publication, device, file-size or production-capacity validation.
 Optional settings are
 APP_ENV (development, test, or production), LOG_LEVEL (DEBUG, INFO, WARNING, ERROR, or
 CRITICAL), TELEGRAM_API_BASE_URL, and TELEGRAM_API_TIMEOUT_SECONDS. Never commit the real

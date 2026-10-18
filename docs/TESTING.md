@@ -1,5 +1,9 @@
 # Testing Strategy
 
+Instagram's current narrow live acceptance is recorded in
+[Instagram live acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
+Earlier sections retain the evidence and open gates at each historical stage.
+
 ## Phase 4 functional acceptance (2026-10-15)
 
 Status: **ACCEPTED for the tested functional scope**, as confirmed by the user. This is
@@ -1106,3 +1110,32 @@ inspection/acquisition/delivery/local-media **927 passed**; YouTube/handlers/URL
 config **267 passed**. Ruff lint/format, diff, documentation and security/scope checks
 PASS. Exact-head CI is checked after publication; independent review, merge and
 deployment of this fix remain separate decisions.
+
+## Instagram live acceptance 2026-10-18
+
+Status: **ACCEPTED for the two tested cases**, confirmed by the project owner using
+the running Telegram bot after PR #57 deployment. Revision:
+`13da14d6f1ea9378d776543c94b22b7b716630d3`.
+
+| Real user test | Owner-confirmed result |
+| --- | --- |
+| One single-video `/p/` publication, full share link | Accepted without the previous URL refusal; video delivered and played normally. The owner described processing as sufficiently fast; exact time was not measured. |
+| One three-video carousel, previously rejected full share link | All three videos delivered in one Telegram album, in original order; all played normally and remained silent, matching the originals. |
+
+These are real user/client observations, separate from the prior network-forbidden
+offline suite (1470 passed, 1 skipped), local FFmpeg/ffprobe fixtures and provider-only
+acquisition experiments. PR #57 passed independent review, merged at the revision
+above, and passed post-merge CI #39151964361 before the separately authorized bot-only
+deployment. This documentation change does not repeat any external-platform test.
+
+Only these single-post and three-video-album acceptance cases are closed. Exact URLs
+and query combinations were not supplied for this record; no new source IDs or user
+data are retained. Exact processing times, file sizes, codecs, request counts and live
+cleanup telemetry were not recorded; earlier acquisition metrics are not attributed
+to these tests. No additional orientation/audio observation is inferred for the single
+video beyond normal playback.
+
+Still open: other publication shapes, mixed PHOTO/VIDEO Telegram delivery, larger or
+multi-batch albums, other clients/devices, file-size boundaries, failure/recovery and
+load behavior, broad Instagram availability and production capacity. Item selectors
+remain blocked; defaults, product limits and the production-mode guard are unchanged.

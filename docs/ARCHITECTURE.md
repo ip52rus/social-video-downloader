@@ -22,7 +22,7 @@ Environment-based settings are validated before starting the application. The Te
 
 ## Telegram layer
 
-The aiogram router owns commands and text intake, user-facing validation responses, and result delivery. It does not contain provider-specific download logic. Membership/access control is deferred to a future monetization or business-model layer and is not part of the current implementation. The /start response describes current platform support. Text messages are validated against supported platform domains. By default, YouTube URLs are passed to the application service; Instagram and TikTok URLs receive an explicit not-connected response. Merged PR #56 adds an explicit Instagram opt-in delegating `/reel/` to the established Reel flow and `/p/` to positively inspected single-video or complete video-carousel flows. Both share one admission slot. PR #56 was separately deployed with bot-only startup/polling verification; real `/p/` Telegram delivery and albums remain unverified. The subsequent share-link correction is offline-only pending its own review and deployment.
+The aiogram router owns commands and text intake, user-facing validation responses, and result delivery. It does not contain provider-specific download logic. Membership/access control is deferred to a future monetization or business-model layer and is not part of the current implementation. The /start response describes current platform support. Text messages are validated against supported platform domains. By default, YouTube URLs are passed to the application service; Instagram and TikTok URLs receive an explicit not-connected response. Merged PR #56 adds an explicit Instagram opt-in delegating `/reel/` to the established Reel flow and `/p/` to positively inspected single-video or complete video-carousel flows. Both share one admission slot. PR #57 subsequently aligned share-link admission and was separately deployed only to bot. On 2026-10-18 the owner confirmed normal playback for one full-link single-video post and one ordered three-video silent album. This is narrow client evidence, not broad reliability or capacity validation; see [the acceptance record](TESTING.md#instagram-live-acceptance-2026-10-18).
 
 The implemented option UX is capability-driven. Telegram shows only meaningful choices for
 the current platform/content and keeps a consistent visual language without forcing every
@@ -509,9 +509,10 @@ callers must not blindly replay the collection after an ambiguous result.
 
 Private aliases, derivatives and staging are removed after success/failure/cancellation;
 caller originals and unrelated existing files remain. The caller eventually removes its
-acquired outputs. Live handlers/YouTube/default registration remain unchanged. Only the
-prior real three-video acquisition is verified externally; real album upload/playback,
-larger carousels and broad Instagram reliability remain NOT VERIFIED.
+acquired outputs. At this offline transport stage, live handlers/YouTube/default
+registration remained unchanged and only the prior three-video acquisition was verified
+externally. Subsequent narrow real delivery is recorded in the integration section below;
+larger carousels and broad Instagram reliability remain unverified.
 
 ## Opt-in /p/ Telegram integration (PR #56)
 
@@ -590,10 +591,14 @@ owned until the worker exits; existing subprocess stages retain kill/reap cleanu
 If the common deadline interrupts an upload, the transport's confirmed/uncertain
 progress survives; no retry or false pre-delivery-failure claim is introduced.
 Before these review corrections, GitHub Actions with FFmpeg/ffprobe passed 1277 offline tests (one external
-YouTube test opt-in skipped), plus Ruff lint/format. The real Telegram album
-and broader client playback gates are pending. Final independent review passed at
+YouTube test opt-in skipped), plus Ruff lint/format. At that stage, real Telegram album
+and broader client playback gates were pending. Final independent review passed at
 `219e1bfcc134e80be24bb8565f6dfc18dae77c21`; merge commit
 `20d14441a2b7ea906ed2a0abc83679d25d9f2d32` was separately deployed by replacing
 only bot. All 88 checked image paths matched main, polling started, and Local Bot API
 was unchanged. This is technical deployment evidence, not live `/p/`/album acceptance.
-The current share-link correction makes no additional deployment or environment change.
+PR #57 subsequently passed review, merged at `13da14d6f1ea9378d776543c94b22b7b716630d3`
+and was separately deployed only to bot. On 2026-10-18 the owner confirmed full-link
+single-post delivery/playback and all three carousel videos in one ordered, playable,
+silent album. See [the evidence limits](TESTING.md#instagram-live-acceptance-2026-10-18).
+This documentation update changes no runtime behavior, resources or configuration.

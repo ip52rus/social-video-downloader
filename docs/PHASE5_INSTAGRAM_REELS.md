@@ -1,4 +1,16 @@
-# Phase 5: Instagram single-video provider scope and evidence
+# Phase 5: Instagram scope and evidence
+
+## Current acceptance — 2026-10-18
+
+After PR #57 deployment at `13da14d6f1ea9378d776543c94b22b7b716630d3`, the owner
+confirmed one full-link single-video `/p/` delivery with normal playback and one
+previously rejected full-link carousel delivering all three videos as one ordered,
+playable, silent Telegram album. Single-post processing was described as sufficiently
+fast, without a measured time. These close only those two real user acceptance cases.
+See [the evidence and remaining limits](TESTING.md#instagram-live-acceptance-2026-10-18).
+The sections below preserve the chronology of offline and earlier live stages;
+their stage-local unverified statements do not supersede this narrow acceptance.
+Broader publication/client/size coverage and production reliability remain open.
 
 ## Agreed scope and decision
 
@@ -475,5 +487,8 @@ This does not close the live `/p/` or album gates.
 After that deployment, the user reported the same reference-rejection response for
 one single post and one carousel. Their URLs were not supplied: no exact parameter
 combination or selector intent is inferred. The share-link correction reproduces the
-old policy's rejection classes with synthetic offline URLs only. Corrected real
-`/p/` delivery and Telegram album playback remain NOT VERIFIED; this fix is not deployed.
+old policy's rejection classes with synthetic offline URLs only. At that stage,
+corrected real `/p/` delivery and Telegram album playback were NOT VERIFIED.
+PR #57 subsequently passed independent review, merged at `13da14d6f1ea9378d776543c94b22b7b716630d3`
+and was separately deployed only to bot. The two owner-confirmed live cases are
+recorded above; they do not establish broad Instagram or Telegram client reliability.
