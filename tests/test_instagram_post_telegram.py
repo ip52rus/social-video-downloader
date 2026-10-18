@@ -129,8 +129,10 @@ async def test_unclassifiable_carousel_is_blocked_not_partially_sent(
 ):
     _, ready = collection(tmp_path, 3)
     blocked = replace(
-        ready, state=CarouselPlanState.BLOCKED,
-        selected_videos=(), issue=CarouselIssue.UNKNOWN_ITEM,
+        ready,
+        state=CarouselPlanState.BLOCKED,
+        selected_videos=(),
+        issue=CarouselIssue.UNKNOWN_ITEM,
     )
     monkeypatch.setattr(
         InstagramCarouselService, "create_selection_plan", lambda self, url: blocked
@@ -145,8 +147,13 @@ async def test_unclassifiable_carousel_is_blocked_not_partially_sent(
 @pytest.mark.asyncio
 async def test_single_video_post_uses_existing_single_file_worker(message, monkeypatch):
     blocked = CarouselSelectionPlan(
-        URL, None, (), (), CarouselScope.PUBLICATION,
-        CarouselPlanState.BLOCKED, CarouselIssue.UNSUPPORTED_CONTENT,
+        URL,
+        None,
+        (),
+        (),
+        CarouselScope.PUBLICATION,
+        CarouselPlanState.BLOCKED,
+        CarouselIssue.UNSUPPORTED_CONTENT,
     )
     monkeypatch.setattr(
         InstagramCarouselService, "create_selection_plan", lambda self, url: blocked
@@ -169,25 +176,19 @@ async def test_single_video_post_uses_existing_single_file_worker(message, monke
 
 
 @pytest.mark.asyncio
-async def test_uncertain_album_send_does_not_retry_or_claim_success(
-    message, monkeypatch, tmp_path
-):
+async def test_uncertain_album_send_does_not_retry_or_claim_success(message, monkeypatch, tmp_path):
     acquired, plan = collection(tmp_path, 3)
     handler = owner()
     sends = []
 
-    monkeypatch.setattr(
-        InstagramCarouselService, "create_selection_plan", lambda self, url: plan
-    )
+    monkeypatch.setattr(InstagramCarouselService, "create_selection_plan", lambda self, url: plan)
 
     async def acquire(self, selection, workspace):
         return acquired
 
     async def deliver(self, media, *, plan, workspace, chat_id):
         sends.append(1)
-        raise CarouselDeliveryError(
-            "delivery", CarouselDeliveryProgress(3, (1,), (2, 3), 1)
-        )
+        raise CarouselDeliveryError("delivery", CarouselDeliveryProgress(3, (1,), (2, 3), 1))
 
     monkeypatch.setattr(InstagramCarouselAcquisition, "acquire", acquire)
     monkeypatch.setattr(TelegramCarouselDelivery, "deliver", deliver)
