@@ -1,4 +1,4 @@
-"""Inactive-by-default Reel integration; no alternate downloader or polling loop."""
+"""Opt-in Instagram Reel and post entry points; no alternate polling loop."""
 
 import asyncio
 import os
@@ -204,11 +204,18 @@ class InstagramReelHandler:
 
     async def handle(self, message: Message, raw_url: str) -> None:
         try:
+            canonical = InstagramProvider._media_url(raw_url)
+            if urlsplit(canonical).path.startswith("/p/"):
+                # Import lazily: the /p/ handler reuses the Reel handler's bounded worker.
+                from social_video_downloader.telegram_instagram_posts import InstagramPostHandler
+
+                await InstagramPostHandler(self).handle(message, raw_url, canonical)
+                return
             url = _reel_url(raw_url)
         except InvalidMediaURLError:
             await message.answer(
-                "Пока поддерживаются только ссылки на отдельные Reels. "
-                "Публикации /p/ и ссылки на отдельные элементы не подключены."
+                "Поддерживаются публичные Reels и публикации /p/. "
+                "Ссылки на отдельные элементы и другие страницы не поддерживаются."
             )
             return
         if self._active:
