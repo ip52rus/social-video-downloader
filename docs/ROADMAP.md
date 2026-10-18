@@ -175,6 +175,17 @@ guard remain unchanged. `/p/`/carousel routing, larger-carousel acquisition, bro
 reliability and real Telegram album playback remain NOT VERIFIED. Item-specific semantics remain
 blocked pending separate validation; the installed extractor ignores `img_index`.
 No running-stack rebuild/restart is authorized by this stage.
+A subsequent opt-in feature branch `feat/instagram-post-carousel-telegram` now connects
+public `/p/` URLs to existing post/provider single-video download or existing
+carousel inspection/acquisition and Telegram album transport, without changing the
+YouTube flow or the production-only Settings guard. The route shares the current
+Reel admission slot. Initial bounded carousel scope is at most 10 videos, 25 MiB
+per source/upload file and 100 MiB total; oversize/unknown selections are blocked,
+not truncated. Only allowlisted carousel share queries are accepted; item selectors
+and ambiguous queries remain blocked. The implementation is not live until reviewed,
+merged and separately deployed. The external three-video acquisition gate is not
+proof of Telegram album playback. Deterministic tests and CI are required before
+a controlled real album smoke; neither is claimed complete by this draft stage.
 See [the scope and acceptance record](PHASE5_INSTAGRAM_REELS.md).
 
 The general gated sequence remains:
