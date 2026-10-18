@@ -87,7 +87,9 @@ async def test_three_video_carousel_is_routed_in_original_order_and_cleaned(
                 )
             )
         return DownloadedCarousel(
-            plan.publication_url, tuple(videos), sum(v.media.file_path.stat().st_size for v in videos)
+            plan.publication_url,
+            tuple(videos),
+            sum(v.media.file_path.stat().st_size for v in videos),
         )
 
     async def deliver(self, acquired, *, plan, workspace, chat_id):
@@ -126,8 +128,13 @@ async def test_unclassifiable_carousel_is_blocked_not_partially_sent(
     message, monkeypatch, tmp_path
 ):
     _, ready = collection(tmp_path, 3)
-    blocked = replace(ready, state=CarouselPlanState.BLOCKED, selected_videos=(), issue=CarouselIssue.UNKNOWN_ITEM)
-    monkeypatch.setattr(InstagramCarouselService, "create_selection_plan", lambda self, url: blocked)
+    blocked = replace(
+        ready, state=CarouselPlanState.BLOCKED,
+        selected_videos=(), issue=CarouselIssue.UNKNOWN_ITEM,
+    )
+    monkeypatch.setattr(
+        InstagramCarouselService, "create_selection_plan", lambda self, url: blocked
+    )
     handler = owner()
     await handle_text(message, instagram_reels=handler)
     assert "Невозможно безопасно" in message.answer.call_args.args[0]
@@ -141,7 +148,9 @@ async def test_single_video_post_uses_existing_single_file_worker(message, monke
         URL, None, (), (), CarouselScope.PUBLICATION,
         CarouselPlanState.BLOCKED, CarouselIssue.UNSUPPORTED_CONTENT,
     )
-    monkeypatch.setattr(InstagramCarouselService, "create_selection_plan", lambda self, url: blocked)
+    monkeypatch.setattr(
+        InstagramCarouselService, "create_selection_plan", lambda self, url: blocked
+    )
     handler = owner()
     created = []
 
@@ -167,7 +176,9 @@ async def test_uncertain_album_send_does_not_retry_or_claim_success(
     handler = owner()
     sends = []
 
-    monkeypatch.setattr(InstagramCarouselService, "create_selection_plan", lambda self, url: plan)
+    monkeypatch.setattr(
+        InstagramCarouselService, "create_selection_plan", lambda self, url: plan
+    )
 
     async def acquire(self, selection, workspace):
         return acquired
