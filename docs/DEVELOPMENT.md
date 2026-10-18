@@ -85,8 +85,8 @@ new token, Compose service or polling loop. The new branch
 review, passing CI and a separate merge/deployment decision.
 
 Accepted public `/p/` publication links pass through the conservative carousel
-selection policy. Only allowlisted tracking query parameters are accepted; item
-selectors, unknown share keys such as `psln`, and ambiguous fragments are blocked
+selection policy. Only allowlisted tracking query parameters (including `psln`) are accepted; item
+selectors, unknown share keys, and ambiguous fragments are blocked
 before extraction. One actual single-video post falls back to the existing
 bounded single-file download. A READY video carousel goes through the bounded
 multi-file acquisition and Telegram delivery; PHOTOs are skipped only after
