@@ -37,7 +37,7 @@ class InstagramCarouselService:
         if any(key.lower() in reference_keys for key, _ in query):
             issue = CarouselIssue.ITEM_REFERENCE_UNSUPPORTED
         elif urlsplit(url.strip()).fragment or any(
-            key not in {"igsh", "igshid", "fbclid"} and not key.startswith("utm_")
+            key not in {"igsh", "igshid", "fbclid", "psln"} and not key.startswith("utm_")
             for key, _ in query
         ):
             issue = CarouselIssue.AMBIGUOUS_REFERENCE
