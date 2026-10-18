@@ -36,7 +36,7 @@ Gate: a core user can submit a supported YouTube URL and receive downloaded medi
 
 This phase closure does not mean production readiness. It does not close restart/recovery, upload/network failure recovery, cloud/local operational rehearsal, larger-file limit work, repeatable E2E/deployment procedure, monitoring, resource limits, or broader reliability checks. Those are tracked in Phase 9, Production Reliability.
 
-Instagram and TikTok URLs remain recognition-only in the bot. An experimental Instagram Reel/single-video-post provider exists for explicit injection; default registration and Telegram integration remain pending.
+Instagram and TikTok remain recognition-only by default. Instagram has a separate explicit Telegram opt-in with narrow owner-confirmed Reel, single-post and three-video-album evidence; see Phase 5 below. The default downloader registry remains YouTube-only.
 
 ## Phase 4 - Download UX and YouTube Options
 Expose useful provider/content capabilities through a polished Telegram interaction flow.
@@ -142,9 +142,9 @@ integration remain unverified.
 Eventual video delivery uses ordered Telegram groups, splitting more than 10 videos;
 a single remainder uses one video message. Never silently omit a selected video.
 
-Next: independent review and separately authorized bounded real single-video `/p/`
-validation. Real single-video `/p/` acquisition and all Instagram Telegram delivery
-remain unverified. Default registration/Telegram routing require separate gates.
+At that provider-only stage, real single-video `/p/` and Telegram delivery required
+separate gates. Subsequent routing and narrow live acceptance are recorded below;
+the default downloader registry remains YouTube-only.
 PR #47 inspection and PR #48 PHOTO correction were independently reviewed and merged.
 The final authorized metadata gate passed on one real 20-entry mixed publication:
 17 VIDEO, 3 PHOTO (8/9/18), zero UNKNOWN, READY with ordered unique IDs and three direct
@@ -172,9 +172,9 @@ The user confirmed full-share-link delivery, playback, orientation and sound;
 size/time were not recorded. This is narrow Reel evidence, not `/p/`/album reliability.
 That earlier fix stripped ordinary queries/harmless fragments, retained known item-selector
 rejection and left carousel policy unchanged. No restart, environment change or live request is
-part of the current share-link follow-up. Compose defaults false; APP_ENV=development
-and the production guard remain unchanged. Real `/p/`/carousel delivery, larger-carousel acquisition, broad
-reliability and real Telegram album playback remain NOT VERIFIED. Item-specific semantics remain
+part of that share-link implementation. Compose defaults false; APP_ENV=development
+and the production guard remain unchanged. Larger-carousel acquisition and broad
+reliability remain unverified; later narrow `/p/`/album acceptance is recorded below. Item-specific semantics remain
 blocked pending separate validation; the installed extractor ignores `img_index`.
 No running-stack rebuild/restart is authorized by this stage.
 Merged PR #56 (`feat/instagram-post-carousel-telegram`) connects
@@ -191,20 +191,27 @@ deployed only to bot, with source/polling verification and unchanged Local Bot A
 The external three-video acquisition gate is not
 proof of Telegram album playback. Before review corrections, GitHub Actions lint, formatting and offline/FFmpeg integration tests passed
 (1277 passed, one optional external YouTube test skipped) before any real
-album smoke. A controlled real Instagram-to-Telegram album/client playback
-check remains outstanding. Review, merge and deployment of the share-link fix are
-separate pending decisions; no further deployment occurs in this implementation task.
+album smoke. PR #57 subsequently passed independent review, merged at
+`13da14d6f1ea9378d776543c94b22b7b716630d3`, passed post-merge CI #39151964361
+and was separately deployed only to bot.
+On 2026-10-18 the owner confirmed one full-link single-video `/p/` delivery with normal
+playback and one previously rejected full-link three-video carousel arriving as one
+ordered, playable, silent album. Single-post processing was subjectively sufficiently
+fast; exact time was not measured. Only these two real user acceptance cases are closed.
+Other publication shapes, mixed-media delivery, clients/devices, larger/multi-batch
+albums, file-size boundaries, recovery, load and production capacity remain open.
+See [the evidence and limits](TESTING.md#instagram-live-acceptance-2026-10-18).
 Review corrections remove the UNSUPPORTED_CONTENT-to-single fallback: only explicit
 available VIDEO evidence and coherent identity seed the single-file snapshot, and no
 second extraction can override a block. Initial inspection uses the existing guard/event
 and a shared operation deadline; slot/workspace ownership survives cancellation until
 worker completion. Those corrections passed independent review before merge; the
-current share-link follow-up still needs its own review. Real `/p/` and album gates remain open.
+share-link follow-up also passed review before the narrow live acceptance above.
 The source-shape follow-up rejects present malformed carousel fields before
 mapping and requires complete source-to-playlist count/identity/order preservation.
 It added no downloader or metadata model; another independent review was required after
 offline verification. That PR review/merge/deployment subsequently completed as recorded
-above; live `/p/`/album gates remain open. The user's two reported post-deployment refusals
+above. The user's two initial post-deployment refusals
 do not identify the exact URL parameters because the links were not supplied.
 See [the scope and acceptance record](PHASE5_INSTAGRAM_REELS.md).
 

@@ -69,7 +69,8 @@ After independent PR review/merge, the separately performed deployment procedure
 
 Do not restart/recreate telegram-bot-api or modify its volume. The 25 MiB Reel limit
 and cooperative thread-cancellation limitation remain; no hard whole-request watchdog
-or production-reliability guarantee is introduced. `/p/` and carousel routing stay pending.
+or production-reliability guarantee is introduced. At that Reel-only stage, `/p/` and
+carousel routing were pending.
 After PR #54, the separately authorized bot-only deployment and one canonical-Reel smoke
 passed. The user confirmed delivery, playback, orientation and sound; temporary files
 were cleaned and Local Bot API was unchanged. Exact size/time were not recorded. The
@@ -86,10 +87,13 @@ The existing `INSTAGRAM_TELEGRAM_ENABLED` opt-in is reused: no second bot,
 new token, Compose service or polling loop. PR #56 passed final independent review,
 merged at `20d14441a2b7ea906ed2a0abc83679d25d9f2d32` and was separately deployed
 by replacing only bot. Startup/polling and source identity passed; Local Bot API was
-unchanged. Real `/p/` and album delivery/playback remain unverified.
+unchanged. PR #57 subsequently merged at `13da14d6f1ea9378d776543c94b22b7b716630d3`
+and was separately deployed only to bot. On 2026-10-18 the owner confirmed one
+full-link single-post video and one ordered three-video silent album, all with normal
+playback. See [the limited acceptance](TESTING.md#instagram-live-acceptance-2026-10-18).
 
 Accepted public `/p/` publication links pass through the conservative carousel
-selection policy. The offline share-link follow-up aligns `/p/` with Reels: irrelevant
+selection policy. The merged PR #57 share-link fix aligns `/p/` with Reels: irrelevant
 query keys, bare share flags and ordinary fragments are stripped. Known item selectors
 are rejected case-insensitively after percent decoding in query keys and selector-shaped
 fragments, before extraction. Malformed references and the 32-field bound remain blocked.
@@ -115,7 +119,6 @@ and workspace remain owned until real worker completion. Do not replace this wit
 thread abandonment or claim hard native-call termination.
 
 Do not rebuild/restart either running container, edit server environment or
-perform real external calls as part of this share-link fix. It requires independent
-review and its own merge/deployment decision. A separately approved
-bot-only rollout/smoke may follow review and tests, with full-client album
-playback checked before broader use.
+perform real external calls as part of the acceptance-documentation update. The two
+owner-confirmed cases do not authorize additional deployments, tests or limit changes.
+Broader publication/client/size coverage and production capacity remain unverified.
