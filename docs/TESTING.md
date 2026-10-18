@@ -946,3 +946,20 @@ Verification: net +34 cases; Reel handler 66 passed, combined handler/config/bot
 176 passed, full suite 1268 passed and 1 skipped (external YouTube matrix disabled).
 Full pytest forbids socket connections. Local FFmpeg/ffprobe, YouTube, callbacks and
 delivery regressions passed. Ruff lint/format, diff, documentation and scope/security PASS.
+
+## Draft Instagram /p/ Telegram routing validation
+
+`tests/test_instagram_post_telegram.py` adds network-forbidden tests for
+whole-publication three-video route selection, position preservation, owned
+workspace cleanup, conservative item/unknown-query rejection, blocked unknown
+items, single-video post reuse, uncertain album send without retry, and the
+shared per-dispatcher Instagram admission slot. The prior
+`test_posts_stay_outside_this_integration` expectation is replaced with
+a positive delegation check; public Reels retain their existing tests.
+
+This stage is under review; tests, Ruff and CI results have not yet been
+confirmed here, and should not be marked PASS solely because the test cases
+are committed. No new real Instagram extraction, media acquisition or live
+Telegram album send has been performed. The three-silent-video media
+acquisition gate remains separately verified; real album delivery and playback
+remain unverified.
