@@ -22,7 +22,7 @@ Environment-based settings are validated before starting the application. The Te
 
 ## Telegram layer
 
-The aiogram router owns commands and text intake, user-facing validation responses, and result delivery. It does not contain provider-specific download logic. Membership/access control is deferred to a future monetization or business-model layer and is not part of the current implementation. The /start response describes current platform support. Text messages are validated against supported platform domains. By default, YouTube URLs are passed to the application service; Instagram and TikTok URLs receive an explicit not-connected response. In Draft PR #56 the explicit Instagram opt-in delegates `/reel/` to the established Reel flow and `/p/` to positively inspected single-video or complete video-carousel flows. Both share one admission slot. Real `/p/` Telegram delivery and albums remain unverified; merge and deployment require separate decisions.
+The aiogram router owns commands and text intake, user-facing validation responses, and result delivery. It does not contain provider-specific download logic. Membership/access control is deferred to a future monetization or business-model layer and is not part of the current implementation. The /start response describes current platform support. Text messages are validated against supported platform domains. By default, YouTube URLs are passed to the application service; Instagram and TikTok URLs receive an explicit not-connected response. Merged PR #56 adds an explicit Instagram opt-in delegating `/reel/` to the established Reel flow and `/p/` to positively inspected single-video or complete video-carousel flows. Both share one admission slot. PR #56 was separately deployed with bot-only startup/polling verification; real `/p/` Telegram delivery and albums remain unverified. The subsequent share-link correction is offline-only pending its own review and deployment.
 
 The implemented option UX is capability-driven. Telegram shows only meaningful choices for
 the current platform/content and keeps a consistent visual language without forcing every
@@ -340,9 +340,11 @@ Single-file provider/download contracts, registry and Telegram routing stay unch
 
 `InstagramProvider.inspect_carousel` accepts canonical publication identities only.
 `InstagramCarouselService.create_selection_plan` validates URL intent first: known
-item-reference candidates (including `img_index`), unknown query keys and fragments
-are BLOCKED before extraction/cache lookup. Only ordinary `/p/` identities and the
-explicit tracking-key allowlist share a canonical cache key. No index semantics are guessed.
+item-reference candidates (including `img_index`) are BLOCKED before extraction/cache
+lookup. The follow-up share-link correction reuses the Reel guard: non-selector query
+keys, bare share flags and harmless fragments share the provider's canonical cache key.
+Malformed references and more than 32 query fields remain blocked. No index semantics
+are guessed; raw tracking data never reaches the provider.
 
 VIDEO requires positive video evidence; malformed/conflicting type markers give UNKNOWN.
 PHOTO requires `is_video=False`, `GraphImage`, or strictly integer `media_type=1`,
@@ -511,7 +513,18 @@ acquired outputs. Live handlers/YouTube/default registration remain unchanged. O
 prior real three-video acquisition is verified externally; real album upload/playback,
 larger carousels and broad Instagram reliability remain NOT VERIFIED.
 
-## Draft opt-in /p/ Telegram integration
+## Opt-in /p/ Telegram integration (PR #56)
+
+Post-share correction design: reuse the Reel query/fragment intent rule through a
+small transport-independent helper in the existing domain URL module. Validate the
+host/path with InstagramProvider first, reject known item selectors before stripping
+the raw reference, and pass only the provider's canonical URL to inspection. Unknown
+non-selector tracking keys, bare share flags and ordinary anchors must not block a
+whole publication. Keep the 32-field bound and malformed-reference rejection; no
+metadata, selection, acquisition or transport contract changes are needed.
+The shared helper decodes selector names, including repeated escaping, and matches
+case-insensitively. Malformed percent escapes and empty query names fail closed in
+both paths; correctly escaped literal percent signs remain ordinary share data.
 
 Source-shape correction design: validate the presence and complete list structure of
 `carousel_media` in the instance-local extractor adapter before yt-dlp can filter it.
@@ -544,7 +557,7 @@ downloader or transport layer is added. The initial inspection shares the existi
 cooperative guard/event and a deadline starting before extraction; asynchronous
 carousel stages consume the remaining budget while retaining their cleanup semantics.
 
-The feature branch `feat/instagram-post-carousel-telegram` adds a separate
+Merged PR #56 (`feat/instagram-post-carousel-telegram`) adds a separate
 Telegram `InstagramPostHandler` behind the existing `InstagramReelHandler`
 and unchanged opt-in flag, sharing one `_active` admission slot per dispatcher.
 The main transport-independent carousel contracts remain unchanged.
@@ -578,5 +591,9 @@ If the common deadline interrupts an upload, the transport's confirmed/uncertain
 progress survives; no retry or false pre-delivery-failure claim is introduced.
 Before these review corrections, GitHub Actions with FFmpeg/ffprobe passed 1277 offline tests (one external
 YouTube test opt-in skipped), plus Ruff lint/format. The real Telegram album
-and broader client playback gates are pending. No Compose/deployment change
-belongs to this branch.
+and broader client playback gates are pending. Final independent review passed at
+`219e1bfcc134e80be24bb8565f6dfc18dae77c21`; merge commit
+`20d14441a2b7ea906ed2a0abc83679d25d9f2d32` was separately deployed by replacing
+only bot. All 88 checked image paths matched main, polling started, and Local Bot API
+was unchanged. This is technical deployment evidence, not live `/p/`/album acceptance.
+The current share-link correction makes no additional deployment or environment change.

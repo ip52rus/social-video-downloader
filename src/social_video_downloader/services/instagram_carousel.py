@@ -1,6 +1,6 @@
 """Selection policy for Instagram carousels; no acquisition or Telegram calls."""
 
-from urllib.parse import parse_qsl, urlsplit
+from urllib.parse import urlsplit
 
 from social_video_downloader.domain.carousel import (
     CarouselInspection,
@@ -12,7 +12,7 @@ from social_video_downloader.domain.carousel import (
 )
 from social_video_downloader.domain.errors import InvalidMediaURLError
 from social_video_downloader.domain.models import MediaMetadata
-from social_video_downloader.domain.urls import normalize_media_url
+from social_video_downloader.domain.urls import has_instagram_item_reference, normalize_media_url
 from social_video_downloader.providers.instagram import InstagramProvider
 
 
@@ -40,22 +40,14 @@ class InstagramCarouselService:
         if not parts.path.startswith("/p/"):
             raise InvalidMediaURLError("Carousel inspection requires an Instagram post URL.")
         canonical = self._provider._media_url(normalized)
-        # Inspect intent before using a stripped canonical cache key. Unknown query
-        # parameters/fragments are ambiguous, not permission to select all entries.
+        # Share the Reel reference policy before using a stripped canonical cache key.
         try:
-            query = parse_qsl(
-                parts.query, keep_blank_values=True, strict_parsing=True, max_num_fields=32
+            issue = (
+                CarouselIssue.ITEM_REFERENCE_UNSUPPORTED
+                if has_instagram_item_reference(url)
+                else None
             )
-        except ValueError:
-            query = [("ambiguous", "")]
-        reference_keys = {"img_index", "media_id", "item_id", "carousel_index", "index", "slide"}
-        issue = None
-        if any(key.lower() in reference_keys for key, _ in query):
-            issue = CarouselIssue.ITEM_REFERENCE_UNSUPPORTED
-        elif urlsplit(url.strip()).fragment or any(
-            key not in {"igsh", "igshid", "fbclid", "psln"} and not key.startswith("utm_")
-            for key, _ in query
-        ):
+        except InvalidMediaURLError:
             issue = CarouselIssue.AMBIGUOUS_REFERENCE
         if issue is not None:
             return canonical, CarouselSelectionPlan(

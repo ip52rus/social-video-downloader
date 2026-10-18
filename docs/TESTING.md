@@ -951,7 +951,7 @@ Verification: net +34 cases; Reel handler 66 passed, combined handler/config/bot
 Full pytest forbids socket connections. Local FFmpeg/ffprobe, YouTube, callbacks and
 delivery regressions passed. Ruff lint/format, diff, documentation and scope/security PASS.
 
-## Draft Instagram /p/ Telegram routing validation
+## PR #56 Instagram /p/ Telegram routing validation
 
 `tests/test_instagram_post_telegram.py` adds network-forbidden tests for
 whole-publication three-video route selection, position preservation, known
@@ -1066,3 +1066,43 @@ lint/format, diff, documentation and security/scope checks PASS. Only the metada
 adapter changes in application code; provider/service/transport contracts, resource
 limits and cancellation/deadline handling are unchanged. Exact-head GitHub CI is
 verified separately after push; it does not replace final independent review.
+
+### Post share-link admission correction — offline
+
+PR #56 subsequently passed final independent review, merged at
+`20d14441a2b7ea906ed2a0abc83679d25d9f2d32` and was separately deployed only to bot.
+All 88 checked image paths matched main, polling started without conflicts, and Local
+Bot API identity/start/mounts/restart count were preserved. This is technical deployment
+evidence, not successful real `/p/` delivery. The user then reported reference-policy
+refusals for a single post and a carousel; their exact URLs were not provided.
+
+The old service rejected unknown query keys, bare flags under strict query parsing,
+and every fragment, unlike the Reel policy. The same synthetic 132-case control set
+produced **69 failed, 63 passed** before the fix and **132 passed** afterward. These
+include updated metadata-refusal tests that must now reach inspection rather than
+stop at share-query admission. No claim is made about the users' actual parameters.
+
+Reel and post entry points now share one domain URL intent guard, preserving provider
+host/path/credential/port validation. Query keys are percent-decoded and matched
+case-insensitively against img_index, media_id, item_id, carousel_index, index and slide;
+selector-shaped fragments and repeatedly escaped names remain blocked. Malformed
+percent escapes, unnamed fields and more than 32 query fields fail closed. Unknown
+non-selector keys, bare flags and ordinary anchors are stripped before the canonical
+publication reaches extraction; correctly escaped literal percent signs remain allowed.
+
+Tests cover canonical provider URLs, one planning extraction, shared cache identity,
+zero acquisition/media sends for blocked references, single silent/audio video success,
+three-video and mixed-carousel order, PHOTO exclusion, and UNKNOWN/private/auth/DRM/
+malformed-source refusal with full share URLs. Existing immutable-source, deadline,
+acquisition, preparation, delivery, YouTube and full Reel-share regressions remain in place.
+All tests are offline with socket connections denied. No real platform request,
+deployment or additional polling is part of this fix. Corrected real `/p/` delivery
+and Telegram album playback remain NOT VERIFIED.
+
+Final verification with the existing Python 3.13.12 / yt-dlp 2026.08.19 / aiogram
+3.31.0 environment and real local FFmpeg/ffprobe 9.0.2: net **+73 cases**, full pytest
+**1470 passed, 1 skipped** (external YouTube opt-in); extended Instagram/provider/
+inspection/acquisition/delivery/local-media **927 passed**; YouTube/handlers/URL/bot/
+config **267 passed**. Ruff lint/format, diff, documentation and security/scope checks
+PASS. Exact-head CI is checked after publication; independent review, merge and
+deployment of this fix remain separate decisions.

@@ -80,17 +80,20 @@ share URL with `utm_source` and `psln`; size and processing time were not record
 This is one Reel case, not `/p/` or album validation or general Instagram reliability.
 No further restart or live test is authorized by these historical records.
 
-## Experimental Instagram /p/ and album routing (Draft PR, not deployed)
+## Opt-in Instagram /p/ and album routing
 
 The existing `INSTAGRAM_TELEGRAM_ENABLED` opt-in is reused: no second bot,
-new token, Compose service or polling loop. The new branch
-`feat/instagram-post-carousel-telegram` is development-only until independent
-review, passing CI and a separate merge/deployment decision.
+new token, Compose service or polling loop. PR #56 passed final independent review,
+merged at `20d14441a2b7ea906ed2a0abc83679d25d9f2d32` and was separately deployed
+by replacing only bot. Startup/polling and source identity passed; Local Bot API was
+unchanged. Real `/p/` and album delivery/playback remain unverified.
 
 Accepted public `/p/` publication links pass through the conservative carousel
-selection policy. Only allowlisted tracking query parameters (including `psln`) are accepted; item
-selectors, unknown share keys, and ambiguous fragments are blocked
-before extraction. A single-video post must be positively confirmed by the source
+selection policy. The offline share-link follow-up aligns `/p/` with Reels: irrelevant
+query keys, bare share flags and ordinary fragments are stripped. Known item selectors
+are rejected case-insensitively after percent decoding in query keys and selector-shaped
+fragments, before extraction. Malformed references and the 32-field bound remain blocked.
+A single-video post must be positively confirmed by the source
 adapter and existing video validators; it consumes the same verified snapshot in the
 bounded single-file worker. BLOCKED never authorizes fallback or another extraction.
 The adapter checks source `carousel_media` before mapping: a present value must be a
@@ -112,6 +115,7 @@ and workspace remain owned until real worker completion. Do not replace this wit
 thread abandonment or claim hard native-call termination.
 
 Do not rebuild/restart either running container, edit server environment or
-perform real external calls as part of this Draft PR. A separately approved
+perform real external calls as part of this share-link fix. It requires independent
+review and its own merge/deployment decision. A separately approved
 bot-only rollout/smoke may follow review and tests, with full-client album
 playback checked before broader use.

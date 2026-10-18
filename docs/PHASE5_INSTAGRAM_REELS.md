@@ -156,9 +156,10 @@ not validated. Every selected video needs at least one format admitted by the ex
 MP4/H.264/AAC preference and manifest/fragment rejection policy. Nothing is truncated.
 Facts use a separate bounded 180-second cache; expiry requires new inspection.
 
-Query intent is examined before canonical cache use. `img_index` and other candidate
-item references are rejected without extraction; unknown query parameters/fragments are
-ambiguous and rejected. Only allowlisted tracking parameters can be discarded. No frontend
+Query intent is examined before canonical cache use. At the original inspection stage,
+unknown query parameters/fragments were ambiguous and only allowlisted tracking keys
+could be discarded. The post-share follow-up below replaces that policy with the shared
+Reel guard: reject known item selectors, strip non-selector share data. No frontend
 index semantics or first-item fallback is implemented.
 
 ### Live metadata evidence — 2026-10-16, before this implementation
@@ -413,7 +414,7 @@ recorded. This closes that full-share-link smoke only, not `/p/`, albums or broa
 Instagram reliability. The 25 MiB limit, cooperative deadlines, disabled-by-default
 configuration and production guard remain. No new live test is part of PR #56.
 
-## Opt-in /p/ Telegram integration — Draft review stage
+## Opt-in /p/ Telegram integration — PR #56
 
 The user authorized connecting the already merged single-post, carousel
 acquisition and offline Telegram album components, **not** merging or restarting
@@ -429,9 +430,12 @@ same validated provider snapshot without another extraction. All BLOCKED results
 including UNSUPPORTED_CONTENT, stay blocked. A complete READY
 carousel uses `InstagramCarouselAcquisition` and `TelegramCarouselDelivery`
 in one owned operation; 2–10 videos form a Telegram album, and a singleton is
-delivered as a video. Known item selectors and non-allowlisted/ambiguous
-carousel queries are BLOCKED before extraction. The known non-selector share key
-`psln` is accepted, while unknown keys remain blocked.
+delivered as a video. The original PR #56 query policy accepted only allowlisted share
+keys and rejected all fragments. The offline follow-up now uses the same reference
+guard as Reels: non-selector query keys/bare flags and ordinary anchors are stripped,
+while known selectors (including encoded/case variants and selector-shaped fragments)
+remain BLOCKED before extraction. Malformed references and more than 32 query fields
+are blocked. No raw query or fragment reaches the provider.
 No PHOTO is sent; UNKNOWNs and unsupported selected videos block the whole
 operation. Send uncertainty is reported without automatic retries. The per-
 dispatcher slot prevents simultaneous Reel and carousel handling.
@@ -461,6 +465,15 @@ the worker finishes. No new process manager, product byte/count limit or depende
 Before these corrections, network-forbidden routing and local FFmpeg/ffprobe suites
 passed on GitHub Actions (1277 passed, 1 optional real YouTube test skipped), along with
 Ruff lint and formatting. Independent review identified P1/P2/P3; the corrected diff
-requires another independent review. The previous real three-silent-video
+required another independent review. The previous real three-silent-video
 acquisition still proves only files/ffprobe, not live album sending or client
-playback. No live test, environment change, merge or deployment is included.
+playback. Final independent review passed on `219e1bfcc134e80be24bb8565f6dfc18dae77c21`;
+PR #56 merged at `20d14441a2b7ea906ed2a0abc83679d25d9f2d32` and was separately
+deployed only to bot. Source hashes and polling passed; Local Bot API was unchanged.
+This does not close the live `/p/` or album gates.
+
+After that deployment, the user reported the same reference-rejection response for
+one single post and one carousel. Their URLs were not supplied: no exact parameter
+combination or selector intent is inferred. The share-link correction reproduces the
+old policy's rejection classes with synthetic offline URLs only. Corrected real
+`/p/` delivery and Telegram album playback remain NOT VERIFIED; this fix is not deployed.
