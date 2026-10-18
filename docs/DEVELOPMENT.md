@@ -76,3 +76,26 @@ were cleaned and Local Bot API was unchanged. Exact size/time were not recorded.
 initial share URL was rejected on `psln`; the focused admission correction is offline-only
 and must be reviewed, merged and deployed separately. No further restart or live test is
 authorized by that code change. See PHASE5_INSTAGRAM_REELS.md for the evidence boundaries.
+
+## Experimental Instagram /p/ and album routing (Draft PR, not deployed)
+
+The existing `INSTAGRAM_TELEGRAM_ENABLED` opt-in is reused: no second bot,
+new token, Compose service or polling loop. The new branch
+`feat/instagram-post-carousel-telegram` is development-only until independent
+review, passing CI and a separate merge/deployment decision.
+
+Accepted public `/p/` publication links pass through the conservative carousel
+selection policy. Only allowlisted tracking query parameters are accepted; item
+selectors, unknown share keys such as `psln`, and ambiguous fragments are blocked
+before extraction. One actual single-video post falls back to the existing
+bounded single-file download. A READY video carousel goes through the bounded
+multi-file acquisition and Telegram delivery; PHOTOs are skipped only after
+positive classification, UNKNOWN items block everything, and no video is silently
+truncated. Initial limits are 10 selected videos, 25 MiB/file and 100 MiB total.
+One active Instagram operation per dispatcher; no automatic retry after a
+possibly delivered album.
+
+Do not rebuild/restart either running container, edit server environment or
+perform real external calls as part of this Draft PR. A separately approved
+bot-only rollout/smoke may follow review and tests, with full-client album
+playback checked before broader use.
