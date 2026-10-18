@@ -170,36 +170,42 @@ The initial shared URL failed on the irrelevant `psln` query key. PR #55 subsequ
 merged at `0a87beeaa8acb302b74e980946778608856b13f6` and was separately deployed.
 The user confirmed full-share-link delivery, playback, orientation and sound;
 size/time were not recorded. This is narrow Reel evidence, not `/p/`/album reliability.
-The fix strips ordinary queries/harmless fragments, retains known item-selector rejection
-and leaves carousel policy unchanged. No restart, environment change or live request is
-part of the current PR #56 correction. Compose defaults false; APP_ENV=development
-and the production guard remain unchanged. `/p/`/carousel routing, larger-carousel acquisition, broad
+That earlier fix stripped ordinary queries/harmless fragments, retained known item-selector
+rejection and left carousel policy unchanged. No restart, environment change or live request is
+part of the current share-link follow-up. Compose defaults false; APP_ENV=development
+and the production guard remain unchanged. Real `/p/`/carousel delivery, larger-carousel acquisition, broad
 reliability and real Telegram album playback remain NOT VERIFIED. Item-specific semantics remain
 blocked pending separate validation; the installed extractor ignores `img_index`.
 No running-stack rebuild/restart is authorized by this stage.
-A subsequent opt-in feature branch `feat/instagram-post-carousel-telegram` now connects
+Merged PR #56 (`feat/instagram-post-carousel-telegram`) connects
 public `/p/` URLs to positively inspected post/provider single-video download or existing
 carousel inspection/acquisition and Telegram album transport, without changing the
 YouTube flow or the production-only Settings guard. The route shares the current
 Reel admission slot. Initial bounded carousel scope is at most 10 videos, 25 MiB
 per source/upload file and 100 MiB total; oversize/unknown selections are blocked,
-not truncated. Only allowlisted carousel share queries (including `psln`) are accepted; item selectors
-and ambiguous queries remain blocked. The implementation is not live until reviewed,
-merged and separately deployed. The external three-video acquisition gate is not
+not truncated. The share-link follow-up aligns `/p/` query/fragment admission with Reels:
+strip non-selector share data and block known encoded/case-varied item selectors before
+extraction. Malformed references and the 32-field bound remain. PR #56 passed independent
+review, merged at `20d14441a2b7ea906ed2a0abc83679d25d9f2d32` and was separately
+deployed only to bot, with source/polling verification and unchanged Local Bot API.
+The external three-video acquisition gate is not
 proof of Telegram album playback. Before review corrections, GitHub Actions lint, formatting and offline/FFmpeg integration tests passed
 (1277 passed, one optional external YouTube test skipped) before any real
 album smoke. A controlled real Instagram-to-Telegram album/client playback
-check, independent review, merge and deployment remain outstanding.
+check remains outstanding. Review, merge and deployment of the share-link fix are
+separate pending decisions; no further deployment occurs in this implementation task.
 Review corrections remove the UNSUPPORTED_CONTENT-to-single fallback: only explicit
 available VIDEO evidence and coherent identity seed the single-file snapshot, and no
 second extraction can override a block. Initial inspection uses the existing guard/event
 and a shared operation deadline; slot/workspace ownership survives cancellation until
-worker completion. Further independent review of these corrections is required before
-any merge decision. Real `/p/` and album delivery gates remain open.
+worker completion. Those corrections passed independent review before merge; the
+current share-link follow-up still needs its own review. Real `/p/` and album gates remain open.
 The source-shape follow-up rejects present malformed carousel fields before
 mapping and requires complete source-to-playlist count/identity/order preservation.
-It adds no downloader or metadata model; another independent review is required after
-offline verification. No merge/deployment or live `/p/`/album gate is closed here.
+It added no downloader or metadata model; another independent review was required after
+offline verification. That PR review/merge/deployment subsequently completed as recorded
+above; live `/p/`/album gates remain open. The user's two reported post-deployment refusals
+do not identify the exact URL parameters because the links were not supplied.
 See [the scope and acceptance record](PHASE5_INSTAGRAM_REELS.md).
 
 The general gated sequence remains:

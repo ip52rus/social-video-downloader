@@ -40,6 +40,26 @@ CORROBORATED_PHOTO = {
     "image_versions2": {"candidates": [{"url": "https://media.invalid/photo.jpg"}]},
 }
 
+POST_SHARE_SUFFIXES = [
+    "",
+    "?utm_source=ig_web_copy_link&psln=fixture&dlrf=fixture",
+    "?unknown_tracking=fixture",
+    "?share",
+    "#watch",
+    "?tracking=100%25#progress%25",
+    "?srtk=fixture&share#comments",
+]
+ITEM_REFERENCE_SUFFIXES = [
+    suffix
+    for selector in ("img_index", "media_id", "item_id", "carousel_index", "index", "slide")
+    for suffix in (
+        f"?{selector}=fixture",
+        f"?%{ord(selector[0]):02x}{selector[1:].upper()}=fixture",
+        f"#?{selector.upper()}=fixture",
+        f"#share&%25{ord(selector[0]):02x}{selector[1:]}=fixture",
+    )
+]
+
 INVALID_CAROUSEL_SOURCES = [
     pytest.param([None], id="null-entry"),
     pytest.param("invalid", id="string"),
@@ -408,6 +428,7 @@ def test_unmodified_real_mapper_preserves_initial_facts(monkeypatch, items, sele
         "?img_index=-1",
         "?img_index=bad",
         "?img_index=",
+        "?img_index",
         "?img_index=1&img_index=2",
         "?%69mg_index=3",
         "?media_id=3",
@@ -429,12 +450,52 @@ def test_item_reference_intent_is_rejected_before_extraction_and_cache(query):
 
 
 @pytest.mark.parametrize(
-    "suffix",
-    ["?unknown=3", "?video_id=3", "?img_index", "?=3", "?igsh=x&item=3", "#3", "?bad%XX=3"],
+    "suffix,issue",
+    [
+        ("?unknown=3", None),
+        ("?video_id=3", None),
+        ("?img_index", CarouselIssue.ITEM_REFERENCE_UNSUPPORTED),
+        ("?=3", CarouselIssue.AMBIGUOUS_REFERENCE),
+        ("?igsh=x&item=3", None),
+        ("#3", None),
+        ("?bad%XX=3", CarouselIssue.AMBIGUOUS_REFERENCE),
+        ("?tracking=fixture#bad%XX", CarouselIssue.AMBIGUOUS_REFERENCE),
+    ],
 )
-def test_ambiguous_reference_never_becomes_full_publication(suffix):
+def test_reference_intent_is_distinct_from_inert_query_keys(suffix, issue):
     runtime = Runtime([VIDEO])
     plan = runtime.service().create_selection_plan(URL + suffix)
+    if issue is None:
+        assert plan.state is CarouselPlanState.READY and plan.issue is None
+        assert runtime.extractions == [URL]
+    else:
+        assert_blocked(plan, issue)
+        assert runtime.extractions == []
+
+
+@pytest.mark.parametrize("suffix", POST_SHARE_SUFFIXES)
+@pytest.mark.parametrize("entry_point", ["create_selection_plan", "inspect_publication"])
+def test_post_share_links_inspect_only_the_canonical_publication(suffix, entry_point):
+    runtime = Runtime([{**VIDEO, "pk": 101 + index} for index in range(3)])
+    plan = getattr(runtime.service(), entry_point)(URL + suffix)
+    assert plan.state is CarouselPlanState.READY and plan.issue is None
+    assert plan.publication_url == URL and plan.total_entries == 3
+    assert [item.position for item in plan.selected_videos] == [1, 2, 3]
+    assert runtime.extractions == [URL]
+
+
+@pytest.mark.parametrize("suffix", ITEM_REFERENCE_SUFFIXES)
+def test_encoded_post_selectors_block_before_publication_inspection(suffix):
+    runtime = Runtime([VIDEO])
+    plan = runtime.service().inspect_publication(URL + suffix)
+    assert_blocked(plan, CarouselIssue.ITEM_REFERENCE_UNSUPPORTED)
+    assert runtime.extractions == []
+
+
+def test_post_query_field_bound_blocks_before_extraction():
+    runtime = Runtime([VIDEO])
+    suffix = "?" + "&".join(f"tracking{index}=fixture" for index in range(33))
+    plan = runtime.service().inspect_publication(URL + suffix)
     assert_blocked(plan, CarouselIssue.AMBIGUOUS_REFERENCE)
     assert runtime.extractions == []
 
@@ -445,6 +506,7 @@ def test_tracking_variants_share_cached_immutable_facts(monkeypatch):
     runtime = Runtime([VIDEO])
     service = runtime.service()
     first = service.create_selection_plan(URL + "?igsh=fixture&utm_source=fixture&psln=fixture")
+    assert service.create_selection_plan(URL + "?unknown_tracking=fixture&share#watch") == first
     assert service.create_selection_plan("http://m.instagram.com/p/Fixture_Carousel") == first
     assert len(runtime.extractions) == 1
     clock[0] = 180.0

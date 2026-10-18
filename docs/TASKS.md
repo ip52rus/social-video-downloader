@@ -432,12 +432,12 @@ are unchanged. No live external-platform or Telegram calls.
 ### Reel-only Telegram MVP (offline)
 
 - [x] Connect public Reels to the existing provider, optional-audio preparation and sendVideo behind an explicit disabled-by-default flag.
-- [x] Historical Reel-only stage: reject item selectors and `/p/`; strip ordinary Reel share queries and harmless fragments. Draft PR #56 adds guarded `/p/` routing separately below.
+- [x] Historical Reel-only stage: reject item selectors and `/p/`; strip ordinary Reel share queries and harmless fragments. Merged PR #56 adds guarded `/p/` routing separately below.
 - [x] Add scoped media-byte/preparation limits and one active Reel per handler instance; keep admission/workspace until a cancelled worker actually exits.
 - [x] Verify the narrow integration offline, including local silent/audio passthrough and video-only conversion.
 - [x] Independently review and merge the Reel MVP (PR #53).
 - [x] Validate one real canonical Reel upload; user confirmed client playback, orientation and sound. Exact file size/time were not recorded; broader reliability remains open.
-- [ ] Validate the isolated Draft PR connecting single-video `/p/` and whole-publication video carousels to the existing active Instagram handler. Implementation and network-forbidden routing tests are present on the feature branch; baseline GitHub CI before review corrections passed with FFmpeg (1277 tests, 1 skipped). Real album upload/playback, repeat independent review, merge and deployment remain OPEN. Preserve the Reel flag/production guard and the unchanged single-file core.
+- [x] Independently review PR #56 at `219e1bfcc134e80be24bb8565f6dfc18dae77c21` (PASS), merge at `20d14441a2b7ea906ed2a0abc83679d25d9f2d32`, and separately deploy only bot. Full offline suite/CI: 1397 passed, 1 skipped. Image source identity and polling passed; Local Bot API was unchanged. This closes technical integration/deployment only, not real `/p/` delivery or album playback.
 - [ ] Confirm real Telegram album send for the previously tested three-silent-video publication, including order, playback, cleanup and no synthetic sound, only after separate deployment/smoke approval.
 - [ ] Reassess initial 10-video / 25 MiB-per-file / 100 MiB-total limits and source-query policy using test evidence before expansion.
 - Review correction P1: use source-confirmed single-video metadata and the same cached
@@ -445,7 +445,7 @@ are unchanged. No live external-platform or Telegram calls.
 - Review correction P2: initial inspection shares cancellation/deadline with later stages;
   keep admission/workspace until worker exit, and preserve uncertain-send progress on timeout.
 - Review correction P3: current architecture describes `/reel/` and `/p/`; Reel-only
-  statements are historical. New live `/p/`/album gates and re-review remain OPEN.
+  statements are historical. Live `/p/`/album gates remain OPEN; PR #56 re-review completed above.
 - Prior correction verification: net +43 deterministic cases; full suite 1320 passed,
   1 skipped (external YouTube opt-in); focused post/Reel/preparation tests 204 passed,
   extended Instagram/local-media tests 777 passed, YouTube/handler/config regressions 242 passed.
@@ -457,19 +457,37 @@ are unchanged. No live external-platform or Telegram calls.
   net +42 cases, focused source-shape 40 passed (29 failed before the fix), combined
   carousel/post/Reel 303 passed, extended Instagram/local-media 819 passed,
   YouTube/handlers/config 242 passed, full pytest 1362 passed and 1 external opt-in skipped.
-  Ruff lint/format, diff, documentation and security/scope checks PASS. Repeat independent
-  review is required; merge/deployment and live `/p/`/album gates remain OPEN.
+  Ruff lint/format, diff, documentation and security/scope checks PASS. At this historical
+  stage, repeat review/merge/deployment remained open; their completion is recorded above.
+  Live `/p/`/album gates remain OPEN.
 - Immutable-source follow-up: freeze the original count and ordered ItemEvidence
   before mapping, then compare every mapped identity, kind, evidence signal and
   availability flag with those initial facts. Do not derive expectations from a
   source list that upstream may have mutated. Eleven synthetic mutation scenarios
   cover inspection and handler refusal without acquisition, media sends or repeat
   extraction. These are mapper fault-injection cases, not observed upstream mutation
-  or a live exploit; repeat independent review and live `/p/`/album gates remain OPEN.
+  or a live exploit. PR #56 subsequently passed repeat review; live `/p/`/album gates remain OPEN.
   Verification: net +35 cases; new subset 35 passed (33 failed/2 passed before the fix),
   extended Instagram/local FFmpeg/ffprobe 854 passed, YouTube/handlers/config 242 passed,
   full pytest 1397 passed and 1 external opt-in skipped. Ruff lint/format, diff and
   security/scope checks PASS. No new external-platform requests or delivery evidence.
+
+### Post share-link correction — offline follow-up
+
+- The user reported two reference-policy refusals after PR #56 deployment; actual
+  URLs were not supplied. Synthetic tests reproduce unknown-query, bare-flag and
+  ordinary-fragment rejection without claiming the users' exact parameters.
+- Reuse one transport-independent Reel/post reference guard. Strip non-selector share
+  data before provider inspection; retain known selectors, encoded/case variants,
+  malformed-reference rejection and the 32-field bound. Metadata snapshot, selection,
+  acquisition, delivery, product limits and the running environment remain unchanged.
+- Offline verification PASS: net +73 deterministic cases; full pytest 1470 passed,
+  1 skipped (external YouTube opt-in); extended Instagram/local-media 927 passed;
+  YouTube/handlers/URL/bot/config 267 passed. Ruff lint/format, diff, documentation and
+  security/scope checks PASS. The 132-case control set changed from 69 failed/63 passed
+  before the fix to 132 passed; later encoding/malformed-reference cases also pass.
+- Review, merge and separate deployment of this correction remain OPEN. Corrected
+  live `/p/`/album delivery and client playback remain NOT VERIFIED.
 
 The user chose one controlled smoke with the existing main bot and accepted a short
 planned bot-only restart after PR review/merge. General production rollout is not approved.

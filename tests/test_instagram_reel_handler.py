@@ -159,6 +159,7 @@ def test_invalid_flag_fails_closed(value):
         "#share",
         "?psln=fixture#watch",
         "?note=img_index#note=slide",
+        "?tracking=100%25#progress%25",
     ],
 )
 async def test_enabled_reel_uses_provider_and_one_send_then_cleans(message, monkeypatch, suffix):
@@ -203,6 +204,7 @@ async def test_enabled_reel_uses_provider_and_one_send_then_cleans(message, monk
         "?slide=2",
         "?psln=fixture&IMG_INDEX=2",
         "?%69mg_index=2",
+        "?%2569mg_index=2",
         "?img_index=",
         "#slide",
         "#slide=2",
@@ -211,6 +213,7 @@ async def test_enabled_reel_uses_provider_and_one_send_then_cleans(message, monk
         "#?img_index=2",
         "#share&item_id=fixture",
         "#%69mg_index=2",
+        "#%2569mg_index=2",
     ],
 )
 async def test_raw_reference_is_rejected_before_extraction(message, monkeypatch, suffix):
@@ -248,6 +251,8 @@ def test_share_links_reuse_provider_canonicalization(raw):
         "https://www.instagram.com:8443/reel/Fixture_01/",
         "https://www.instagram.com:invalid/reel/Fixture_01/",
         "https://[malformed/reel/Fixture_01/",
+        URL + "?bad%XX=fixture",
+        URL + "?=fixture",
         URL + "?" + "&".join(f"key{i}=value" for i in range(33)),
     ],
 )

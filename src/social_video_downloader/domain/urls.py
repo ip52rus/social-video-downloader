@@ -1,6 +1,7 @@
 """URL normalization and platform detection."""
 
-from urllib.parse import urlsplit, urlunsplit
+from re import findall, search
+from urllib.parse import parse_qsl, unquote, urlsplit, urlunsplit
 
 from social_video_downloader.domain.errors import (
     InvalidMediaURLError,
@@ -68,6 +69,38 @@ def normalize_media_url(url: str) -> str:
             parts.query,
             "",
         )
+    )
+
+
+def has_instagram_item_reference(raw: str) -> bool:
+    """Inspect intent on a raw URL already validated by InstagramProvider.
+
+    Share parameters are discarded by the provider's canonicalization. Only known
+    selectors change publication scope; malformed or overlarge references fail closed.
+    """
+    parts = urlsplit(raw.strip())
+    try:
+        query = parse_qsl(parts.query, keep_blank_values=True, max_num_fields=32)
+    except ValueError:
+        raise InvalidMediaURLError("Ambiguous reference.") from None
+    if (
+        any(not key for key, _ in query)
+        or search(r"%(?![0-9A-Fa-f]{2})", parts.query)
+        or search(r"%(?![0-9A-Fa-f]{2})", parts.fragment)
+    ):
+        raise InvalidMediaURLError("Malformed reference.")
+
+    def decoded(value):
+        # Escaped selectors must not masquerade as unknown tracking keys. Each
+        # changing decode shortens the string; a literal percent sign converges.
+        while (normalized := unquote(value)) != value:
+            value = normalized
+        return value
+
+    reference_keys = {"img_index", "media_id", "item_id", "carousel_index", "index", "slide"}
+    fragment_keys = findall(r"(?:^|[?&/])([^=:/?&]+)", decoded(parts.fragment))
+    return any(decoded(key).casefold() in reference_keys for key, _ in query) or any(
+        key.casefold() in reference_keys for key in fragment_keys
     )
 
 

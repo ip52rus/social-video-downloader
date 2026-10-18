@@ -40,6 +40,7 @@ from social_video_downloader.telegram_instagram_posts import (
 from tests.integration.test_video_preparation import generate
 from tests.test_instagram_carousel import (
     INVALID_CAROUSEL_SOURCES,
+    ITEM_REFERENCE_SUFFIXES,
     PHOTO,
     SOURCE_MUTATIONS,
     VIDEO,
@@ -137,23 +138,22 @@ async def test_three_video_carousel_is_routed_in_original_order_and_cleaned(
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "suffix",
-    [
-        "?img_index=2",
-        "?media_id=fixture",
-        "?item_id=fixture",
-        "?carousel_index=2",
-        "?index=2",
-        "?slide=2",
-        "?%69mg_index=2",
-        "?unknown=ignored",
-        "#slide/2",
-    ],
+    ITEM_REFERENCE_SUFFIXES,
 )
-async def test_unsafe_post_reference_never_extracts_or_sends(message, suffix):
+async def test_unsafe_post_reference_never_extracts_or_sends(message, monkeypatch, suffix):
     handler = owner()
+    acquire, deliver = AsyncMock(), AsyncMock()
+    monkeypatch.setattr(InstagramCarouselAcquisition, "acquire", acquire)
+    monkeypatch.setattr(TelegramCarouselDelivery, "deliver", deliver)
+    prepare = MagicMock()
+    monkeypatch.setattr(handler, "_prepare", prepare)
     message.text += suffix
     await handle_text(message, instagram_reels=handler)
+    acquire.assert_not_awaited()
+    deliver.assert_not_awaited()
+    prepare.assert_not_called()
     assert message.answer_video.await_count == 0
+    assert not message.bot.mock_calls
     assert "ссылка на публикацию целиком" in message.answer.call_args.args[0]
     assert not handler._active
 
@@ -284,8 +284,11 @@ def publication_runtime(product, *, source=None, mutate=None):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("audio", [False, True])
+@pytest.mark.parametrize(
+    "suffix", ["", "?utm_source=fixture&psln=fixture&dlrf=fixture", "?share#watch"]
+)
 async def test_positive_single_post_consumes_same_snapshot_and_validates_local_media(
-    message, tmp_path, audio
+    message, tmp_path, audio, suffix
 ):
     if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
         pytest.skip("Local FFmpeg/ffprobe unavailable")
@@ -295,7 +298,7 @@ async def test_positive_single_post_consumes_same_snapshot_and_validates_local_m
     # Incomplete codec/dimension fields remain admissible, with explicit VIDEO evidence.
     product = {**VIDEO, "video_versions": [{"url": "https://media.invalid/video.mp4"}]}
     handler, runtime, processed, repeated = publication_runtime(product, source=source)
-    message.text += "?utm_source=fixture&psln=fixture"
+    message.text += suffix
     sent_paths = []
 
     async def send(file, **kwargs):
@@ -340,6 +343,7 @@ async def test_positive_single_post_consumes_same_snapshot_and_validates_local_m
     ],
 )
 async def test_blocked_source_never_reextracts_acquires_or_sends(message, monkeypatch, product):
+    message.text += "?utm_source=fixture&psln=fixture&dlrf=fixture#watch"
     handler, runtime, processed, repeated = publication_runtime(product)
     acquire, deliver = AsyncMock(), AsyncMock()
     monkeypatch.setattr(InstagramCarouselAcquisition, "acquire", acquire)
@@ -356,6 +360,7 @@ async def test_blocked_source_never_reextracts_acquires_or_sends(message, monkey
 @pytest.mark.asyncio
 @pytest.mark.parametrize("source", INVALID_CAROUSEL_SOURCES)
 async def test_invalid_source_collection_never_acquires_or_sends(message, monkeypatch, source):
+    message.text += "?utm_source=fixture&psln=fixture&dlrf=fixture#watch"
     handler, runtime, processed, repeated = publication_runtime({**VIDEO, "carousel_media": source})
     acquire, deliver = AsyncMock(), AsyncMock()
     monkeypatch.setattr(InstagramCarouselAcquisition, "acquire", acquire)
@@ -454,9 +459,13 @@ async def test_incomplete_or_ambiguous_single_metadata_is_not_permission_to_fall
 @pytest.mark.asyncio
 @pytest.mark.parametrize("mixed", [False, True])
 @pytest.mark.parametrize("silent", [False, True])
+@pytest.mark.parametrize(
+    "suffix", ["", "?utm_source=fixture&psln=fixture&dlrf=fixture", "?share#watch"]
+)
 async def test_real_metadata_plan_selects_every_video_and_only_confirmed_photos_are_skipped(
-    message, monkeypatch, mixed, silent
+    message, monkeypatch, mixed, silent, suffix
 ):
+    message.text += suffix
     items = [VIDEO, {**VIDEO, "pk": 103}]
     if silent:
         items = [{**item, "has_audio": False} for item in (*items, {**VIDEO, "pk": 104})]
