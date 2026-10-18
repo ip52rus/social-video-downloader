@@ -116,6 +116,13 @@ class InstagramPostHandler:
                     )
                 return
 
+            if len(plan.selected_videos) > _ACQUISITION_LIMITS.max_videos:
+                await message.answer(
+                    f"В публикации {len(plan.selected_videos)} видео. Сейчас лимит — "
+                    f"{_ACQUISITION_LIMITS.max_videos}; пропускать остальные не будем."
+                )
+                return
+
             await message.answer("Карусель распознана. Подготавливаю видео к отправке…")
             with TemporaryDirectory(prefix="instagram-carousel-") as directory:
                 workspace = Path(directory).resolve()
