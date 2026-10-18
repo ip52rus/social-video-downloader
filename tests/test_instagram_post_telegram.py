@@ -113,7 +113,7 @@ async def test_three_video_carousel_is_routed_in_original_order_and_cleaned(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("suffix", ["?img_index=2", "?psln=ignored", "#slide/2"])
+@pytest.mark.parametrize("suffix", ["?img_index=2", "?unknown=ignored", "#slide/2"])
 async def test_unsafe_post_reference_never_extracts_or_sends(message, suffix):
     handler = owner()
     message.text += suffix
