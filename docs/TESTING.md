@@ -950,7 +950,8 @@ delivery regressions passed. Ruff lint/format, diff, documentation and scope/sec
 ## Draft Instagram /p/ Telegram routing validation
 
 `tests/test_instagram_post_telegram.py` adds network-forbidden tests for
-whole-publication three-video route selection, position preservation, owned
+whole-publication three-video route selection, position preservation, known
+`psln` tracking-key acceptance, owned
 workspace cleanup, conservative item/unknown-query rejection, blocked unknown
 items, single-video post reuse, uncertain album send without retry, and the
 shared per-dispatcher Instagram admission slot. The prior
