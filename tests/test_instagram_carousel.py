@@ -55,6 +55,55 @@ INVALID_CAROUSEL_SOURCES = [
     pytest.param([{**VIDEO, "carousel_media": [None]}], id="nested-collection"),
 ]
 
+SOURCE_MUTATIONS = [
+    "drop_unknown",
+    "reverse",
+    "identity",
+    "promote_unknown",
+    "photo_to_video",
+    "video_signal",
+    "image_signal",
+    "is_private",
+    "needs_auth",
+    "has_drm",
+    "availability",
+]
+
+
+def mutate_upstream_source(monkeypatch, change):
+    """Fault injection before the installed mapper, not its observed behavior."""
+    original = InstagramIE._extract_product
+    items = [deepcopy(VIDEO), {**deepcopy(VIDEO), "pk": 103}]
+    if change in {"drop_unknown", "promote_unknown"}:
+        items[1] = {"pk": 103}
+    elif change == "photo_to_video":
+        items[1] = deepcopy(PHOTO)
+    elif change in {"is_private", "needs_auth", "has_drm", "availability"}:
+        items[1][change] = "needs_auth" if change == "availability" else True
+
+    def changed(self, product, *args, **kwargs):
+        source = product["carousel_media"]
+        if change == "drop_unknown":
+            source.pop()
+        elif change == "reverse":
+            source.reverse()
+        elif change == "identity":
+            source[1]["pk"] = 104
+        elif change in {"promote_unknown", "photo_to_video"}:
+            identity = source[1]["pk"]
+            source[1].clear()
+            source[1].update(deepcopy(VIDEO), pk=identity)
+        elif change == "video_signal":
+            source[1]["is_video"] = True
+        elif change == "image_signal":
+            source[1]["image_versions2"] = deepcopy(PHOTO["image_versions2"])
+        else:
+            source[1].pop(change)
+        return original(self, product, *args, **kwargs)
+
+    monkeypatch.setattr(InstagramIE, "_extract_product", changed)
+    return items
+
 
 def corrupt_upstream_collection(monkeypatch, change):
     original = InstagramIE._extract_product
@@ -312,6 +361,43 @@ def test_source_collection_must_survive_mapping_completely(monkeypatch, change, 
     assert_blocked(result, CarouselIssue.INVALID_METADATA)
     assert result.total_entries == 2
     assert runtime.extractions == [URL] and runtime.provider._inspection_cache == {}
+
+
+@pytest.mark.parametrize("change", SOURCE_MUTATIONS)
+@pytest.mark.parametrize("entry_point", ["create_selection_plan", "inspect_publication"])
+def test_mapping_compares_against_initial_immutable_source_facts(monkeypatch, change, entry_point):
+    runtime = Runtime(mutate_upstream_source(monkeypatch, change))
+    service = runtime.service()
+    result = getattr(service, entry_point)(URL)
+    assert not isinstance(result, MediaMetadata)
+    assert_blocked(result, CarouselIssue.INVALID_METADATA)
+    # In particular, dropping UNKNOWN must not rewrite the original count to one.
+    assert result.total_entries == 2
+    assert runtime.extractions == [URL] and runtime.provider._inspection_cache == {}
+
+
+@pytest.mark.parametrize(
+    "items,selected", [([VIDEO, {**VIDEO, "pk": 103}], [1, 2]), ([VIDEO, PHOTO], [1])]
+)
+def test_unmodified_real_mapper_preserves_initial_facts(monkeypatch, items, selected):
+    original = InstagramIE._extract_product
+    calls = []
+
+    def unchanged(self, product, *args, **kwargs):
+        before = deepcopy(product)
+        result = original(self, product, *args, **kwargs)
+        assert product == before
+        calls.append(True)
+        return result
+
+    monkeypatch.setattr(InstagramIE, "_extract_product", unchanged)
+    runtime = Runtime(items)
+    plan = runtime.service().inspect_publication(URL)
+    assert plan.state is CarouselPlanState.READY and plan.issue is None
+    assert [item.item_id for item in plan.items] == [str(item["pk"]) for item in items]
+    assert [item.position for item in plan.items] == [1, 2]
+    assert [item.position for item in plan.selected_videos] == selected
+    assert calls == [True] and runtime.extractions == [URL]
 
 
 @pytest.mark.parametrize(

@@ -459,6 +459,17 @@ are unchanged. No live external-platform or Telegram calls.
   YouTube/handlers/config 242 passed, full pytest 1362 passed and 1 external opt-in skipped.
   Ruff lint/format, diff, documentation and security/scope checks PASS. Repeat independent
   review is required; merge/deployment and live `/p/`/album gates remain OPEN.
+- Immutable-source follow-up: freeze the original count and ordered ItemEvidence
+  before mapping, then compare every mapped identity, kind, evidence signal and
+  availability flag with those initial facts. Do not derive expectations from a
+  source list that upstream may have mutated. Eleven synthetic mutation scenarios
+  cover inspection and handler refusal without acquisition, media sends or repeat
+  extraction. These are mapper fault-injection cases, not observed upstream mutation
+  or a live exploit; repeat independent review and live `/p/`/album gates remain OPEN.
+  Verification: net +35 cases; new subset 35 passed (33 failed/2 passed before the fix),
+  extended Instagram/local FFmpeg/ffprobe 854 passed, YouTube/handlers/config 242 passed,
+  full pytest 1397 passed and 1 external opt-in skipped. Ruff lint/format, diff and
+  security/scope checks PASS. No new external-platform requests or delivery evidence.
 
 The user chose one controlled smoke with the existing main bot and accepted a short
 planned bot-only restart after PR review/merge. General production rollout is not approved.

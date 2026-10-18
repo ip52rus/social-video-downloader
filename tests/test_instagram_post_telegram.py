@@ -41,9 +41,11 @@ from tests.integration.test_video_preparation import generate
 from tests.test_instagram_carousel import (
     INVALID_CAROUSEL_SOURCES,
     PHOTO,
+    SOURCE_MUTATIONS,
     VIDEO,
     Runtime,
     corrupt_upstream_collection,
+    mutate_upstream_source,
 )
 from tests.test_instagram_provider import INFO
 from tests.test_telegram_carousel import collection, response
@@ -381,6 +383,25 @@ async def test_changed_upstream_collection_never_reaches_media(message, monkeypa
     monkeypatch.setattr(InstagramCarouselAcquisition, "acquire", acquire)
     monkeypatch.setattr(TelegramCarouselDelivery, "deliver", deliver)
     prepare = MagicMock(side_effect=AssertionError("Changed collection reached single worker"))
+    monkeypatch.setattr(handler, "_prepare", prepare)
+    await handle_text(message, instagram_reels=handler)
+    assert runtime.extractions == [URL] and not processed and not repeated
+    prepare.assert_not_called()
+    acquire.assert_not_awaited()
+    deliver.assert_not_awaited()
+    message.answer_video.assert_not_awaited()
+    assert not message.bot.mock_calls and not handler._active
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change", SOURCE_MUTATIONS)
+async def test_mutated_source_never_acquires_sends_or_reextracts(message, monkeypatch, change):
+    items = mutate_upstream_source(monkeypatch, change)
+    handler, runtime, processed, repeated = publication_runtime({**VIDEO, "carousel_media": items})
+    acquire, deliver = AsyncMock(), AsyncMock()
+    monkeypatch.setattr(InstagramCarouselAcquisition, "acquire", acquire)
+    monkeypatch.setattr(TelegramCarouselDelivery, "deliver", deliver)
+    prepare = MagicMock(side_effect=AssertionError("Mutated collection reached single worker"))
     monkeypatch.setattr(handler, "_prepare", prepare)
     await handle_text(message, instagram_reels=handler)
     assert runtime.extractions == [URL] and not processed and not repeated

@@ -526,6 +526,14 @@ the adapter returns an incomplete guarded playlist consumed as INVALID_METADATA.
 Known original list counts remain available even on rejection. Empty collections
 remain blocked as NO_VIDEOS. Single-post cache, format and cancellation rules stay unchanged.
 
+Immutable-source correction: keeping the original list by reference is insufficient
+if an upstream mapper mutates it in place. Before mapping, retain only a tuple of
+existing frozen ItemEvidence values (ordered source/mapped IDs, kind, signals and
+availability), the original count and parent availability. Compare mapped entries
+against those initial facts, never against the possibly mutated source list. This
+adds no parallel classifier or raw-payload copy; mapper fault injection is offline
+contract testing, not observed mutation by unmodified yt-dlp or a live exploit.
+
 Review correction design: a generic BLOCKED issue cannot prove a single video.
 Reuse the instance-local adapter's ItemEvidence and existing MediaMetadata as the
 positive single-post result of a narrow provider/service inspection operation.

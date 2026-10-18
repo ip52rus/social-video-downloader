@@ -1031,3 +1031,38 @@ Socket connections were forbidden. Ruff lint/format, diff, documentation and
 security/scope checks PASS. Only `_extract_product` changes in application code;
 format/classification policies, product limits, cancellation and transport are unchanged.
 Exact-head GitHub CI and a separate independent review remain required after publication.
+
+### PR #56 immutable source facts — offline fault injection
+
+Before calling the installed product mapper, the adapter snapshots the original
+count and ordered frozen ItemEvidence values: source ID, expected mapped ID,
+VIDEO/PHOTO/UNKNOWN kind, evidence signals and unavailability. Parent availability
+is also retained before mapping. Expected values are never recomputed from the
+mutable source after mapping; mismatches produce INVALID_METADATA, not a single
+fallback or a shortened READY selection. The classifier and identity policy are reused
+unchanged; no full upstream payload is copied in production.
+
+Eleven fault-injection scenarios mutate the input in place before the real installed
+yt-dlp mapper runs: remove UNKNOWN, reorder entries, replace an ID, promote UNKNOWN,
+change PHOTO to VIDEO, change video/image evidence, or remove is_private, needs_auth,
+has_drm or restricted availability. Both inspection APIs assert INVALID_METADATA,
+the initial count and empty selection/cache. Handler tests assert no acquisition,
+preparation, Telegram media send, repeated extraction or partial delivery. Two
+unmodified mapper controls preserve all-video and mixed VIDEO/PHOTO selections;
+existing real-local single-post, silent-video, Reel and cancellation tests are retained.
+
+These 35 new cases produced **33 failed, 2 passed** before the correction and
+**35 passed** afterward. This is synthetic fault injection, not evidence that
+unmodified yt-dlp 2026.08.19 mutates these facts, nor an observed Instagram exploit.
+There is no new live Instagram acquisition or Telegram delivery evidence. Independent
+review is still required; live `/p/` and album playback remain NOT VERIFIED.
+
+Final local verification: net **+35 cases**, full pytest **1397 passed, 1 skipped**
+(external YouTube opt-in); extended Instagram/provider/inspection/acquisition/delivery
+and local FFmpeg/ffprobe **854 passed**; YouTube/handlers/bot/config **242 passed**.
+The existing Python 3.13.12 environment, yt-dlp 2026.08.19 and FFmpeg/ffprobe 9.0.2
+were used. All runs forbid socket connections; no dependencies were changed. Ruff
+lint/format, diff, documentation and security/scope checks PASS. Only the metadata
+adapter changes in application code; provider/service/transport contracts, resource
+limits and cancellation/deadline handling are unchanged. Exact-head GitHub CI is
+verified separately after push; it does not replace final independent review.
