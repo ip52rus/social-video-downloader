@@ -437,7 +437,9 @@ are unchanged. No live external-platform or Telegram calls.
 - [x] Verify the narrow integration offline, including local silent/audio passthrough and video-only conversion.
 - [x] Independently review and merge the Reel MVP (PR #53).
 - [x] Validate one real canonical Reel upload; user confirmed client playback, orientation and sound. Exact file size/time were not recorded; broader reliability remains open.
-- [ ] Integrate single-video `/p/` and carousels separately.
+- [ ] Validate the isolated Draft PR connecting single-video `/p/` and whole-publication video carousels to the existing active Instagram handler. Implementation and network-forbidden routing tests are present on the feature branch; CI, real album upload/playback, independent review, merge and deployment remain OPEN. Preserve the Reel flag/production guard and the unchanged single-file core.
+- [ ] Confirm real Telegram album send for the previously tested three-silent-video publication, including order, playback, cleanup and no synthetic sound, only after separate deployment/smoke approval.
+- [ ] Reassess initial 10-video / 25 MiB-per-file / 100 MiB-total limits and source-query policy using test evidence before expansion.
 
 The user chose one controlled smoke with the existing main bot and accepted a short
 planned bot-only restart after PR review/merge. General production rollout is not approved.
