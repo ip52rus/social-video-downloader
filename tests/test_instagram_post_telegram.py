@@ -119,7 +119,7 @@ async def test_unsafe_post_reference_never_extracts_or_sends(message, suffix):
     message.text += suffix
     await handle_text(message, instagram_reels=handler)
     assert message.answer_video.await_count == 0
-    assert "ссылку на публикацию целиком" in message.answer.call_args.args[0]
+    assert "ссылка на публикацию целиком" in message.answer.call_args.args[0]
     assert not handler._active
 
 
