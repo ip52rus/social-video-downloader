@@ -422,7 +422,8 @@ download/prepare/send route after a non-playlist inspection. A complete READY
 carousel uses `InstagramCarouselAcquisition` and `TelegramCarouselDelivery`
 in one owned operation; 2–10 videos form a Telegram album, and a singleton is
 delivered as a video. Known item selectors and non-allowlisted/ambiguous
-carousel queries are BLOCKED before extraction, including `psln` for now.
+carousel queries are BLOCKED before extraction. The known non-selector share key
+`psln` is accepted, while unknown keys remain blocked.
 No PHOTO is sent; UNKNOWNs and unsupported selected videos block the whole
 operation. Send uncertainty is reported without automatic retries. The per-
 dispatcher slot prevents simultaneous Reel and carousel handling.
