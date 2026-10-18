@@ -279,7 +279,7 @@ def test_tracking_variants_share_cached_immutable_facts(monkeypatch):
     monkeypatch.setattr("social_video_downloader.providers.instagram.monotonic", lambda: clock[0])
     runtime = Runtime([VIDEO])
     service = runtime.service()
-    first = service.create_selection_plan(URL + "?igsh=fixture&utm_source=fixture")
+    first = service.create_selection_plan(URL + "?igsh=fixture&utm_source=fixture&psln=fixture")
     assert service.create_selection_plan("http://m.instagram.com/p/Fixture_Carousel") == first
     assert len(runtime.extractions) == 1
     clock[0] = 180.0
