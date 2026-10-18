@@ -406,8 +406,12 @@ The full share URL initially failed before acquisition because `psln` was outsid
 old tracking allowlist. The share-link correction is verified offline using the exact
 reported URL without network access; committed fixtures replace the opaque tracking
 value with synthetic data. Synthetic provider/send tests confirm a canonical URL and
-one send. This correction has not been deployed or live-tested. The 25 MiB limit,
-cooperative deadlines, disabled-by-default configuration and production guard remain.
+one send. PR #55 then merged at `0a87beeaa8acb302b74e980946778608856b13f6`
+and was separately deployed. The user confirmed delivery, playback, orientation and
+sound for the full Reel URL with `utm_source` and `psln`; file size/time were not
+recorded. This closes that full-share-link smoke only, not `/p/`, albums or broad
+Instagram reliability. The 25 MiB limit, cooperative deadlines, disabled-by-default
+configuration and production guard remain. No new live test is part of PR #56.
 
 ## Opt-in /p/ Telegram integration — Draft review stage
 
@@ -431,6 +435,13 @@ carousel queries are BLOCKED before extraction. The known non-selector share key
 No PHOTO is sent; UNKNOWNs and unsupported selected videos block the whole
 operation. Send uncertainty is reported without automatic retries. The per-
 dispatcher slot prevents simultaneous Reel and carousel handling.
+
+The source-shape correction validates `carousel_media` before yt-dlp can filter it:
+only an absent field permits single-video classification. Present null/non-list values,
+malformed members and nested collections give INVALID_METADATA without acquisition.
+An empty list remains NO_VIDEOS. A valid source collection must remain a playlist with
+the original count, identities and order; missing/dropped/reordered entries or a mapped
+single result fail closed. Parent video_versions never override this source evidence.
 
 Initial route limits are smaller than the reusable components' defaults:
 10 selected videos, 25 MiB per acquired/uploaded file, 100 MiB media total,

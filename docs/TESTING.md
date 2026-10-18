@@ -940,7 +940,11 @@ Carousel query policy is unchanged. Network-forbidden handler tests assert that 
 provider receives only the canonical URL and a successful synthetic acquisition sends
 exactly once and cleans its workspace. The exact reported URL is also checked offline;
 committed fixtures use a synthetic tracking value instead of the original opaque value.
-This correction has no live Instagram/Telegram evidence and no deployment changes.
+That implementation stage had no live calls or deployment changes. PR #55 was later
+merged at `0a87beeaa8acb302b74e980946778608856b13f6` and separately deployed. The
+user confirmed delivery, playback, orientation and sound for the full Reel URL with
+`utm_source`/`psln`; size/time were not recorded. This narrow evidence does not cover
+`/p/`, albums or broad reliability. No new live call occurs in the current correction.
 
 Verification: net +34 cases; Reel handler 66 passed, combined handler/config/bot suite
 176 passed, full suite 1268 passed and 1 skipped (external YouTube matrix disabled).
@@ -996,3 +1000,34 @@ Python 3.13.12, yt-dlp
 2026.08.19, aiogram 3.31.0 and local FFmpeg/ffprobe 9.0.2 were used. Socket
 connections were forbidden in the pytest process. Ruff lint/format and diff checks
 PASS. These local results do not replace exact-head CI or repeat independent review.
+
+### PR #56 source-shape follow-up — offline
+
+The installed yt-dlp 2026.08.19 product mapper filters non-dictionary carousel members.
+With no remaining members it can return the parent's video formats as a single video,
+discarding evidence that carousel_media was present. Direct installed-mapper tests
+record this behavior; the production adapter now rejects invalid source shapes before
+that mapping and requires a complete, ordered, identity-consistent playlist afterward.
+
+New negative fixtures include `[None]`, strings, empty/nonempty objects, empty lists,
+invalid members before/after valid ones, present null, booleans, numbers and nested
+collections, all with admissible parent video_versions. An absent field is tested by
+the existing successful single-post path; present null is explicitly not absence.
+Additional mapper-drift cases remove entries, drop/reorder items or produce a false
+single result. Both carousel inspection APIs are covered for drift. Handler checks
+assert zero single-worker calls, carousel acquisition/delivery, media sends and repeat
+extraction. Invalid list counts remain available; empty lists stay blocked as NO_VIDEOS.
+
+Before the fix, the new 40-case source-shape subset produced **29 failed, 11 passed**;
+after the fix, **40 passed**. Two additional positive variants inspect three silent
+videos, alone or mixed with a confirmed PHOTO, preserving every video position/identity.
+Focused carousel/post/Reel tests: **303 passed**. All fixtures are synthetic and
+network-forbidden; no new live Instagram or Telegram evidence is introduced.
+
+Final local verification: net **+42 cases**, full pytest **1362 passed, 1 skipped**
+(external YouTube opt-in); extended Instagram/provider/inspection/acquisition/delivery
+and local FFmpeg/ffprobe **819 passed**; YouTube/handlers/bot/config **242 passed**.
+Socket connections were forbidden. Ruff lint/format, diff, documentation and
+security/scope checks PASS. Only `_extract_product` changes in application code;
+format/classification policies, product limits, cancellation and transport are unchanged.
+Exact-head GitHub CI and a separate independent review remain required after publication.

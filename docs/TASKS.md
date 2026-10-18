@@ -446,11 +446,19 @@ are unchanged. No live external-platform or Telegram calls.
   keep admission/workspace until worker exit, and preserve uncertain-send progress on timeout.
 - Review correction P3: current architecture describes `/reel/` and `/p/`; Reel-only
   statements are historical. New live `/p/`/album gates and re-review remain OPEN.
-- Local correction verification: net +43 deterministic cases; full suite 1320 passed,
+- Prior correction verification: net +43 deterministic cases; full suite 1320 passed,
   1 skipped (external YouTube opt-in); focused post/Reel/preparation tests 204 passed,
   extended Instagram/local-media tests 777 passed, YouTube/handler/config regressions 242 passed.
   Ruff lint/format and diff checks PASS. Tests forbid socket connections and include
   real local FFmpeg/ffprobe; no new external-platform or Telegram evidence.
+- Source-shape follow-up: validate present carousel fields before mapping and require
+  complete count/identity/order preservation afterward. Malformed collections must not
+  become single videos; empty lists remain NO_VIDEOS. Offline verification PASS:
+  net +42 cases, focused source-shape 40 passed (29 failed before the fix), combined
+  carousel/post/Reel 303 passed, extended Instagram/local-media 819 passed,
+  YouTube/handlers/config 242 passed, full pytest 1362 passed and 1 external opt-in skipped.
+  Ruff lint/format, diff, documentation and security/scope checks PASS. Repeat independent
+  review is required; merge/deployment and live `/p/`/album gates remain OPEN.
 
 The user chose one controlled smoke with the existing main bot and accepted a short
 planned bot-only restart after PR review/merge. General production rollout is not approved.
@@ -463,11 +471,12 @@ deduplication, global quotas or production capacity is claimed.
 - [x] Deploy only bot with --no-deps after confirming no active download; verify polling, retained YouTube code and unchanged Local Bot API. Live YouTube was not retested.
 - [x] Execute one approved canonical Reel smoke and verify client playback; temporary files cleaned, 25 MiB limit retained.
 - [x] Correct share-link admission offline: accept/strip `psln` and irrelevant query keys/anchors, retain known item selectors and strict URL validation. Canonical URL reaches provider; one synthetic send; no deployment changes.
-- [ ] Independently review, merge and separately deploy the share-link fix; full shared-URL live validation remains pending.
+- [x] Merge PR #55 at `0a87beeaa8acb302b74e980946778608856b13f6` and separately deploy the share-link fix. The user confirmed full Reel share-link delivery, playback, orientation and sound with `utm_source`/`psln`. Size/time were not recorded; this does not validate `/p/`, albums or general reliability.
 - [ ] Restore false and recreate only bot if rollback is needed.
 
 The deployment/smoke above was separately authorized after configuration preparation.
-This share-link correction performs no environment change, restart, polling or live call.
+The share-link implementation was offline; its deployment/smoke followed separately.
+The current PR #56 corrections perform no environment change, restart, polling or live call.
 See DEVELOPMENT.md for the controlled procedure.
 
 Share-link correction verification: net +34 cases; Reel handler 66 passed; combined

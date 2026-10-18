@@ -38,7 +38,13 @@ from social_video_downloader.telegram_instagram_posts import (
     TelegramCarouselDelivery,
 )
 from tests.integration.test_video_preparation import generate
-from tests.test_instagram_carousel import PHOTO, VIDEO, Runtime
+from tests.test_instagram_carousel import (
+    INVALID_CAROUSEL_SOURCES,
+    PHOTO,
+    VIDEO,
+    Runtime,
+    corrupt_upstream_collection,
+)
 from tests.test_instagram_provider import INFO
 from tests.test_telegram_carousel import collection, response
 
@@ -346,6 +352,46 @@ async def test_blocked_source_never_reextracts_acquires_or_sends(message, monkey
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("source", INVALID_CAROUSEL_SOURCES)
+async def test_invalid_source_collection_never_acquires_or_sends(message, monkeypatch, source):
+    handler, runtime, processed, repeated = publication_runtime({**VIDEO, "carousel_media": source})
+    acquire, deliver = AsyncMock(), AsyncMock()
+    monkeypatch.setattr(InstagramCarouselAcquisition, "acquire", acquire)
+    monkeypatch.setattr(TelegramCarouselDelivery, "deliver", deliver)
+    # This guard makes an unsafe single-video permission fail visibly before IO.
+    prepare = MagicMock(side_effect=AssertionError("Malformed collection reached single worker"))
+    monkeypatch.setattr(handler, "_prepare", prepare)
+    await handle_text(message, instagram_reels=handler)
+    assert runtime.extractions == [URL] and not processed and not repeated
+    prepare.assert_not_called()
+    acquire.assert_not_awaited()
+    deliver.assert_not_awaited()
+    message.answer_video.assert_not_awaited()
+    assert not message.bot.mock_calls and not handler._active
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("change", ["single", "missing_entries", "dropped_entry", "reordered"])
+async def test_changed_upstream_collection_never_reaches_media(message, monkeypatch, change):
+    corrupt_upstream_collection(monkeypatch, change)
+    handler, runtime, processed, repeated = publication_runtime(
+        {**VIDEO, "carousel_media": [VIDEO, {**VIDEO, "pk": 103}]}
+    )
+    acquire, deliver = AsyncMock(), AsyncMock()
+    monkeypatch.setattr(InstagramCarouselAcquisition, "acquire", acquire)
+    monkeypatch.setattr(TelegramCarouselDelivery, "deliver", deliver)
+    prepare = MagicMock(side_effect=AssertionError("Changed collection reached single worker"))
+    monkeypatch.setattr(handler, "_prepare", prepare)
+    await handle_text(message, instagram_reels=handler)
+    assert runtime.extractions == [URL] and not processed and not repeated
+    prepare.assert_not_called()
+    acquire.assert_not_awaited()
+    deliver.assert_not_awaited()
+    message.answer_video.assert_not_awaited()
+    assert not message.bot.mock_calls and not handler._active
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "change",
     [
@@ -386,16 +432,19 @@ async def test_incomplete_or_ambiguous_single_metadata_is_not_permission_to_fall
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("mixed", [False, True])
+@pytest.mark.parametrize("silent", [False, True])
 async def test_real_metadata_plan_selects_every_video_and_only_confirmed_photos_are_skipped(
-    message, monkeypatch, mixed
+    message, monkeypatch, mixed, silent
 ):
     items = [VIDEO, {**VIDEO, "pk": 103}]
+    if silent:
+        items = [{**item, "has_audio": False} for item in (*items, {**VIDEO, "pk": 104})]
     if mixed:
         items.insert(0, PHOTO)
     handler, runtime, processed, repeated = publication_runtime(
         {"pk": 100, "carousel_media": items}
     )
-    expected = [2, 3] if mixed else [1, 2]
+    expected = list(range(2 if mixed else 1, len(items) + 1))
     outputs = []
 
     async def acquire(self, plan, output_dir):

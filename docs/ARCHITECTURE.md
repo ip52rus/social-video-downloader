@@ -96,9 +96,11 @@ of false. Its existing `APP_ENV=development` and Local Bot API endpoint are unch
 the Settings guard against enabled+production remains. After PR #54, the separately
 authorized bot-only deployment and one canonical-Reel smoke succeeded; the user confirmed
 delivery, playback, orientation and sound. The original share URL was blocked by `psln`
-before acquisition; this correction has offline evidence only and requires separate
-deployment. No container or environment changes are part of the correction. One Reel
-does not establish general production reliability.
+before acquisition. PR #55 subsequently merged at
+`0a87beeaa8acb302b74e980946778608856b13f6` and was separately deployed; the user
+confirmed full-share-link delivery, playback, orientation and sound. Size/time were
+not recorded. No new deployment occurs in PR #56. One Reel does not establish `/p/`
+or album delivery or general production reliability.
 
 ### Optional-audio preparation design
 
@@ -510,6 +512,19 @@ prior real three-video acquisition is verified externally; real album upload/pla
 larger carousels and broad Instagram reliability remain NOT VERIFIED.
 
 ## Draft opt-in /p/ Telegram integration
+
+Source-shape correction design: validate the presence and complete list structure of
+`carousel_media` in the instance-local extractor adapter before yt-dlp can filter it.
+An absent field permits ordinary single-video inspection; a present malformed value
+or inconsistent mapped collection must produce the existing INVALID_METADATA result,
+never permission for a single-video path. Reuse the existing guarded playlist/count
+representation and source-to-mapped identity checks, without a new metadata model or
+handler-side reconstruction. A present null, non-list, invalid member or nested
+collection is rejected before calling the upstream mapper. Valid collections must
+map to a playlist of equal length, with matching item identities and order; otherwise
+the adapter returns an incomplete guarded playlist consumed as INVALID_METADATA.
+Known original list counts remain available even on rejection. Empty collections
+remain blocked as NO_VIDEOS. Single-post cache, format and cancellation rules stay unchanged.
 
 Review correction design: a generic BLOCKED issue cannot prove a single video.
 Reuse the instance-local adapter's ItemEvidence and existing MediaMetadata as the

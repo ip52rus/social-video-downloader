@@ -73,9 +73,12 @@ or production-reliability guarantee is introduced. `/p/` and carousel routing st
 After PR #54, the separately authorized bot-only deployment and one canonical-Reel smoke
 passed. The user confirmed delivery, playback, orientation and sound; temporary files
 were cleaned and Local Bot API was unchanged. Exact size/time were not recorded. The
-initial share URL was rejected on `psln`; the focused admission correction is offline-only
-and must be reviewed, merged and deployed separately. No further restart or live test is
-authorized by that code change. See PHASE5_INSTAGRAM_REELS.md for the evidence boundaries.
+initial share URL was rejected on `psln`. PR #55 subsequently merged at
+`0a87beeaa8acb302b74e980946778608856b13f6` and was separately deployed to the existing
+bot. The user confirmed delivery, playback, orientation and sound for the full Reel
+share URL with `utm_source` and `psln`; size and processing time were not recorded.
+This is one Reel case, not `/p/` or album validation or general Instagram reliability.
+No further restart or live test is authorized by these historical records.
 
 ## Experimental Instagram /p/ and album routing (Draft PR, not deployed)
 
@@ -90,6 +93,10 @@ selectors, unknown share keys, and ambiguous fragments are blocked
 before extraction. A single-video post must be positively confirmed by the source
 adapter and existing video validators; it consumes the same verified snapshot in the
 bounded single-file worker. BLOCKED never authorizes fallback or another extraction.
+The adapter checks source `carousel_media` before mapping: a present value must be a
+complete flat list and must survive mapping with the same count, identities and order.
+Malformed/nested collections block with INVALID_METADATA; an empty list has NO_VIDEOS.
+An absent field permits positive single-video inspection; present null is not absence.
 A READY video carousel goes through the bounded
 multi-file acquisition and Telegram delivery; PHOTOs are skipped only after
 positive classification, UNKNOWN items block everything, and no video is silently

@@ -14,6 +14,7 @@ from social_video_downloader.domain.carousel import (
     CarouselScope,
 )
 from social_video_downloader.domain.errors import InvalidMediaURLError, MetadataExtractionError
+from social_video_downloader.domain.models import MediaMetadata
 from social_video_downloader.infrastructure.instagram_metadata import CarouselInstagramIE, _classify
 from social_video_downloader.providers.instagram import InstagramProvider
 from social_video_downloader.services.instagram_carousel import InstagramCarouselService
@@ -38,6 +39,40 @@ CORROBORATED_PHOTO = {
     "__typename": "UnrecognizedFixtureType",
     "image_versions2": {"candidates": [{"url": "https://media.invalid/photo.jpg"}]},
 }
+
+INVALID_CAROUSEL_SOURCES = [
+    pytest.param([None], id="null-entry"),
+    pytest.param("invalid", id="string"),
+    pytest.param({}, id="empty-object"),
+    pytest.param({"invalid": "shape"}, id="object"),
+    pytest.param([], id="empty-list"),
+    pytest.param([VIDEO, None], id="invalid-last-entry"),
+    pytest.param([None, VIDEO], id="invalid-first-entry"),
+    pytest.param(None, id="present-null"),
+    pytest.param([False], id="boolean-entry"),
+    pytest.param(True, id="boolean"),
+    pytest.param(1, id="number"),
+    pytest.param([{**VIDEO, "carousel_media": [None]}], id="nested-collection"),
+]
+
+
+def corrupt_upstream_collection(monkeypatch, change):
+    original = InstagramIE._extract_product
+
+    def changed(self, product, *args, **kwargs):
+        result = original(self, product, *args, **kwargs)
+        if change == "single":
+            return self._extract_product_media(product)
+        if change == "missing_entries":
+            result.pop("entries")
+        elif change == "dropped_entry":
+            result["entries"].pop()
+        else:
+            assert change == "reordered"
+            result["entries"].reverse()
+        return result
+
+    monkeypatch.setattr(InstagramIE, "_extract_product", changed)
 
 
 class Runtime:
@@ -233,6 +268,50 @@ def test_duplicate_ids_remain_visible_but_block_selection():
 def test_malformed_original_entries_cannot_be_silently_filtered(bad):
     plan = Runtime([VIDEO, bad]).service().create_selection_plan(URL)
     assert_blocked(plan, CarouselIssue.INVALID_METADATA)
+
+
+@pytest.mark.parametrize("source", INVALID_CAROUSEL_SOURCES)
+def test_present_source_collection_cannot_become_a_single_video(source):
+    runtime = Runtime([])
+    # Parent video locators deliberately make upstream's single fallback admissible.
+    runtime.product = {**VIDEO, "carousel_media": deepcopy(source)}
+    service = runtime.service()
+    result = service.inspect_publication(URL)
+    assert not isinstance(result, MediaMetadata)
+    issue = CarouselIssue.NO_VIDEOS if source == [] else CarouselIssue.INVALID_METADATA
+    assert_blocked(result, issue)
+    assert result.total_entries == (len(source) if isinstance(source, list) else None)
+    assert runtime.extractions == [URL]
+    assert runtime.provider._inspection_cache == {}
+
+
+@pytest.mark.parametrize("source", [[None], "invalid", {}, [VIDEO, None]])
+def test_installed_upstream_mapping_loses_invalid_source_shape(source):
+    # Exercise the installed mapper directly, without our adapter or network access.
+    with yt_dlp.YoutubeDL({"quiet": True}, auto_init=False) as ydl:
+        result = InstagramIE(ydl)._extract_product(
+            {**VIDEO, "carousel_media": deepcopy(source)}, get_comments=False
+        )
+    assert "carousel_media" not in result
+    if source == [VIDEO, None]:
+        assert result["_type"] == "playlist" and len(result["entries"]) == 1
+    else:
+        assert result.get("_type", "video") == "video"
+        assert any(InstagramProvider._usable_format(f) for f in result["formats"])
+
+
+@pytest.mark.parametrize("change", ["single", "missing_entries", "dropped_entry", "reordered"])
+@pytest.mark.parametrize("entry_point", ["create_selection_plan", "inspect_publication"])
+def test_source_collection_must_survive_mapping_completely(monkeypatch, change, entry_point):
+    corrupt_upstream_collection(monkeypatch, change)
+    runtime = Runtime([VIDEO, {**VIDEO, "pk": 103}])
+    runtime.product.update(VIDEO)
+    service = runtime.service()
+    result = getattr(service, entry_point)(URL)
+    assert not isinstance(result, MediaMetadata)
+    assert_blocked(result, CarouselIssue.INVALID_METADATA)
+    assert result.total_entries == 2
+    assert runtime.extractions == [URL] and runtime.provider._inspection_cache == {}
 
 
 @pytest.mark.parametrize(

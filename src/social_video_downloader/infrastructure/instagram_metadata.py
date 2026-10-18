@@ -145,8 +145,21 @@ class CarouselInstagramIE(InstagramIE):
         )
         if not isinstance(product, Mapping):
             raise MetadataExtractionError("Unrecognized Instagram carousel metadata shape.")
-        source = product.get("carousel_media") if isinstance(product, Mapping) else None
-        if isinstance(product, Mapping) and _identity(product.get("pk")) is None:
+        has_source = "carousel_media" in product
+        source = product.get("carousel_media")
+        # A guarded empty playlist is deliberately incomplete, so existing provider
+        # facts report INVALID_METADATA without exposing or processing a partial set.
+        invalid = {
+            "_type": "playlist",
+            "entries": [],
+            "_carousel_source_count": len(source) if isinstance(source, list) else None,
+        }
+        if has_source and (
+            not isinstance(source, list)
+            or any(not isinstance(item, Mapping) or "carousel_media" in item for item in source)
+        ):
+            return invalid
+        if _identity(product.get("pk")) is None:
             product_info = {key: value for key, value in product.items() if key != "pk"}
         if isinstance(source, list) and not source:
             return {
@@ -156,12 +169,14 @@ class CarouselInstagramIE(InstagramIE):
                 "_carousel_unavailable": _unavailable(product),
             }
         result = super()._extract_product(product_info, *args, **kwargs)
-        if isinstance(product, Mapping) and _unavailable(product):
+        if _unavailable(product):
             result["_carousel_unavailable"] = True
-        if isinstance(source, list) and all(isinstance(x, Mapping) for x in source):
-            entries = result.get("entries")
-            if (
-                isinstance(entries, list)
+        if has_source:
+            entries = result.get("entries") if isinstance(result, Mapping) else None
+            if not (
+                isinstance(result, Mapping)
+                and result.get("_type") == "playlist"
+                and isinstance(entries, list)
                 and len(entries) == len(source)
                 and all(
                     isinstance(entry, Mapping)
@@ -171,5 +186,6 @@ class CarouselInstagramIE(InstagramIE):
                     for original, entry in zip(source, entries, strict=True)
                 )
             ):
-                result["_carousel_source_count"] = len(source)
+                return invalid
+            result["_carousel_source_count"] = len(source)
         return result
