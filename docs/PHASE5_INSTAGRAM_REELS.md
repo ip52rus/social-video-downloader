@@ -408,3 +408,32 @@ reported URL without network access; committed fixtures replace the opaque track
 value with synthetic data. Synthetic provider/send tests confirm a canonical URL and
 one send. This correction has not been deployed or live-tested. The 25 MiB limit,
 cooperative deadlines, disabled-by-default configuration and production guard remain.
+
+## Opt-in /p/ Telegram integration — Draft review stage
+
+The user authorized connecting the already merged single-post, carousel
+acquisition and offline Telegram album components, **not** merging or restarting
+the running bot without review. The branch
+`feat/instagram-post-carousel-telegram` wires `/p/` to the existing
+Instagram handler and the same disabled-by-default flag.
+
+A normal single-video publication reuses the existing provider's single-file
+download/prepare/send route after a non-playlist inspection. A complete READY
+carousel uses `InstagramCarouselAcquisition` and `TelegramCarouselDelivery`
+in one owned operation; 2–10 videos form a Telegram album, and a singleton is
+delivered as a video. Known item selectors and non-allowlisted/ambiguous
+carousel queries are BLOCKED before extraction, including `psln` for now.
+No PHOTO is sent; UNKNOWNs and unsupported selected videos block the whole
+operation. Send uncertainty is reported without automatic retries. The per-
+dispatcher slot prevents simultaneous Reel and carousel handling.
+
+Initial route limits are smaller than the reusable components' defaults:
+10 selected videos, 25 MiB per acquired/uploaded file, 100 MiB media total,
+130 MiB acquisition temporary budget, 400 MiB delivery workspace budget.
+They are safety caps, not production throughput guarantees. Existing
+`INSTAGRAM_TELEGRAM_ENABLED=false` default and the production guard remain.
+
+Network-forbidden route tests are committed for CI/review, but execution and
+independent code review remain pending. The previous real three-silent-video
+acquisition still proves only files/ffprobe, not live album sending or client
+playback. No live test, environment change, merge or deployment is included.
