@@ -145,6 +145,20 @@ async def test_unclassifiable_carousel_is_blocked_not_partially_sent(
 
 
 @pytest.mark.asyncio
+async def test_large_carousel_is_refused_without_truncation_or_acquisition(
+    message, monkeypatch, tmp_path
+):
+    _, plan = collection(tmp_path, 11)
+    monkeypatch.setattr(InstagramCarouselService, "create_selection_plan", lambda self, url: plan)
+    handler = owner()
+    await handle_text(message, instagram_reels=handler)
+    assert "лимит — 10" in message.answer.call_args.args[0]
+    assert "пропускать остальные не будем" in message.answer.call_args.args[0]
+    message.answer_video.assert_not_awaited()
+    assert not handler._active
+
+
+@pytest.mark.asyncio
 async def test_single_video_post_uses_existing_single_file_worker(message, monkeypatch):
     blocked = CarouselSelectionPlan(
         URL,
