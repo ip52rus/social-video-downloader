@@ -257,12 +257,17 @@ def test_invalid_or_unsupported_share_links_fail_closed(raw):
 
 
 @pytest.mark.asyncio
-async def test_posts_stay_outside_this_integration(message, monkeypatch):
+async def test_posts_are_dispatched_to_separate_post_flow(message, monkeypatch):
+    from social_video_downloader.telegram_instagram_posts import InstagramPostHandler
+
+    post_handle = AsyncMock()
+    monkeypatch.setattr(InstagramPostHandler, "handle", post_handle)
     handler, fixture, _ = runtime(monkeypatch)
     message.text = URL.replace("/reel/", "/p/")
     await handle_text(message, instagram_reels=handler)
+    post_handle.assert_awaited_once()
+    assert post_handle.call_args.args == (message, message.text, message.text)
     assert not fixture.extractions
-    assert "/p/" in message.answer.call_args.args[0]
 
 
 @pytest.mark.asyncio
