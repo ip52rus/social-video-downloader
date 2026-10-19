@@ -187,6 +187,34 @@ Exact-head CI is checked after publication. No live requests or downloads are pa
 of Phase 6B-4. Focused independent review and new owner authorization remain gates
 before one final live experiment.
 
+### Phase 6B-4 HTML ambiguity correction (offline)
+
+Focused review found one P2 at `72a8b2d`: the classifier ignored base href and
+conflicting refresh directives. All four reviewer failures were reproduced on the
+old code with real HTTP parsing and the installed extractor, including both public
+CLI JSON paths. The unchanged reviewer file passes all 33 cases after correction.
+
+The classifier now marks any base href plus a relative refresh as ambiguous in
+either tag order, without interpreting or retaining base values. Multiple refresh
+directives are conservatively ambiguous even when identical or malformed. No
+directive is followed; no new response fields or categories are introduced.
+Twelve new project cases cover order, duplicate/conflicting refresh, ambiguous
+challenge, base without href, fake base in a comment and an absolute trusted login
+unaffected by base. All **174 focused metadata/acquisition cases pass**; failures
+stop after one metadata HTTP/extraction, before B/media, and expose no private HTML
+or URL values. Public-worker acquisition checks confirm cleanup. A separate compact
+fault review passed **12 cases** covering base order, empty/malformed base,
+identical/malformed refresh and absolute login independent of base; no additional
+P0–P2 was found in these boundaries. The reviewer diagnostic file was not modified.
+
+Full suite with external sockets forbidden: **1644 passed, 1 skipped** (external
+YouTube opt-in), including local FFmpeg/ffprobe. Ruff lint/format, diff, local
+documentation targets and security/scope checks pass. AST comparison confirms
+that only `_MetadataHTML` changed in runtime code; transport, headers, acquisition,
+identity, provenance, limits and supervisor are unchanged. Exact-head CI is checked
+after publication. No live requests, Docker or Telegram operations were performed;
+one final live test still requires separate owner authorization.
+
 ## Phase 4 functional acceptance (2026-10-15)
 
 Status: **ACCEPTED for the tested functional scope**, as confirmed by the user. This is

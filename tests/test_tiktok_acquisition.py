@@ -24,7 +24,14 @@ import pytest
 from scripts import tiktok_acquisition as a
 from scripts import tiktok_metadata as m
 from tests.integration.test_video_preparation import generate
-from tests.test_tiktok_metadata import CHALLENGE_HTML, LOGIN_HTML, Network, page
+from tests.test_tiktok_metadata import (
+    BASE_HTML,
+    CHALLENGE_HTML,
+    LOGIN_HTML,
+    OTHER_REFRESH,
+    Network,
+    page,
+)
 
 A = "https://www.tiktok.com/@fixture/video/123456789"
 B = "https://www.tiktok.com/@fixture/video/987654321"
@@ -124,6 +131,8 @@ def workers(monkeypatch):
     [
         (CHALLENGE_HTML, "challenge_structure_detected"),
         (LOGIN_HTML, "login_page_detected"),
+        (BASE_HTML + LOGIN_HTML, "unrecognized_metadata_html"),
+        (OTHER_REFRESH + LOGIN_HTML, "unrecognized_metadata_html"),
         (b"<html>PRIVATE_UNRECOGNIZED</html>", "unrecognized_metadata_html"),
     ],
 )

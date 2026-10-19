@@ -152,12 +152,19 @@ class _MetadataHTML(HTMLParser):
             "ambiguous_structure": False,
         }
         self.seen = set()
+        self.has_base_href = self.relative_refresh = False
+        self.refresh_count = 0
 
     def handle_starttag(self, tag, attrs):
         if len(attrs) != len({name for name, _ in attrs}):
             self.flags["ambiguous_structure"] = True
             return
         attrs = dict(attrs)
+        if tag == "base" and "href" in attrs:
+            # Do not interpret or retain base URLs; tag order must not decide trust.
+            self.has_base_href = True
+            if self.relative_refresh:
+                self.flags["ambiguous_structure"] = True
         identity = attrs.get("id")
         if identity in {"cs", "wci", "__UNIVERSAL_DATA_FOR_REHYDRATION__"}:
             if identity in self.seen:
@@ -170,6 +177,9 @@ class _MetadataHTML(HTMLParser):
         if tag == "script" and identity == "__UNIVERSAL_DATA_FOR_REHYDRATION__":
             self.flags["universal_script_marker"] = True
         if tag == "meta" and (attrs.get("http-equiv") or "").lower() == "refresh":
+            self.refresh_count += 1
+            if self.refresh_count > 1:
+                self.flags["ambiguous_structure"] = True
             match = re.fullmatch(
                 r"""\s*0\s*;\s*url\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s'"]+))\s*""",
                 attrs.get("content") or "",
@@ -177,6 +187,10 @@ class _MetadataHTML(HTMLParser):
             )
             if match:
                 target = next(value for value in match.groups() if value is not None)
+                if not urlsplit(target).scheme:
+                    self.relative_refresh = True
+                    if self.has_base_href:
+                        self.flags["ambiguous_structure"] = True
                 destination = urlsplit(urljoin("https://www.tiktok.com/", target))
                 if (
                     destination.scheme == "https"

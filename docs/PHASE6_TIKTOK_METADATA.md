@@ -242,10 +242,14 @@ name. The upstream solver is never called; payloads are not decoded or executed.
   solving it would grant access.
 - `login_page_detected`: an explicit zero-delay HTML meta refresh points to the
   exact HTTPS `www.tiktok.com/login` destination (including relative redirects).
-  A login link or login-related text alone is insufficient evidence.
+  A login link or login-related text alone is insufficient evidence. Any `base href`
+  together with a relative refresh is conservatively ambiguous, regardless of tag
+  order or the base value. An absolute HTTPS login target does not depend on base.
 - `unrecognized_metadata_html`: neither condition is established, structure is
   ambiguous/contradictory, or HTML parsing fails. `Please wait...`, short HTML,
   isolated markers and an empty universal-data script do not establish challenge.
+  Multiple refresh directives are always ambiguous, even if identical or malformed;
+  no first/last directive is selected and ambiguity cannot promote challenge either.
 
 All three categories stop the series without retry, solver, cookie use, second
 extraction or media GET. Existing explicit upstream `login_required` and HTTP
@@ -259,8 +263,15 @@ URLs are serialized or persisted; acquisition changes only failure reporting.
 No copy of the prior live HTML was retained, so its cause cannot be classified
 retroactively. Future schema changes or unrecognized challenge/login layouts
 remain unknown and fail closed. Header/cookie policies, media transport, framing,
-identity, DNS/TLS, budgets and supervisor are unchanged. Focused independent review
-and a new owner authorization are required before one final live experiment.
+identity, DNS/TLS, budgets and supervisor are unchanged.
+
+Focused independent review at `72a8b2d` found one P2: base-relative and conflicting
+refresh instructions incorrectly produced a login label. The conservative rules
+above correct that ambiguity without interpreting, retaining or following any base
+URL. Four independent failing cases were reproduced before correction and now
+pass, including both public CLIs. Project regressions and a compact follow-up
+fault review cover ordering and ambiguous instructions. See [verification results](TESTING.md#phase-6b-4-html-ambiguity-correction-offline).
+A new owner authorization is still required before one final live experiment.
 
 ### Separately authorized live procedure
 

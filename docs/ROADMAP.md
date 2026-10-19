@@ -242,8 +242,10 @@ live retest stopped before media GET on 537 bytes of A HTML; the old fallback
 error did not prove challenge. Phase 6B-4 classifies known challenge structure,
 explicit HTML login redirects and unrecognized HTML offline, with sanitized
 diagnostics and no solver or extra requests. Cookies remain forbidden; the cause
-of the earlier media 403 is unproven. The next gate is focused classification review,
-then a separate owner decision about one final live experiment. No live experiment
+of the earlier media 403 is unproven. Focused classification review found one P2
+in base-relative/multiple-refresh ambiguity; a narrow offline correction makes
+both unknown and retains safe failure. The next gate is a separate owner decision
+about one final live experiment after the correction's checks. No live experiment
 is authorized by this patch.
 No technical GO for a runtime provider is claimed. See
 [experiment procedure and limits](PHASE6_TIKTOK_METADATA.md).

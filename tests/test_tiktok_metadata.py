@@ -113,6 +113,8 @@ CHALLENGE_HTML = (
     b'<div id="wci" class="_wafchallengeid"></div>'
 )
 LOGIN_HTML = b'<meta http-equiv="refresh" content="0; url=/login?private=SESSION_VALUE">'
+BASE_HTML = b'<base href="https://PRIVATE_BASE.invalid/">'
+OTHER_REFRESH = b'<meta http-equiv="refresh" content="0; url=https://PRIVATE_REFRESH.invalid/">'
 
 
 @pytest.mark.parametrize(
@@ -124,6 +126,53 @@ LOGIN_HTML = b'<meta http-equiv="refresh" content="0; url=/login?private=SESSION
             {"challenge_source_marker", "challenge_cookie_marker"},
         ),
         (LOGIN_HTML, "login_page_detected", {"login_redirect"}),
+        (
+            BASE_HTML + LOGIN_HTML,
+            "unrecognized_metadata_html",
+            {"login_redirect", "ambiguous_structure"},
+        ),
+        (
+            LOGIN_HTML + BASE_HTML,
+            "unrecognized_metadata_html",
+            {"login_redirect", "ambiguous_structure"},
+        ),
+        (
+            OTHER_REFRESH + LOGIN_HTML,
+            "unrecognized_metadata_html",
+            {"login_redirect", "ambiguous_structure"},
+        ),
+        (
+            LOGIN_HTML + OTHER_REFRESH,
+            "unrecognized_metadata_html",
+            {"login_redirect", "ambiguous_structure"},
+        ),
+        (
+            LOGIN_HTML * 2,
+            "unrecognized_metadata_html",
+            {"login_redirect", "ambiguous_structure"},
+        ),
+        (
+            CHALLENGE_HTML + OTHER_REFRESH * 2,
+            "unrecognized_metadata_html",
+            {"challenge_source_marker", "challenge_cookie_marker", "ambiguous_structure"},
+        ),
+        (
+            BASE_HTML
+            + b'<meta http-equiv="refresh" content="0; url=https://www.tiktok.com/login">',
+            "login_page_detected",
+            {"login_redirect"},
+        ),
+        (b"<base>" + LOGIN_HTML, "login_page_detected", {"login_redirect"}),
+        (
+            b"<!--" + BASE_HTML + b"-->" + LOGIN_HTML,
+            "login_page_detected",
+            {"login_redirect"},
+        ),
+        (
+            b'<base href="https://www.tiktok.com/">' + LOGIN_HTML,
+            "unrecognized_metadata_html",
+            {"login_redirect", "ambiguous_structure"},
+        ),
         (b"<html>" + b"x" * 524 + b"</html>", "unrecognized_metadata_html", set()),
         (b"<html>Please wait...</html>", "unrecognized_metadata_html", set()),
         (
@@ -197,6 +246,8 @@ def test_missing_universal_data_real_extractor(monkeypatch, body, category, mark
         "PRIVATE_CHALLENGE_PAYLOAD",
         "SESSION_VALUE",
         "PRIVATE_COOKIE",
+        "PRIVATE_BASE",
+        "PRIVATE_REFRESH",
         FULL,
         "123456789",
     ):

@@ -619,9 +619,20 @@ application providers, Telegram handlers or deployed configuration changed.
   1 external opt-in skipped. Ruff lint/format, diff, documentation and security/scope
   checks pass; exact-head CI is checked after publication. See
   [TESTING](TESTING.md#phase-6b-4-missing-universal-data-classification-offline).
-- [ ] Focused independent classification review, then a separate owner decision
-  about one final live experiment. No Provider implementation, retries or Telegram
-  delivery are authorized.
+- [x] Focused independent classification review at `72a8b2d` found one P2:
+  external base with relative login and conflicting refresh incorrectly yielded
+  `login_page_detected`. Four independent failing cases were reproduced unchanged.
+- [x] Correct HTML ambiguity conservatively: any base href with a relative refresh,
+  in either order, or multiple refresh directives yields unrecognized HTML. No base
+  URLs are retained/followed; absolute trusted login and ordinary challenge labels
+  remain available. Add 12 regressions; all 4 former failures / 33 reviewer cases
+  and 174 focused project cases pass. A compact additional fault review passes
+  12 cases without new P0–P2. Full socket-forbidden suite: 1644 passed,
+  1 external opt-in skipped; Ruff lint/format, diff and security/scope checks pass.
+  Exact-head CI is checked after publication. Details are recorded in
+  [TESTING](TESTING.md#phase-6b-4-html-ambiguity-correction-offline).
+- [ ] Separate owner decision about one final live experiment after correction
+  checks. No Provider implementation, retries or Telegram delivery are authorized.
 
 - [ ] Run a technical spike.
 - [ ] Assess real-world reliability and extraction stability.
