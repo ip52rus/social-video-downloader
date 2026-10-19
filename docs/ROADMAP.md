@@ -236,9 +236,13 @@ embed-state approach under MIT attribution. Offline synthetic HTTP/local-media
 checks establish implementation boundaries only. The first authorized native run
 stopped on A's `unsupported_photo` before media GET; B was not run. A small offline
 patch now distinguishes empty photo placeholders from populated/unknown structures.
-The next gate requires fresh owner authorization for an A/B retest proving complete
-MP4, actual streams, decode and existing media
-preparation; metadata alone is not GO. No Telegram integration before that gate.
+The authorized retest obtained A's complete MP4 with actual video/audio streams,
+decode and passthrough; B resolved metadata but media returned HTTP 403. The reason
+is unknown. Safe diagnostics now report candidate origin, CDN family, query/cookie
+presence, actual statuses, counters and measured codec names without new requests.
+The next gate requires fresh authorization for one B-only diagnostic retest;
+B's full MP4/decode/preparation remains unverified. A single success is not general
+platform GO. No Telegram integration before the gate.
 See [Phase 6C](PHASE6C_TIKTOK_NATIVE.md). No live request is part of preparation.
 
 Use the same gated process as Instagram:

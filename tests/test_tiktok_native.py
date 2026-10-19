@@ -150,6 +150,15 @@ def test_embed_real_schema_candidates_and_separate_audio():
     assert n.publication(A + "?utm_source=share#harmless") == ("11111111", A)
 
 
+@pytest.mark.parametrize("field", ["playAddr", "bitrateInfo", "downloadAddr", "urls"])
+def test_selected_candidate_source_and_unique_count(field):
+    value = [{"PlayAddr": [MEDIA, MEDIA]}] if field == "bitrateInfo" else [MEDIA, MEDIA]
+    resolved = n.resolve(page(video={field: value}), "11111111")
+    assert resolved.source == field and resolved.url == MEDIA and resolved.candidates == 1
+    duplicate = n.resolve(page(video={"playAddr": MEDIA, "downloadAddr": MEDIA}), "11111111")
+    assert duplicate.source == "playAddr" and duplicate.candidates == 1
+
+
 def photo_page(location, field, value, *, video=True, identity="11111111"):
     state = json.loads(page(identity=identity).decode().split(">", 1)[1].rsplit("<", 1)[0])
     data = state["source"]["data"]["/embed/v2/11111111"]["videoData"]
@@ -393,6 +402,102 @@ def test_http_errors_do_not_retry_or_fallback(monkeypatch, tmp_path, status):
     assert "PRIVATE" not in json.dumps(result) and A not in json.dumps(result)
 
 
+@pytest.mark.parametrize("redirect", [False, True])
+def test_cdn_403_diagnostics_actual_requests_cookies_and_counts(monkeypatch, tmp_path, redirect):
+    body = page(video={"downloadAddr": OTHER})
+    wire = network(
+        monkeypatch,
+        {
+            key(EMBED): response(
+                body,
+                fields=[("Set-Cookie", "scope=PRIVATE_COOKIE; Domain=.tiktok.com; Secure; Path=/")],
+            ),
+            key(OTHER): (302, b"", {"Location": MEDIA}) if redirect else (403, b"PRIVATE_HTML", {}),
+            key(MEDIA): (403, b"PRIVATE_HTML", {}),
+        },
+    )
+    result = n._execute([A, B], tmp_path, monotonic() + 10)
+    entry = result["results"][0]
+    expected = [
+        {
+            "cdn_family": "tiktok.com",
+            "has_query": False,
+            "cookie_sent": True,
+            "status": 302 if redirect else 403,
+        }
+    ]
+    if redirect:
+        expected.append(
+            {"cdn_family": "tiktokcdn.com", "has_query": True, "cookie_sent": False, "status": 403}
+        )
+    assert result["error"] == "http_403" and entry["media_http"] == expected
+    assert entry["candidate_source"] == "downloadAddr" and entry["candidates"] == 1
+    assert entry["counts"] == {
+        "metadata_requests": 1,
+        "media_requests": 1 + redirect,
+        "metadata_bytes": len(body),
+        "media_bytes": 0,
+        "acquisitions": 1,
+    }
+    assert result["counts_exact"] and len(wire.requests) == 2 + redirect
+    assert len(result["results"]) == 1 and not list(tmp_path.iterdir())
+    assert wire.requests[1][3].get("Cookie") == "scope=PRIVATE_COOKIE"
+    if redirect:
+        assert wire.requests[2][3].get("Cookie") is None
+    report = json.dumps(result)
+    for private in [A, MEDIA, OTHER, "PRIVATE", "11111111", "v77.", "v16-webapp-prime."]:
+        assert private not in report
+
+
+def test_media_send_failure_does_not_invent_status_or_cookie_measurement(monkeypatch, tmp_path):
+    wire = network(monkeypatch, {key(EMBED): response(page())})
+    request = n._Pinned.request
+
+    def fail_media(conn, *args, **kwargs):
+        if conn.host != "www.tiktok.com":
+            raise OSError("PRIVATE_EXCEPTION")
+        return request(conn, *args, **kwargs)
+
+    monkeypatch.setattr(n._Pinned, "request", fail_media)
+    result = n._execute([A], tmp_path, monotonic() + 10)
+    diagnostic = result["results"][0]["media_http"][0]
+    assert diagnostic["cookie_sent"] is None and diagnostic["status"] is None
+    assert len(wire.requests) == 1 and result["media_requests"] == 1
+    assert "PRIVATE" not in json.dumps(result) and result["media_bytes"] == 0
+
+
+@pytest.mark.parametrize(
+    "video,audio,expected",
+    [
+        ("hevc", "opus", ("hevc", "opus")),
+        (None, None, (None, None)),
+        ("unknown", "future_codec", (None, None)),
+        (23, [], (None, None)),
+        ("PRIVATE_TOKEN", MEDIA * 10, (None, None)),
+    ],
+)
+def test_verify_reports_only_bounded_actual_probe_codec_names(
+    monkeypatch, tmp_path, video, audio, expected
+):
+    # Isolate reporting; existing preparation/decode are not changed by this test.
+    streams = [{"codec_type": "video", "width": 16, "height": 16}, {"codec_type": "audio"}]
+    for stream, value in zip(streams, (video, audio), strict=True):
+        if value is not None:
+            stream["codec_name"] = value
+    monkeypatch.setattr(
+        n, "inspect_telegram_video", lambda *args: {"streams": streams, "format": {"duration": "1"}}
+    )
+    commands = []
+    monkeypatch.setattr(n.subprocess, "run", lambda command, **kwargs: commands.append(command))
+    monkeypatch.setattr(n, "prepare_telegram_video", lambda path, runner, *, allow_silent: path)
+    path = tmp_path / "fixture.mp4"
+    path.write_bytes(b"synthetic")
+    result = n.verify(path, session(), False, True)
+    assert (result["video_codec"], result["audio_codec"]) == expected
+    assert len(commands) == 1 and commands[0][0] == "ffmpeg"
+    assert "PRIVATE" not in json.dumps(result) and MEDIA not in json.dumps(result)
+
+
 @pytest.mark.parametrize("audio", [False, True])
 def test_native_pipeline_real_file_probe_decode_preparation(monkeypatch, tmp_path, audio):
     source = tmp_path / "fixture.mp4"
@@ -406,6 +511,13 @@ def test_native_pipeline_real_file_probe_decode_preparation(monkeypatch, tmp_pat
     result = n._execute([A], workspace, monotonic() + 30)
     if audio:
         assert result["success"], result
+        entry = result["results"][0]
+        assert (entry["video_codec"], entry["audio_codec"]) == ("h264", "aac")
+        assert entry["candidate_source"] == "playAddr"
+        assert entry["media_http"] == [
+            {"cdn_family": "tiktokcdn.com", "has_query": True, "cookie_sent": False, "status": 200}
+        ]
+        assert entry["counts"]["media_bytes"] == len(body)
         assert (
             result["results"][0]["decoded"] and result["results"][0]["preparation"] == "passthrough"
         )
@@ -440,7 +552,8 @@ def workers(monkeypatch):
             process.wait(timeout=5)
 
 
-def test_public_worker_failure_cleans_only_owned_workspace(monkeypatch, tmp_path, workers):
+@pytest.mark.parametrize("failure", ["missing_embed_state", "http_403"])
+def test_public_worker_failure_cleans_only_owned_workspace(monkeypatch, tmp_path, workers, failure):
     foreign = tmp_path / "foreign"
     foreign.write_text("keep")
     original, workspaces = n._command, []
@@ -448,12 +561,17 @@ def test_public_worker_failure_cleans_only_owned_workspace(monkeypatch, tmp_path
     def command(workspace):
         workspaces.append(Path(workspace))
         argv = original(workspace)
+        routes = (
+            "{key(EMBED):response(page()),key(MEDIA):(403,b'PRIVATE_HTML',{})}"
+            if failure == "http_403"
+            else "{key(EMBED):(200,b'PRIVATE_HTML',{'Content-Type':'text/html'})}"
+        )
         bootstrap = (
             "import socket,runpy,sys; "
             "socket.socket.connect=socket.socket.connect_ex=lambda *a,**k: "
             '(_ for _ in ()).throw(AssertionError("No sockets")); '
-            "from tests.test_tiktok_native import install,key,EMBED; "
-            'install({key(EMBED):(200,b"PRIVATE_HTML",{"Content-Type":"text/html"})}); '
+            "from tests.test_tiktok_native import install,key,EMBED,MEDIA,page,response; "
+            f"install({routes}); "
             "from scripts import tiktok_native as patched; "
             'worker=runpy.run_path(sys.argv[1])["_worker_main"]; '
             'worker.__globals__["_Pinned"]=patched._Pinned; worker()'
@@ -462,7 +580,12 @@ def test_public_worker_failure_cleans_only_owned_workspace(monkeypatch, tmp_path
 
     monkeypatch.setattr(n, "_command", command)
     result = n.run([A, B])
-    assert result["error"] == "missing_embed_state" and result["workspace_cleaned"]
+    assert result["error"] == failure and result["workspace_cleaned"]
+    if failure == "http_403":
+        assert result["results"][0]["media_http"][0]["status"] == 403
+        assert result["metadata_requests"] == result["media_requests"] == 1
+        assert result["media_bytes"] == 0 and result["counts_exact"]
+        assert "PRIVATE" not in json.dumps(result)
     assert all(not p.exists() for p in workspaces) and foreign.read_text() == "keep"
     assert workers[0].returncode == 0
 

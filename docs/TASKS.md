@@ -546,9 +546,17 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
   placeholders only with independently valid video data; refuse populated image
   data and unknown/conflicting structures. Offline verification: 72 focused cases,
   full suite 1542 passed / 1 skipped, Ruff and scope review pass. See Phase 6C in TESTING.
-- [ ] Obtain new owner authorization for a bounded native A/B retest: prove complete
-  MP4, actual video/audio or absent audio, decode and existing preparation before
-  any provider/Telegram integration. Metadata alone is not a technical GO.
+- [x] Separately authorized A/B retest on `85ab929`: A complete MP4 (1,097,768 bytes),
+  one video/audio stream, decode and passthrough PASS; B metadata PASS / media 403.
+  Two metadata and two media requests, 5.149 s, exact counters and cleanup PASS.
+  Fixed codec labels were not independent codec measurements; 403 cause is unknown.
+- [x] Add bounded safe CDN/source/request diagnostics and actual existing-probe
+  codec names offline, without changing network or preparation behavior.
+  Verification: 85 focused passed, full offline suite 1555 passed / 1 skipped,
+  Ruff and differential scope review PASS. See Phase 6C of TESTING.
+- [ ] Obtain separate owner authorization for one B-only diagnostic live retest.
+  B's complete MP4/stream/decode/preparation gate remains open before integration;
+  metadata alone and A's single successful case are not general platform GO.
 - [ ] Run a technical spike.
 - [ ] Assess real-world reliability and extraction stability.
 - [ ] Make an explicit Go/No-Go decision before implementation.

@@ -129,6 +129,7 @@ class Resolved:
     url: str
     candidates: int
     separate_audio: bool
+    source: str | None = None
 
 
 def resolve(body, post_id):
@@ -171,15 +172,15 @@ def resolve(body, post_id):
         if photo:
             raise Refusal("unsupported_photo")
         video = item["video"]
-        addresses = [video.get("playAddr")]
+        addresses = [("playAddr", video.get("playAddr"))]
         bitrate = video.get("bitrateInfo", [])
         if isinstance(bitrate, dict):
             bitrate = [bitrate]
         for entry in bitrate:
-            addresses.append(entry.get("PlayAddr", entry.get("playAddr")))
-        addresses.extend([video.get("downloadAddr"), video.get("urls")])
-        candidates = []
-        for address in addresses:
+            addresses.append(("bitrateInfo", entry.get("PlayAddr", entry.get("playAddr"))))
+        addresses.extend([("downloadAddr", video.get("downloadAddr")), ("urls", video.get("urls"))])
+        candidates, sources = [], {}
+        for field, address in addresses:
             if isinstance(address, dict):
                 address = address.get("urlList", address.get("UrlList", address.get("urls", [])))
             if isinstance(address, str):
@@ -189,6 +190,8 @@ def resolve(body, post_id):
             if not isinstance(address, list) or any(not isinstance(u, str) for u in address):
                 raise Refusal("metadata_schema")
             candidates.extend(address)
+            for candidate in address:
+                sources.setdefault(candidate, field)
         if not 0 < len(candidates) <= 32:
             raise Refusal("no_bounded_candidates")
         separate = any(
@@ -196,7 +199,7 @@ def resolve(body, post_id):
         )
         for url in dict.fromkeys(candidates):
             try:
-                return Resolved(media_url(url), len(set(candidates)), bool(separate))
+                return Resolved(media_url(url), len(set(candidates)), bool(separate), sources[url])
             except Refusal:
                 continue  # Offline admission only, never a network fallback.
         raise Refusal("forbidden_media_destination")
@@ -257,6 +260,7 @@ class Session:
         self.path = f"/embed/v2/{post_id}"
         self.referer, self.deadline, self.budget = referer, deadline, budget
         self.jar = CookieJar(policy=_Cookies())
+        self.media_http, self.codecs = [], {}
 
     def remaining(self):
         if (seconds := self.deadline - monotonic()) <= 0:
@@ -301,14 +305,27 @@ class Session:
             conn = _Pinned(
                 p.hostname, timeout=min(10, self.remaining()), context=ssl.create_default_context()
             )
+            diagnostic = None
+            if phase == "media":
+                diagnostic = {
+                    "cdn_family": next(root for root in ROOTS if p.hostname.endswith("." + root)),
+                    "has_query": bool(p.query),
+                    "cookie_sent": None,
+                    "status": None,
+                }
+                self.media_http.append(diagnostic)
             try:
                 conn.request(
                     "GET",
                     p.path + ("?" + p.query if p.query else ""),
                     headers=dict(req.header_items()),
                 )
+                if diagnostic is not None:
+                    diagnostic["cookie_sent"] = bool(req.get_header("Cookie"))
                 response = conn.getresponse()
                 try:
+                    if diagnostic is not None:
+                        diagnostic["status"] = response.status
                     if sum(len(k) + len(v) for k, v in response.headers.items()) > 65536:
                         raise Refusal("header_limit")
                     if response.status not in (200, 301, 302, 303, 307, 308):
@@ -395,6 +412,35 @@ class Session:
             raise
 
 
+def _codec_name(stream):
+    # A finite diagnostic vocabulary prevents arbitrary probe strings leaking data.
+    value = stream.get("codec_name")
+    return (
+        value
+        if isinstance(value, str)
+        and value
+        in {
+            "h264",
+            "hevc",
+            "av1",
+            "vp8",
+            "vp9",
+            "mpeg4",
+            "mjpeg",
+            "aac",
+            "mp3",
+            "opus",
+            "vorbis",
+            "ac3",
+            "eac3",
+            "flac",
+            "alac",
+            "pcm_s16le",
+        }
+        else None
+    )
+
+
 def verify(path, session, separate_audio, require_audio):
     def runner(command, **kwargs):
         if command[0] == "ffprobe":
@@ -410,6 +456,10 @@ def verify(path, session, separate_audio, require_audio):
     audios = [s for s in streams if s.get("codec_type") == "audio"]
     if len(videos) != 1 or len(audios) > 1:
         raise Refusal("unsupported_streams")
+    session.codecs.update(
+        video_codec=_codec_name(videos[0]),
+        audio_codec=_codec_name(audios[0]) if audios else "absent",
+    )
     if not audios and separate_audio:
         raise Refusal("separate_streams_unsupported")
     if require_audio and not audios:
@@ -443,8 +493,7 @@ def verify(path, session, separate_audio, require_audio):
     return {
         "bytes": path.stat().st_size,
         "container": "mp4",
-        "video_codec": "h264",
-        "audio_codec": "aac" if audios else "absent",
+        **session.codecs,
         "video_streams": 1,
         "audio_streams": len(audios),
         **parameters,
@@ -465,6 +514,7 @@ def _execute(urls, workspace, deadline):
         entry = {"case": index + 1, "success": False}
         results.append(entry)
         session = None
+        previous = budget.copy()
         try:
             post_id, canonical = publication(url)
             session = Session(post_id, canonical, deadline, budget)
@@ -472,6 +522,7 @@ def _execute(urls, workspace, deadline):
             entry.update(
                 metadata=True,
                 candidates=resolved.candidates,
+                candidate_source=resolved.source,
                 separate_audio=resolved.separate_audio,
             )
             path = workspace / f"case-{index + 1}.mp4"
@@ -488,7 +539,9 @@ def _execute(urls, workspace, deadline):
             error = "operation_failed"
         finally:
             if session is not None:
+                entry.update(session.codecs, media_http=session.media_http)
                 session.jar.clear()
+            entry["counts"] = {name: budget[name] - previous[name] for name in budget}
         if error:
             entry["error"] = error
             break

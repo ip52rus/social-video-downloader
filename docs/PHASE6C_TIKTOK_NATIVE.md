@@ -78,18 +78,61 @@ The HTML was not retained, so its photo-field values are unknown. The old resolv
 refused on key presence alone; an offline regression reproduced that false refusal
 with null/empty placeholders. The fix does not prove that A will now resolve or
 download. Another live run needs new owner authorization; no live request was made
-during this patch. Complete MP4/stream/decode/preparation evidence remains pending.
+during the photo-classification patch.
 
-## Next separately authorized A/B experiment
+The next authorized A/B run on `85ab929` was **PARTIAL PASS**: A yielded a complete
+1,097,768-byte MP4, one video and one audio stream, full FFmpeg decode and Telegram
+preparation passthrough. B resolved one candidate but its media GET returned 403.
+The series took 5.149 s, with 2 metadata requests / 566,367 body bytes, 2 media
+requests / 1,097,768 body bytes, 2 acquisitions, exact counters and successful
+cleanup. No retry occurred. The old constant codec labels were not independent
+codec measurements; B's server-side refusal reason remains unknown.
 
-Use the existing Python environment, only owner-approved full A and B, supplied
-through hidden stdin to `scripts/tiktok_native.py` in one invocation. No URL files,
-shell arguments or reports. Exactly one series; failure A stops before B.
+## Safe CDN diagnostics (offline patch)
+
+Results now include `candidate_source` (playAddr, bitrateInfo, downloadAddr or urls),
+the existing unique candidate count (recognized addresses before host admission),
+and `media_http`, a bounded ordered list for
+the media HTTP attempts already performed. Each record exposes only a normalized
+`cdn_family`, `has_query`, `cookie_sent` and actual response `status`. Cookie presence
+is recorded only after the request send returns; status only after a response is
+received. Unmeasured fields are null, not assumed false/success. Redirects produce
+separate records; no cookie values, full hosts, paths, queries or response bodies
+are included. This does not add requests or read an error response body.
+
+Per-case `counts` are differences of the existing operation counters, including
+metadata/media attempts, returned body bytes and acquisitions; the aggregate counters
+and `counts_exact` keep their existing meaning. Attempts are budget reservations,
+so a DNS/connect/send failure can count without an HTTP response. Bodies left
+unread (including 403 error bodies) contribute zero; this is not total wire traffic.
+Forced worker termination can still make counters incomplete (`counts_exact=false`).
+
+`video_codec` / `audio_codec` now come from the existing inspection's `codec_name`,
+not constants. Only a finite vocabulary of known codec names (maximum 9 characters)
+is reported. Missing, malformed, oversized or unrecognized names become null;
+an absent audio stream remains `absent`. Measured names also survive a later
+preparation failure. These diagnostic rules do not change decode/preparation or
+authorize conversion. There is no new ffprobe invocation for reporting.
+
+These fields cannot establish why a server sent 403 (signature/session/region/access
+rules), whether cookies are sufficient, or the contents/codecs of an unavailable
+file. No HTML, cookie value, signed URL, publication identity or IP is retained.
+
+The next proposed gate is one separately authorized **B-only** run through the same
+CLI with one URL. It is not authorized by this offline change. Existing first-case
+audio validation remains unchanged: B without an audio stream can report
+`audio_required` after acquisition. No A rerun, fallback or policy adjustment.
+
+## Next separately authorized B-only experiment
+
+Use the existing Python environment and only the previously approved full B URL,
+supplied through hidden stdin to `scripts/tiktok_native.py` in one invocation.
+No URL files, shell arguments or reports. Exactly one run; no A rerun.
 
 With that environment active and `PYTHONPATH=src`, after separate owner permission:
 
 ```bash
-python -c 'import getpass,json; print(json.dumps([getpass.getpass("A full URL: "),getpass.getpass("B full URL: ")]))' | python scripts/tiktok_native.py
+python -c 'import getpass,json; print(json.dumps([getpass.getpass("B full URL: ")]))' | python scripts/tiktok_native.py
 ```
 
 No preliminary TikTok probes, alternate formats, repeats or policy edits during the

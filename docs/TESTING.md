@@ -52,6 +52,24 @@ or acquisition, B not run, exact counters and successful cleanup. HTML was not
 retained; the actual photo-field values and media availability remain unknown.
 No TikTok/Telegram request or Docker operation was made for the offline fix.
 
+The next separately authorized A/B run on `85ab929` was **PARTIAL PASS**: A complete
+1,097,768-byte MP4, one video/audio stream, FFmpeg decode and Telegram passthrough
+PASS; B metadata PASS but media GET 403. Aggregate: 5.149 s, metadata 2 requests /
+566,367 bytes, media 2 requests / 1,097,768 bytes, 2 acquisitions, exact counters,
+cleanup PASS. Reported constant codec labels were not independent measurements.
+
+The targeted CDN diagnostic patch is offline only. Synthetic HTTP parser responses
+cover candidate source/deduplication, success/403 statuses, scoped cookie presence
+across redirects, missing measurements after send failure, safe per-case counters,
+no additional HTTP/retry, secret exclusion and owned worker/workspace cleanup.
+Generated local MP4s verify actual ffprobe codec reporting; isolated synthetic probe
+results cover non-default, missing, unknown and invalid codec names. Network policy,
+preparation and FFmpeg behavior are unchanged. Verification: **85 focused passed**;
+full suite **1555 passed, 1 skipped** with the inherited socket/DNS audit guard.
+Ruff lint/format and diff checks PASS. Differential offline review confirmed
+identical outbound HTTP/headers/cookie scope/redirects/counters and candidate
+selection before/after the patch. Exact-head CI is checked after publication.
+
 ## Phase 4 functional acceptance (2026-10-15)
 
 Status: **ACCEPTED for the tested functional scope**, as confirmed by the user. This is
