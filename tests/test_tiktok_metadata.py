@@ -108,6 +108,121 @@ def execute(urls, limits=None):
     return h._execute(urls, limits, h.monotonic() + limits.max_seconds, lambda event: None)
 
 
+CHALLENGE_HTML = (
+    b'<div id="cs" class="PRIVATE_CHALLENGE_PAYLOAD"></div>'
+    b'<div id="wci" class="_wafchallengeid"></div>'
+)
+LOGIN_HTML = b'<meta http-equiv="refresh" content="0; url=/login?private=SESSION_VALUE">'
+
+
+@pytest.mark.parametrize(
+    ("body", "category", "markers"),
+    [
+        (
+            CHALLENGE_HTML,
+            "challenge_structure_detected",
+            {"challenge_source_marker", "challenge_cookie_marker"},
+        ),
+        (LOGIN_HTML, "login_page_detected", {"login_redirect"}),
+        (b"<html>" + b"x" * 524 + b"</html>", "unrecognized_metadata_html", set()),
+        (b"<html>Please wait...</html>", "unrecognized_metadata_html", set()),
+        (
+            b'<div id="cs" class="PRIVATE_CHALLENGE_PAYLOAD"></div>',
+            "unrecognized_metadata_html",
+            {"challenge_source_marker"},
+        ),
+        (
+            b'<div id="wci" class="_wafchallengeid"></div>',
+            "unrecognized_metadata_html",
+            {"challenge_cookie_marker"},
+        ),
+        (
+            b'<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__">{}</script>',
+            "unrecognized_metadata_html",
+            {"universal_script_marker"},
+        ),
+        (b"<!--" + CHALLENGE_HTML + b"-->", "unrecognized_metadata_html", set()),
+        (
+            b"<script>const ignored = '" + CHALLENGE_HTML + b"';</script>",
+            "unrecognized_metadata_html",
+            set(),
+        ),
+        (
+            CHALLENGE_HTML + LOGIN_HTML,
+            "unrecognized_metadata_html",
+            {"challenge_source_marker", "challenge_cookie_marker", "login_redirect"},
+        ),
+        (
+            CHALLENGE_HTML + b'<div id="cs" class="duplicate"></div>',
+            "unrecognized_metadata_html",
+            {"challenge_source_marker", "challenge_cookie_marker", "ambiguous_structure"},
+        ),
+        (
+            b'<div id="cs" ID="cs" class="x"></div>' + CHALLENGE_HTML,
+            "unrecognized_metadata_html",
+            {"challenge_source_marker", "challenge_cookie_marker", "ambiguous_structure"},
+        ),
+        (
+            b'<meta http-equiv="refresh" content="0; url=https://external.invalid/login">',
+            "unrecognized_metadata_html",
+            set(),
+        ),
+        (b'<a href="/login">Log in to continue</a>', "unrecognized_metadata_html", set()),
+    ],
+)
+def test_missing_universal_data_real_extractor(monkeypatch, body, category, markers):
+    def forbidden_solver(*args, **kwargs):
+        pytest.fail("Upstream challenge solver must never execute")
+
+    monkeypatch.setattr(h.TikTokIE, "_solve_challenge_and_set_cookies", forbidden_solver)
+    net = network(
+        monkeypatch, {("GET", FULL): (200, body, {"Set-Cookie": "PRIVATE_COOKIE=SECRET"})}
+    )
+    result = execute([FULL, FULL])
+    assert not result["success"] and result["error"] == category
+    assert (
+        len(result["results"]) == result["extractions"] == result["requests"] == len(net.calls) == 1
+    )
+    assert result["metadata_bytes"] == len(body)
+    details = result["results"][0]["metadata_response"]
+    assert set(details) == {"category", "flags", "http_status", "content_type", "body_bytes"}
+    assert details["category"] == category
+    assert details["http_status"] == 200 and details["content_type"] == "text/html"
+    assert details["body_bytes"] == len(body)
+    assert {name for name, value in details["flags"].items() if value} == markers
+    assert all(type(value) is bool for value in details["flags"].values())
+    serialized = json.dumps(result)
+    for private in (
+        body.decode(),
+        "PRIVATE_CHALLENGE_PAYLOAD",
+        "SESSION_VALUE",
+        "PRIVATE_COOKIE",
+        FULL,
+        "123456789",
+    ):
+        assert private not in serialized
+
+
+def test_valid_universal_data_does_not_enter_classification(monkeypatch):
+    net = network(monkeypatch, {("GET", FULL): (200, page(), {})})
+
+    def forbidden_classifier(*args, **kwargs):
+        pytest.fail("Valid universal data must bypass fallback classification")
+
+    monkeypatch.setattr(h, "_metadata_html_failure", forbidden_classifier)
+    result = execute([FULL])
+    assert result["success"] and result["requests"] == len(net.calls) == 1
+    assert "metadata_response" not in result["results"][0]
+
+
+def test_unrecognized_html_reports_raw_bytes_without_text(monkeypatch):
+    body = "<html>Нераспознанная PRIVATE_BODY</html>".encode()
+    network(monkeypatch, {("GET", FULL): (200, body, {})})
+    result = execute([FULL])
+    assert result["results"][0]["metadata_response"]["body_bytes"] == len(body)
+    assert "PRIVATE_BODY" not in json.dumps(result)
+
+
 @pytest.fixture
 def owned_workers(monkeypatch):
     """Emergency cleanup is independent of assertions and the tested supervisor."""
@@ -309,7 +424,7 @@ def test_aggregate_body_budget(monkeypatch):
     [
         (403, b"private", {}, "http_403"),
         (429, b"private", {}, "http_429"),
-        (200, b"challenge", {}, "challenge_forbidden"),
+        (200, b"challenge", {}, "unrecognized_metadata_html"),
         (200, page(), {"Content-Encoding": "gzip"}, "encoded_response"),
         (200, b"media", {"Content-Type": "video/mp4"}, "non_html_response"),
     ],

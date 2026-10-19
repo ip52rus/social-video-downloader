@@ -237,9 +237,14 @@ authorized repeat passed metadata inspection for two full URLs (A/B): 2 HTTP,
 unverified. Phase 6B-2 added a separate bounded acquisition CLI with a 180 s global
 deadline. After framing review passed, one authorized live series stopped on A's
 first media GET with HTTP 403: 0 media bytes, B not started, cleanup confirmed.
-Phase 6B-3 restores validated yt-dlp headers offline; cookies remain forbidden and
-the cause of 403 is unproven. The next gate is focused header review, then a new
-separate decision about one live repeat. No repeat is authorized by this patch.
+Phase 6B-3 restored validated yt-dlp headers and passed focused review. One authorized
+live retest stopped before media GET on 537 bytes of A HTML; the old fallback
+error did not prove challenge. Phase 6B-4 classifies known challenge structure,
+explicit HTML login redirects and unrecognized HTML offline, with sanitized
+diagnostics and no solver or extra requests. Cookies remain forbidden; the cause
+of the earlier media 403 is unproven. The next gate is focused classification review,
+then a separate owner decision about one final live experiment. No live experiment
+is authorized by this patch.
 No technical GO for a runtime provider is claimed. See
 [experiment procedure and limits](PHASE6_TIKTOK_METADATA.md).
 

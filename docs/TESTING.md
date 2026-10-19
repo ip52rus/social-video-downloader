@@ -152,8 +152,40 @@ with external sockets forbidden: **1613 passed, 1 skipped** (external YouTube
 opt-in), including local FFmpeg/ffprobe. Ruff lint/format, diff, local documentation
 targets and security/scope checks pass. Exact-head CI is checked after publication.
 
-No real request is part of this correction. Focused independent review and a new
-explicit owner authorization are required before any live repeat.
+No real request was part of that correction. Its focused independent review
+subsequently passed at `a41e7af`. One separately authorized live retest read 537
+metadata body bytes for A in 1 HTTP attempt / 1 extraction and stopped with the old
+`challenge_forbidden` label: 0 media HTTP / acquisitions / bytes, 1.5 s, exact
+counts, B not started, process/workspace cleanup confirmed. This did not test the
+effect of headers on the earlier media 403 or establish a real challenge.
+
+### Phase 6B-4 missing universal data classification (offline)
+
+The installed yt-dlp invokes its challenge hook for any empty universal-data result.
+The harness now classifies only structural evidence from the existing HTML;
+known `cs` + `_wafchallengeid`/`wci` markers yield `challenge_structure_detected`,
+an explicit trusted HTML login redirect yields `login_page_detected`, and other or
+ambiguous HTML yields `unrecognized_metadata_html`. None executes the upstream
+solver, decodes a payload, saves HTML or initiates another request.
+
+Added tests use the real installed TikTok extractor/mapper and synthetic HTTPS
+responses with external sockets forbidden. They distinguish valid universal data,
+paired/isolated/duplicate/conflicting markers, comment/script text, explicit versus
+untrusted login redirects and login links, short/Unicode/empty-universal HTML.
+They verify fail-fast before B, exact raw body counts, fixed diagnostic fields,
+privacy and no additional HTTP calls. Supervised acquisition tests exercise all
+three failure categories through the public parent/worker path: zero media calls,
+reaped worker and removed workspace. No real live HTML is available to classify
+retroactively.
+
+Results: **19 added regressions / 162 focused cases passed**; **50 retained
+independent header/framing diagnostics passed**, including actual outbound Request
+checks and the decodable truncated-MP4 reproduction. Full socket-forbidden suite:
+**1632 passed, 1 skipped** (external YouTube opt-in), including local FFmpeg/ffprobe.
+Ruff lint/format, diff, local documentation targets and security/scope checks pass.
+Exact-head CI is checked after publication. No live requests or downloads are part
+of Phase 6B-4. Focused independent review and new owner authorization remain gates
+before one final live experiment.
 
 ## Phase 4 functional acceptance (2026-10-15)
 

@@ -11,6 +11,7 @@ import subprocess
 import sys
 from contextlib import suppress
 from dataclasses import asdict, dataclass
+from html.parser import HTMLParser
 from pathlib import Path
 from time import monotonic, sleep
 from urllib.error import HTTPError
@@ -138,11 +139,77 @@ def _opener():
     return build_opener(ProxyHandler({}), _NoRedirect())
 
 
+class _MetadataHTML(HTMLParser):
+    """Recognize structure only; never decode, execute or retain challenge data."""
+
+    def __init__(self):
+        super().__init__()
+        self.flags = {
+            "challenge_source_marker": False,
+            "challenge_cookie_marker": False,
+            "login_redirect": False,
+            "universal_script_marker": False,
+            "ambiguous_structure": False,
+        }
+        self.seen = set()
+
+    def handle_starttag(self, tag, attrs):
+        if len(attrs) != len({name for name, _ in attrs}):
+            self.flags["ambiguous_structure"] = True
+            return
+        attrs = dict(attrs)
+        identity = attrs.get("id")
+        if identity in {"cs", "wci", "__UNIVERSAL_DATA_FOR_REHYDRATION__"}:
+            if identity in self.seen:
+                self.flags["ambiguous_structure"] = True
+            self.seen.add(identity)
+        if identity == "cs" and (attrs.get("class") or "").strip():
+            self.flags["challenge_source_marker"] = True
+        if identity == "wci" and attrs.get("class") == "_wafchallengeid":
+            self.flags["challenge_cookie_marker"] = True
+        if tag == "script" and identity == "__UNIVERSAL_DATA_FOR_REHYDRATION__":
+            self.flags["universal_script_marker"] = True
+        if tag == "meta" and (attrs.get("http-equiv") or "").lower() == "refresh":
+            match = re.fullmatch(
+                r"""\s*0\s*;\s*url\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s'"]+))\s*""",
+                attrs.get("content") or "",
+                re.IGNORECASE,
+            )
+            if match:
+                target = next(value for value in match.groups() if value is not None)
+                destination = urlsplit(urljoin("https://www.tiktok.com/", target))
+                if (
+                    destination.scheme == "https"
+                    and destination.netloc == "www.tiktok.com"
+                    and destination.path == "/login"
+                ):
+                    self.flags["login_redirect"] = True
+
+
+def _metadata_html_failure(webpage):
+    parser = _MetadataHTML()
+    try:
+        parser.feed(webpage)
+        parser.close()
+    except Exception:
+        parser.flags["ambiguous_structure"] = True
+    flags = parser.flags
+    challenge = flags["challenge_source_marker"] and flags["challenge_cookie_marker"]
+    category = "unrecognized_metadata_html"
+    if not flags["ambiguous_structure"]:
+        if challenge and not flags["login_redirect"]:
+            category = "challenge_structure_detected"
+        elif flags["login_redirect"] and not challenge:
+            category = "login_page_detected"
+    return {"category": category, "flags": flags}
+
+
 class _Transport:
     def __init__(self, limits, deadline, emit):
         self.limits, self.deadline, self.emit = limits, deadline, emit
         self.requests = self.received = self.extractions = 0
         self.expected = None
+        self.response_info = None
         self.headers = _http_headers(std_headers)
         self.opener = _opener()
 
@@ -159,6 +226,7 @@ class _Transport:
 
     def open(self, request):
         self.check()
+        self.response_info = None
         kind, url = _url(request.url)
         method = request.method
         if url != self.expected or method != ("HEAD" if kind == "short" else "GET"):
@@ -246,6 +314,11 @@ class _Transport:
                         if not chunk:
                             break
                         body.extend(chunk)
+                    self.response_info = {
+                        "http_status": response.code,
+                        "content_type": "text/html",
+                        "body_bytes": len(body),
+                    }
                 return Response(io.BytesIO(body), url, dict(response.headers), status=200)
         raise Stop("redirect_limit")
 
@@ -269,8 +342,12 @@ class _MetadataIE(TikTokIE):
         kwargs["impersonate"] = False
         return super()._download_webpage_handle(*args, **kwargs)
 
-    def _solve_challenge_and_set_cookies(self, *args):
-        raise Stop("challenge_forbidden")
+    def _solve_challenge_and_set_cookies(self, webpage):
+        # Upstream calls this for any missing universal data, not just challenges.
+        details = _metadata_html_failure(webpage)
+        error = Stop(details["category"])
+        error.metadata_response = {**(self._downloader.transport.response_info or {}), **details}
+        raise error
 
     def _set_cookie(self, *args, **kwargs):
         raise Stop("cookies_forbidden")
@@ -425,6 +502,8 @@ def _execute(urls, limits, deadline, emit):
                 )
             except Stop as exc:
                 error = str(exc)
+                if getattr(exc, "metadata_response", None):
+                    entry["metadata_response"] = exc.metadata_response
             except Exception:
                 error = "extraction_error"
             if error:

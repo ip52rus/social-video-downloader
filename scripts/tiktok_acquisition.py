@@ -450,6 +450,8 @@ def _execute(urls, limits, deadline, workspace, emit):
                     entry.update(success=True, preparation="passthrough", decoded=True)
                 except meta.Stop as exc:
                     error = str(exc)
+                    if getattr(exc, "metadata_response", None):
+                        entry["metadata_response"] = exc.metadata_response
                 except subprocess.TimeoutExpired:
                     error = "subprocess_deadline"
                 except Exception:

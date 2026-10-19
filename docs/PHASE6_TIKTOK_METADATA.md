@@ -220,8 +220,47 @@ Set-Cookie responses are still discarded. Signed media queries remain unchanged.
 
 The correction changes neither host/DNS/TLS/redirect policy nor framing,
 byte/workspace/deadline bounds, supervisor, source identity or media provenance.
-It does not prove the cause of 403 or successful CDN access. Focused independent
-review and separate authorization are required before any repeat live acquisition.
+It does not prove the cause of 403 or successful CDN access. The correction passed
+focused independent review at `a41e7af`. One separately authorized live retest then
+stopped during A metadata: 1 HTTP attempt / 1 extraction, 537 body bytes, 1.5 s,
+`counts_exact=true`; 0 media requests / acquisitions / bytes. B did not start,
+worker termination and workspace cleanup passed. The old `challenge_forbidden`
+label only identified entry into yt-dlp's fallback after empty universal data;
+it did not establish a real challenge. The effect of restored headers on the
+earlier media 403 remains untested.
+
+### Phase 6B-4: classify missing universal data (offline)
+
+The fallback now inspects only the HTML already returned by the bounded metadata
+transport. Structural markers are taken from the installed yt-dlp 2026.08.19
+`TikTokIE._solve_challenge_and_set_cookies()` source, not inferred from the method's
+name. The upstream solver is never called; payloads are not decoded or executed.
+
+- `challenge_structure_detected`: both `id=cs` with a nonempty class and `id=wci`
+  with the known `_wafchallengeid` class occur as parsed HTML elements. This
+  identifies a known structure, not a validated challenge payload or proof that
+  solving it would grant access.
+- `login_page_detected`: an explicit zero-delay HTML meta refresh points to the
+  exact HTTPS `www.tiktok.com/login` destination (including relative redirects).
+  A login link or login-related text alone is insufficient evidence.
+- `unrecognized_metadata_html`: neither condition is established, structure is
+  ambiguous/contradictory, or HTML parsing fails. `Please wait...`, short HTML,
+  isolated markers and an empty universal-data script do not establish challenge.
+
+All three categories stop the series without retry, solver, cookie use, second
+extraction or media GET. Existing explicit upstream `login_required` and HTTP
+403/429 refusals retain their meanings. Valid universal data follows the existing
+source-ID/mapper path without entering classification. Metadata and acquisition
+reports carry `metadata_response` on this fallback only: category, already-known
+HTTP status, normalized Content-Type (`text/html`), raw body byte count, and boolean
+structural flags. No attribute values, HTML, session parameters, identifiers or
+URLs are serialized or persisted; acquisition changes only failure reporting.
+
+No copy of the prior live HTML was retained, so its cause cannot be classified
+retroactively. Future schema changes or unrecognized challenge/login layouts
+remain unknown and fail closed. Header/cookie policies, media transport, framing,
+identity, DNS/TLS, budgets and supervisor are unchanged. Focused independent review
+and a new owner authorization are required before one final live experiment.
 
 ### Separately authorized live procedure
 

@@ -24,7 +24,7 @@ import pytest
 from scripts import tiktok_acquisition as a
 from scripts import tiktok_metadata as m
 from tests.integration.test_video_preparation import generate
-from tests.test_tiktok_metadata import Network, page
+from tests.test_tiktok_metadata import CHALLENGE_HTML, LOGIN_HTML, Network, page
 
 A = "https://www.tiktok.com/@fixture/video/123456789"
 B = "https://www.tiktok.com/@fixture/video/987654321"
@@ -117,6 +117,50 @@ def workers(monkeypatch):
             with suppress(ProcessLookupError):
                 os.killpg(process.pid, signal.SIGKILL)
             process.wait(timeout=5)
+
+
+@pytest.mark.parametrize(
+    ("body", "category"),
+    [
+        (CHALLENGE_HTML, "challenge_structure_detected"),
+        (LOGIN_HTML, "login_page_detected"),
+        (b"<html>PRIVATE_UNRECOGNIZED</html>", "unrecognized_metadata_html"),
+    ],
+)
+def test_classified_metadata_failure_survives_worker_without_media(
+    monkeypatch, workers, body, category
+):
+    original, workspaces = a._command, []
+
+    def command(workspace):
+        workspaces.append(Path(workspace))
+        argv = original(workspace)
+        bootstrap = (
+            "import sys,socket,runpy; "
+            "socket.socket.connect=socket.socket.connect_ex="
+            "lambda *a,**k: (_ for _ in ()).throw(AssertionError('No sockets')); "
+            "from tests.test_tiktok_acquisition import install,A; "
+            f"install({{('GET',A):(200,{body!r},{{}})}}); "
+            "from scripts import tiktok_acquisition as patched; "
+            "worker=runpy.run_path(sys.argv[1])['_worker_main']; "
+            "worker.__globals__['_opener']=patched._opener; worker()"
+        )
+        return [*argv[:2], bootstrap, *argv[3:]]
+
+    monkeypatch.setattr(a, "_command", command)
+    result = a.run([A, B])
+    assert not result["success"] and result["error"] == category
+    assert result["counts_exact"] and result["workspace_cleaned"]
+    assert result["extractions"] == result["requests"] == len(result["results"]) == 1
+    assert result["acquisitions"] == result["media_requests"] == result["media_bytes"] == 0
+    assert result["metadata_bytes"] == len(body)
+    details = result["results"][0]["metadata_response"]
+    assert details["category"] == category and details["body_bytes"] == len(body)
+    assert len(workers) == 1 and workers[0].returncode == 0
+    assert all(not path.exists() for path in workspaces)
+    serialized = json.dumps(result)
+    for private in (body.decode(), "PRIVATE_", "SESSION_VALUE", A, B, "123456789"):
+        assert private not in serialized
 
 
 @pytest.mark.parametrize("overflow", [False, True])

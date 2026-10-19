@@ -603,9 +603,25 @@ application providers, Telegram handlers or deployed configuration changed.
   1613 passed, 1 external opt-in skipped. Local FFmpeg/ffprobe, Ruff lint/format,
   diff, documentation and security/scope checks pass; exact-head CI is checked
   after publication. No live requests or downloads are part of this correction.
-- [ ] Focused independent review of the headers-only correction, then separately
-  decide whether to authorize one repeat acquisition experiment. No Provider
-  implementation or Telegram delivery is authorized.
+- [x] Headers-only correction passed focused review at `a41e7af`. One separately
+  authorized live retest stopped during A metadata: 537 body bytes, 1 HTTP /
+  1 extraction, 1.5 s, exact counts; 0 media HTTP / acquisitions / bytes.
+  B not started, worker/workspace cleanup confirmed. `challenge_forbidden`
+  identified the empty-universal-data fallback, not a confirmed JS challenge.
+  The earlier media 403 and real download feasibility remain unresolved.
+- [x] Phase 6B-4: classify only already-received HTML as known challenge structure,
+  explicit HTML login redirect or unrecognized metadata HTML. All outcomes fail
+  closed; report only response category/status/type/byte count and boolean flags.
+  Never decode/execute challenge payloads or retain HTML. Preserve source identity,
+  headers, cookie refusal, networking, framing, resource limits and supervisor.
+  Verification: 19 new / 162 focused cases and 50 retained independent
+  header/framing diagnostics pass; full socket-forbidden suite 1632 passed,
+  1 external opt-in skipped. Ruff lint/format, diff, documentation and security/scope
+  checks pass; exact-head CI is checked after publication. See
+  [TESTING](TESTING.md#phase-6b-4-missing-universal-data-classification-offline).
+- [ ] Focused independent classification review, then a separate owner decision
+  about one final live experiment. No Provider implementation, retries or Telegram
+  delivery are authorized.
 
 - [ ] Run a technical spike.
 - [ ] Assess real-world reliability and extraction stability.
