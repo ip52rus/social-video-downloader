@@ -154,8 +154,18 @@ have not been confirmed by this offline stage; an unlisted host blocks the run.
 | Cleanup | Existing process-group termination/reap (up to 5 additional seconds), then parent-owned temporary-directory cleanup |
 
 File size is checked on disk; a worker-only POSIX file-size limit is a backstop.
-Missing/false Content-Length cannot increase the streaming budget. Exact-cap
-bodies are conservatively refused rather than reading an extra byte to prove EOF.
+Media responses require exactly one Content-Length containing an unsigned decimal
+length (outer spaces/tabs are allowed). Duplicate lengths, comma-combined values,
+malformed/negative lengths and any Transfer-Encoding are refused before body reads.
+This includes valid chunked responses; responses without Content-Length are also
+refused because connection EOF alone cannot establish completeness. These are
+deliberate limitations of this experiment, not reasons to retry another format.
+Reads remain bounded by the file, aggregate and workspace budgets as well as the
+declared body length. Success requires exactly that many returned bytes, before
+ffprobe or preparation. Earlier EOF yields `incomplete_media_response`, cleans the
+partial file and stops before B, even if the prefix is a decodable MP4. A complete
+body at the byte cap can pass without an extra read. Neither Content-Length nor
+ffprobe replaces the streaming resource limits or proves download availability.
 Counts describe returned HTTP body bytes, not total network traffic or buffers.
 No global concurrency, memory or production-capacity guarantees are claimed.
 

@@ -1,6 +1,8 @@
 """Offline real mapper/urllib and local FFmpeg; no external socket connections."""
 
 import hashlib
+import http.client
+import io
 import json
 import os
 import shutil
@@ -14,6 +16,7 @@ from pathlib import Path
 from time import monotonic
 from types import SimpleNamespace
 from urllib.request import ProxyHandler, build_opener
+from urllib.response import addinfourl
 
 import pytest
 
@@ -41,13 +44,40 @@ def routes(first=b"x", second=b"y", identity="123456789", media_url=MEDIA):
     return {
         ("GET", A): (200, page(identity=identity, video={"playAddr": media_url}), {}),
         ("GET", B): (200, page(identity="987654321", video={"playAddr": OTHER}), {}),
-        ("GET", media_url): (200, first, {"Content-Type": "video/mp4"}),
-        ("GET", OTHER): (200, second, {"Content-Type": "video/mp4"}),
+        ("GET", media_url): (
+            200,
+            first,
+            {"Content-Type": "video/mp4", "Content-Length": str(len(first))},
+        ),
+        ("GET", OTHER): (
+            200,
+            second,
+            {"Content-Type": "video/mp4", "Content-Length": str(len(second))},
+        ),
     }
 
 
-def install(data):
-    net = Network(data)
+class FramedNetwork(Network):
+    """Actual HTTPResponse framing; replace only socket I/O, never read()."""
+
+    def https_open(self, request):
+        self.calls.append((request.get_method(), request.full_url, dict(request.header_items())))
+        code, body, headers = self.routes[(request.get_method(), request.full_url)]
+        fields = list(headers.items()) if isinstance(headers, dict) else headers
+        wire = (
+            f"HTTP/1.1 {code} Synthetic\r\nContent-Type: text/html\r\n"
+            + "".join(f"{name}: {value}\r\n" for name, value in fields)
+            + "\r\n"
+        ).encode() + body
+        raw = http.client.HTTPResponse(SimpleNamespace(makefile=lambda *args: io.BytesIO(wire)))
+        raw.begin()
+        response = addinfourl(raw, raw.headers, request.full_url, code)
+        response.msg = "Synthetic"
+        return response
+
+
+def install(data, network_type=Network):
+    net = network_type(data)
     a._opener = lambda: build_opener(ProxyHandler({}), m._NoRedirect(), net)
     return net
 
@@ -133,6 +163,139 @@ def test_real_mapping_probe_decode_and_parent_cleanup(monkeypatch, media_files, 
     assert all(secret not in json.dumps(result) for secret in (A, B, MEDIA, "123456789"))
 
 
+@pytest.mark.parametrize("truncated", [False, True])
+def test_real_http_framing_before_probe_and_second_video(
+    monkeypatch, tmp_path, media_files, workers, truncated
+):
+    source = tmp_path / "fragmented.mp4"
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=s=64x96:r=10",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440",
+            "-t",
+            "2.2",
+            "-c:v",
+            "libx264",
+            "-g",
+            "5",
+            "-c:a",
+            "aac",
+            "-movflags",
+            "frag_keyframe+empty_moov",
+            str(source),
+        ],
+        check=True,
+        capture_output=True,
+        timeout=15,
+    )
+    body = source.read_bytes()
+    end = 0
+    while end < len(body):
+        size = int.from_bytes(body[end : end + 4], "big")
+        assert size >= 8
+        kind = body[end + 4 : end + 8]
+        end += size
+        if kind == b"mdat":
+            break
+    assert end < len(body)
+    prefix = tmp_path / "playable-prefix.mp4"
+    prefix.write_bytes(body[:end])
+    # Prove that local validation alone cannot establish HTTP completeness.
+    probe = a._validate(prefix, monotonic() + 15)
+    a._prepare_and_decode(prefix, probe, 1, monotonic() + 15)
+    original_command, workspaces = a._command, []
+
+    def command(workspace):
+        workspaces.append(Path(workspace))
+        original = original_command(workspace)
+        bootstrap = (
+            "import sys,socket; "
+            "socket.socket.connect=socket.socket.connect_ex="
+            "lambda *a,**k: (_ for _ in ()).throw(AssertionError('No sockets')); "
+            "from tests.test_tiktok_acquisition import install,routes,FramedNetwork,MEDIA; "
+            "from pathlib import Path; "
+            f"body=Path({str(source)!r}).read_bytes(); "
+            f"prefix=Path({str(prefix)!r}).read_bytes(); "
+            f"silent=Path({str(media_files[1])!r}).read_bytes(); "
+            "data=routes(body,silent); "
+            + (
+                "data[('GET',MEDIA)]=(200,prefix,{'Content-Length':str(len(body))}); "
+                if truncated
+                else ""
+            )
+            + "install(data,FramedNetwork); "
+            "from scripts import tiktok_acquisition as patched; import runpy; "
+            "worker=runpy.run_path(sys.argv[1])['_worker_main']; "
+            "worker.__globals__['_opener']=patched._opener; worker()"
+        )
+        return [*original[:2], bootstrap, *original[3:]]
+
+    monkeypatch.setattr(a, "_command", command)
+    result = a.run([A, B])
+    assert result["workspace_cleaned"] and not workspaces[0].exists()
+    assert result["counts_exact"]
+    assert all(p.returncode is not None for p in workers)
+    assert source.read_bytes() == body and prefix.read_bytes() == body[:end]
+    if truncated:
+        assert not result["success"] and result["error"] == "incomplete_media_response"
+        assert result["media_bytes"] == end
+        assert result["extractions"] == result["acquisitions"] == result["media_requests"] == 1
+        assert len(result["results"]) == 1 and "probe" not in result["results"][0]
+    else:
+        assert result["success"] and result["extractions"] == result["acquisitions"] == 2
+        assert all(e["decoded"] for e in result["results"])
+
+
+@pytest.mark.parametrize(
+    ("headers", "body", "error"),
+    [
+        ([], b"x", "unverifiable_media_framing"),
+        ([("Content-Length", "-1")], b"x", "invalid_media_framing"),
+        ([("Content-Length", "invalid")], b"x", "invalid_media_framing"),
+        ([("Content-Length", "1, 1")], b"x", "invalid_media_framing"),
+        ([("Content-Length", "1"), ("content-length", "1")], b"x", "invalid_media_framing"),
+        ([("Content-Length", "1"), ("Content-Length", "2")], b"x", "invalid_media_framing"),
+        ([("Content-Length", "1"), ("Transfer-Encoding", "chunked")], b"", "invalid_media_framing"),
+        ([("Transfer-Encoding", "chunked")], b"1\r\nx\r\n0\r\n\r\n", "unsupported_media_framing"),
+        ([("transfer-encoding", "chunked")], b"1\r\nx\r\n", "unsupported_media_framing"),
+        ([("Transfer-Encoding", "gzip")], b"x", "unsupported_media_framing"),
+    ],
+)
+def test_real_parser_rejects_ambiguous_or_unverifiable_framing(
+    monkeypatch, tmp_path, headers, body, error
+):
+    data = routes()
+    data[("GET", MEDIA)] = (200, body, headers)
+    net = FramedNetwork(data)
+    monkeypatch.setattr(a, "_opener", lambda: build_opener(ProxyHandler({}), m._NoRedirect(), net))
+    result = a._execute([A, B], a.Limits(), monotonic() + 10, tmp_path, lambda e: None)
+    assert not result["success"] and result["error"] == error
+    assert result["media_bytes"] == 0
+    assert result["extractions"] == result["acquisitions"] == result["media_requests"] == 1
+    assert len(net.calls) == 2 and len(result["results"]) == 1
+    assert "probe" not in result["results"][0] and not list(tmp_path.iterdir())
+
+
+def test_complete_real_parser_body_can_use_exact_byte_budget(monkeypatch, tmp_path):
+    net = FramedNetwork({("GET", MEDIA): (200, b"video", {"Content-Length": "5"})})
+    monkeypatch.setattr(a, "_opener", lambda: build_opener(ProxyHandler({}), m._NoRedirect(), net))
+    media = a._Media(
+        a.Limits(max_file_bytes=5, max_total_bytes=5), monotonic() + 10, tmp_path, lambda e: None
+    )
+    path = tmp_path / "video.mp4"
+    media.acquire(MEDIA, path)
+    assert media.received == path.stat().st_size == 5
+
+
 @pytest.mark.parametrize("bad", ["source", "host", "provenance", "probe_required"])
 def test_untrusted_selection_stops_before_media_get(monkeypatch, tmp_path, bad):
     data = routes(
@@ -181,7 +344,11 @@ def test_approved_redirect_cookies_discarded_and_no_cookie_sent(monkeypatch, tmp
         monkeypatch,
         {
             ("GET", MEDIA): (302, b"", {"Location": OTHER, "Set-Cookie": "fixture=discard"}),
-            ("GET", OTHER): (200, b"video", {"Set-Cookie": "fixture=discard"}),
+            ("GET", OTHER): (
+                200,
+                b"video",
+                {"Set-Cookie": "fixture=discard", "Content-Length": "5"},
+            ),
         },
     )
     media = a._Media(a.Limits(), monotonic() + 10, tmp_path, lambda e: None)
@@ -240,21 +407,28 @@ def test_public_ip_is_pinned_without_second_dns_lookup_and_tls_keeps_hostname(mo
     assert tls == [{"server_hostname": "v16-webapp-prime.tiktok.com"}]
 
 
-@pytest.mark.parametrize("headers", [{}, {"Content-Length": "1"}])
+@pytest.mark.parametrize("headers", [{}, {"Content-Length": "100000000"}])
 def test_actual_25_mib_cap_independent_of_size_header(monkeypatch, tmp_path, headers):
     cap = a.Limits().max_file_bytes
-    network(monkeypatch, {("GET", MEDIA): (200, b"x" * (cap + 1), headers)})
+    net = FramedNetwork({("GET", MEDIA): (200, b"x" * (cap + 1), headers)})
+    monkeypatch.setattr(a, "_opener", lambda: build_opener(ProxyHandler({}), m._NoRedirect(), net))
     media = a._Media(a.Limits(), monotonic() + 10, tmp_path, lambda e: None)
     output = tmp_path / "video.mp4"
-    with pytest.raises(m.Stop, match="media_byte_limit"):
+    with pytest.raises(
+        m.Stop, match="media_byte_limit" if headers else "unverifiable_media_framing"
+    ):
         media.acquire(MEDIA, output)
-    assert media.received == output.stat().st_size == cap
+    if headers:
+        assert media.received == output.stat().st_size == cap
+    else:
+        assert media.received == 0 and not output.exists()
     assert media.attempts == media.requests == 1
 
 
 @pytest.mark.parametrize("budget", ["aggregate", "workspace"])
 def test_aggregate_and_partial_workspace_budgets(monkeypatch, tmp_path, budget):
-    network(monkeypatch, {("GET", MEDIA): (200, b"x" * 8, {})})
+    net = FramedNetwork({("GET", MEDIA): (200, b"x" * 8, {"Content-Length": "8"})})
+    monkeypatch.setattr(a, "_opener", lambda: build_opener(ProxyHandler({}), m._NoRedirect(), net))
     limits = (
         a.Limits(max_total_bytes=12) if budget == "aggregate" else a.Limits(max_workspace_bytes=12)
     )

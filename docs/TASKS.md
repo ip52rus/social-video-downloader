@@ -574,7 +574,20 @@ application providers, Telegram handlers or deployed configuration changed.
   Local FFmpeg/ffprobe, Ruff lint/format, diff, documentation and security/scope
   checks pass. The CLI uses a conservative 180 s series ceiling, below the
   authorized 360 s maximum. No real acquisition was performed.
-- [ ] Independently review Phase 6B-2, then separately authorize one A/B acquisition
+- [x] Reproduce and correct the Phase 6B-2 review P2: premature HTTP EOF could
+  accept a decodable MP4 prefix and start B. Both original real-parser reproductions
+  failed before the patch and pass after it. Media now requires one valid
+  Content-Length and exact body completion before ffprobe; unknown length,
+  duplicate/invalid framing and all Transfer-Encoding responses fail closed.
+  Partial A stops the series; parent cleanup removes the owned workspace.
+  Thirteen real-parser regression cases were added; no HTTP framework, new
+  dependencies, fallback, retry, network policy or resource-limit expansion.
+  Verified: 50 acquisition / 120 focused cases passed; 63 retained independent
+  diagnostics passed (three obsolete no-length/chunked-read expectations and one
+  obsolete cookie refusal deselected). Full socket-forbidden suite: 1590 passed,
+  1 external opt-in skipped. Local FFmpeg/ffprobe, Ruff lint/format, diff,
+  documentation and security/scope checks pass; exact-head CI is checked after push.
+- [ ] Focused independent re-review of the HTTP completeness correction, then separately authorize one A/B acquisition
   experiment. No Provider implementation or Telegram delivery is authorized.
 
 - [ ] Run a technical spike.

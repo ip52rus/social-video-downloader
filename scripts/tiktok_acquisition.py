@@ -174,6 +174,23 @@ def _candidate(info, source_urls):
     raise meta.Stop("no_safe_format")
 
 
+def _content_length(headers):
+    # This experiment admits only one explicit length. Do not infer completeness
+    # from connection EOF or depend on stdlib's permissive chunk/trailer parsing.
+    lengths = headers.get_all("Content-Length", [])
+    if headers.get_all("Transfer-Encoding"):
+        raise meta.Stop("invalid_media_framing" if lengths else "unsupported_media_framing")
+    if len(lengths) != 1:
+        raise meta.Stop("invalid_media_framing" if lengths else "unverifiable_media_framing")
+    value = lengths[0].strip(" \t")
+    if not re.fullmatch(r"[0-9]+", value):
+        raise meta.Stop("invalid_media_framing")
+    try:
+        return int(value)
+    except ValueError:
+        raise meta.Stop("invalid_media_framing") from None
+
+
 class _Media:
     def __init__(self, limits, deadline, workspace, emit):
         self.limits, self.deadline, self.workspace, self.emit = limits, deadline, workspace, emit
@@ -240,10 +257,14 @@ class _Media:
                     )
                 if response.headers.get("Content-Encoding", "identity").lower() != "identity":
                     raise meta.Stop("encoded_response")
+                expected = _content_length(response.headers)
                 with path.open("xb") as output:
                     while True:
                         used = self.check()
+                        if output.tell() == expected:
+                            break
                         remaining = min(
+                            expected - output.tell(),
                             self.limits.max_file_bytes - output.tell(),
                             self.limits.max_total_bytes - self.received,
                             self.limits.max_workspace_bytes - used,
@@ -257,7 +278,7 @@ class _Media:
                         if len(chunk) > remaining:
                             raise meta.Stop("invalid_response_reader")
                         if not chunk:
-                            break
+                            raise meta.Stop("incomplete_media_response")
                         output.write(chunk)
                         output.flush()
                     if output.tell() == 0 or path.stat().st_size != output.tell():

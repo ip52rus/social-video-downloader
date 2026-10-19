@@ -73,19 +73,52 @@ actual ffprobe, full FFmpeg video/audio decode, silent B and byte-identical
 passthrough, followed by parent cleanup without deleting caller-owned fixtures.
 Negative cases cover source mismatch/provenance/probe markers, strict hosts and
 redirects, reserved/private/mixed DNS, a pinned sockaddr with original TLS SNI,
-actual 25 MiB reads despite absent/false Content-Length, aggregate/workspace
+actual 25 MiB streaming limits despite an overstated Content-Length, aggregate/workspace
 budgets, partial files, 403/429/404 without fallback, deadlines, subprocess reap,
 worker interruption and explicit cleanup failure. The common supervisor's existing
 metadata tests continue to exercise exited leaders, descendants and repeated signals.
 Real acquisition remains untested. See [the separate authorization gate](PHASE6_TIKTOK_METADATA.md#separately-authorized-live-procedure).
 
-Offline results: **37 new acquisition cases**, **107 focused cases passed** with
+Initial preparation results, before the HTTP correction below: **37 new acquisition
+cases**, **107 focused cases passed** with
 the existing 70 metadata cases. The 44 retained independent diagnostics pass; only
 the obsolete Set-Cookie-only refusal assertion is deselected. Full suite with
 external sockets forbidden: **1577 passed, 1 skipped** (external YouTube opt-in),
 including real local FFmpeg/ffprobe checks. Ruff lint/format, diff, documentation
 links and security/scope checks pass. No live requests or downloads are part of
 this preparation; independent review is still required.
+
+### PR #59 incomplete HTTP media response correction (offline)
+
+The original reviewer reproduction failed twice on the previous acquisition HEAD:
+a response promised 21,750 bytes but returned a 5,446-byte decodable MP4 prefix.
+Both the worker path and public supervised `run()` incorrectly reported success
+and started B. Both reproductions now pass: `incomplete_media_response`, no B,
+no ffprobe/preparation of the incomplete response, and parent workspace cleanup.
+
+The conservative media policy requires one valid Content-Length and exactly that
+many returned bytes. Duplicate/conflicting/comma-combined/malformed lengths and
+Content-Length with Transfer-Encoding fail closed. Both complete and incomplete
+chunked responses are refused before body reads, as are responses without length;
+no new chunk parser, retry, Range request or fallback is introduced. Exact-cap
+complete bodies can pass; streaming file/aggregate/workspace limits still apply.
+
+Thirteen added regression cases use real `http.client.HTTPResponse` framing with
+synthetic socket input, including generated fragmented MP4s whose incomplete
+prefix independently passes ffprobe and full local decode. Assertions cover fail-fast,
+exact returned-byte counters, no downstream probe, reaped workers, removed owned
+workspace and untouched caller files. Existing resource tests also use the real
+HTTP parser. No external socket connections are allowed.
+
+Verification: **50 acquisition / 120 focused metadata/acquisition cases passed**;
+**63 retained independent diagnostics passed, 4 deselected**. The latter excludes
+three older expectations of reading chunked/unknown-length media and one obsolete
+Set-Cookie-only refusal; strict framing and streaming budgets are tested above.
+Full socket-forbidden suite: **1590 passed, 1 skipped** (external YouTube opt-in),
+including local FFmpeg/ffprobe regressions. Ruff lint/format, diff, documentation
+targets and security/scope checks pass. Exact-head CI is verified after publication.
+This patch still requires focused independent re-review before a separately
+authorized live acquisition. No real acquisition or Telegram upload is evidenced.
 
 ## Phase 4 functional acceptance (2026-10-15)
 
