@@ -530,6 +530,18 @@ Reel MVP verification: 32 new cases; focused 142 passed; full 1234 passed, 1 ski
 Ruff lint/format, diff, documentation and security/scope review PASS; no live requests.
 
 ## Phase 6 - TikTok Provider
+- [x] Inspect tt-dlp `08a1f42` sources/tests and MIT license; retain attribution.
+- [x] Prepare separate native embed resolver/acquisition CLI with explicit source
+  identity, constrained video-host/DNS/TLS/redirect policy, operation-local cookies,
+  bounded streaming, complete framing and owned worker/workspace cleanup. Keep
+  PR #59 and production providers/handlers/DownloadService unchanged.
+- [x] Verify offline with synthetic HTTP, local FFmpeg fixtures and socket denial;
+  44 focused cases and full suite 1514 passed / 1 external opt-in skipped.
+  Ruff lint/format, diff, MIT attribution and security/scope checks pass; exact-head
+  CI is checked after publication. See [TESTING](TESTING.md#phase-6c-native-tiktok-offline).
+- [ ] Owner authorization for one bounded native A/B experiment: prove complete
+  MP4, actual video/audio or absent audio, decode and existing preparation before
+  any provider/Telegram integration. Metadata alone is not a technical GO.
 - [ ] Run a technical spike.
 - [ ] Assess real-world reliability and extraction stability.
 - [ ] Make an explicit Go/No-Go decision before implementation.

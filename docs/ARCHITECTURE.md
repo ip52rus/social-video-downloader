@@ -75,6 +75,19 @@ The synchronous download and media-preparation operations run in worker threads 
 
 The remux path is an optimization for compatible streams when only the container needs conversion; it is not a claim that all media can be remuxed. The transcode path remains the compatibility fallback. No scaling filter is applied, and FFmpeg autorotation is retained. The bot sends the prepared file as a Telegram video with streaming support. A per-request temporary directory holds the media while Telegram uploads it, and is removed after delivery or failure. Telegram upload errors and expected downloader errors are mapped to safe user-facing messages; detailed source exceptions are not sent to the user.
 
+### Isolated native TikTok feasibility
+
+Phase 6C adds only `scripts/tiktok_native.py`: a standalone embed-state resolver
+and bounded HTTP downloader using stdlib, not yt-dlp or a provider/Telegram route.
+It requires explicit matching source ID, constrained video-host admission, pinned
+public IPv4/TLS, scoped per-publication in-memory cookies and complete HTTP framing.
+Existing inspection/preparation helpers are used only for local verification;
+conversion and upload are not part of this experiment. A private worker group and
+parent-owned workspace bound native calls and cleanup. This isolation keeps the
+working downloader/transport contracts unchanged until actual MP4 acquisition,
+decode and preparation have passed a separately authorized gate. See
+[Phase 6C design and limits](PHASE6C_TIKTOK_NATIVE.md).
+
 ### Historical Reel-only opt-in MVP design
 
 The original Reel-only stage reused `InstagramProvider`, `DownloadedMedia` and the

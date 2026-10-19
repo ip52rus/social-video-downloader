@@ -229,6 +229,15 @@ Order:
 Where Instagram exposes meaningful format or quality choices, map them into the shared download-options model.
 
 ## Phase 6 - TikTok Provider
+The previous yt-dlp harness remains in unmerged Draft PR #59 and is discontinued:
+the final series stopped on unrecognized metadata HTML before any media GET.
+Phase 6C prepares a separate native public-video CLI from main, using tt-dlp's
+embed-state approach under MIT attribution. Offline synthetic HTTP/local-media
+checks establish implementation boundaries only. The next gate is one separately
+authorized A/B run proving complete MP4, actual streams, decode and existing media
+preparation; metadata alone is not GO. No Telegram integration before that gate.
+See [Phase 6C](PHASE6C_TIKTOK_NATIVE.md). No live request is part of preparation.
+
 Use the same gated process as Instagram:
 
 1. technical spike;
