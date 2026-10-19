@@ -46,6 +46,9 @@ excluded. Signed locators and HTML are never logged. Owned process/workspace,
 body-size and HTTP completeness controls are described in
 [Phase 6C](PHASE6C_TIKTOK_NATIVE.md). These are experiment boundaries, not a
 production sandbox or evidence of real platform reliability.
+Benchmark continuation is only to another explicitly approved publication with a
+fresh session, never a retry/fallback. All cases consume the original shared limits;
+case cleanup failure stops further work. No benchmark live call is implicit.
 
 ## Experimental Instagram provider
 

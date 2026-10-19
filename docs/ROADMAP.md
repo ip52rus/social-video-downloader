@@ -240,9 +240,14 @@ The authorized retest obtained A's complete MP4 with actual video/audio streams,
 decode and passthrough; B resolved metadata but media returned HTTP 403. The reason
 is unknown. Safe diagnostics now report candidate origin, CDN family, query/cookie
 presence, actual statuses, counters and measured codec names without new requests.
-The next gate requires fresh authorization for one B-only diagnostic retest;
-B's full MP4/decode/preparation remains unverified. A single success is not general
-platform GO. No Telegram integration before the gate.
+The authorized B-only diagnostic retest again returned media 403 (`urls`, EU CDN
+family, query present, no cookies sent); B remains unverified and the cause unknown.
+The next gate is a separately authorized reliability benchmark on up to four new
+independent publications, excluding A/B. Its explicit offline-prepared mode keeps
+the existing aggregate budgets, per-case sessions and audio expectations, and can
+continue after case-local errors without retries. No request is authorized by this
+preparation. A single success is not general platform GO; no provider/Telegram
+integration before the reliability decision.
 See [Phase 6C](PHASE6C_TIKTOK_NATIVE.md). No live request is part of preparation.
 
 Use the same gated process as Instagram:

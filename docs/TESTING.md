@@ -70,6 +70,24 @@ Ruff lint/format and diff checks PASS. Differential offline review confirmed
 identical outbound HTTP/headers/cookie scope/redirects/counters and candidate
 selection before/after the patch. Exact-head CI is checked after publication.
 
+The authorized B-only run on `f3213d6` was **BLOCKED**: one candidate from `urls`,
+CDN family tiktokcdn-eu.com, query present, no cookies sent, media HTTP 403. Metadata
+1 request / 286,670 bytes; media 1 request / zero bytes; one acquisition; 1.788 s,
+exact counters and cleanup PASS. No file inspection or audio validation occurred.
+
+Reliability preparation adds only an explicit benchmark mode; no further live test.
+**103 focused cases PASS** with external sockets forbidden. Synthetic wire and
+generated local media cover continuation after 403, separate cookie jars, source
+provenance, exact case/aggregate counters, no repeated media GET, required/optional
+audio, shared metadata/media request/byte/deadline caps, partial-error file cleanup,
+cleanup-error stopping, input validation, public worker and normal CLI compatibility.
+Private markers are excluded from reports. Full offline suite: **1573 passed,
+1 skipped** (external YouTube opt-in), with inherited socket/DNS denial. Ruff
+lint/format and diff checks PASS. Differential scope review confirmed ordinary
+fail-fast output/request compatibility and unchanged resolver/transport/policies/
+limits/supervisor. Exact-head CI is verified after publication. No Docker/Telegram
+operation or real TikTok request is part of this preparation.
+
 ## Phase 4 functional acceptance (2026-10-15)
 
 Status: **ACCEPTED for the tested functional scope**, as confirmed by the user. This is

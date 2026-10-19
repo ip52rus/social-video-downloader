@@ -118,34 +118,105 @@ These fields cannot establish why a server sent 403 (signature/session/region/ac
 rules), whether cookies are sufficient, or the contents/codecs of an unavailable
 file. No HTML, cookie value, signed URL, publication identity or IP is retained.
 
-The next proposed gate is one separately authorized **B-only** run through the same
-CLI with one URL. It is not authorized by this offline change. Existing first-case
-audio validation remains unchanged: B without an audio stream can report
-`audio_required` after acquisition. No A rerun, fallback or policy adjustment.
+The separately authorized B-only run on `f3213d6` also stopped at media HTTP 403:
+one candidate from `urls`, `tiktokcdn-eu.com`, query present, cookies not sent.
+Metadata: 1 request / 286,670 bytes; media: 1 request / 0 bytes; one acquisition,
+1.788 s, exact counters and cleanup PASS. No full file or audio verification.
+This does not identify the refusal's cause or establish that cookies are required.
+No further request for B is part of the reliability plan.
 
-## Next separately authorized B-only experiment
+## Media source comparison (read-only research)
 
-Use the existing Python environment and only the previously approved full B URL,
-supplied through hidden stdin to `scripts/tiktok_native.py` in one invocation.
-No URL files, shell arguments or reports. Exactly one run; no A rerun.
+References: MIT [tt-dlp client](https://github.com/bajaam/tt-dlp/blob/08a1f42abf11ff3c969e0af323644bb6fbcc7cf7/src/tt_dlp/client.py)
+(`_address_urls`, `video_urls`, `normalize_item`) and
+[downloader](https://github.com/bajaam/tt-dlp/blob/08a1f42abf11ff3c969e0af323644bb6fbcc7cf7/src/tt_dlp/downloader.py);
+[Cobalt](https://github.com/imputnet/cobalt/blob/a636575b09de1fc55d9b8cd98cac88f5f2f16b42/api/src/processing/services/tiktok.js)
+(analysis only; no AGPL implementation copied); locally installed yt-dlp
+2026.08.19, `TikTokBaseIE._extract_web_formats` / `_parse_aweme_video_web`.
+The [upstream version source](https://github.com/yt-dlp/yt-dlp/blob/2026.08.19/yt_dlp/extractor/tiktok.py)
+is a reference; findings use the actual installed code.
 
-With that environment active and `PYTHONPATH=src`, after separate owner permission:
+| Field | Evidence and limitation |
+| --- | --- |
+| `playAddr` | Playback candidate in all three projects. tt-dlp accepts strings and address containers; yt-dlp also handles web `src` layouts. Cobalt normally selects this field. No access guarantee. |
+| `bitrateInfo.PlayAddr` | Alternative playback representations. tt-dlp sorts by declared pixel area before playAddr; yt-dlp extracts formats and notes some video-only/unplayable layouts; Cobalt optionally selects H.265. Quality/codec metadata does not prove a complete muxed file. |
+| `downloadAddr` | Additional candidate in tt-dlp. yt-dlp labels its web download representation watermarked and requiring testing; API forms differ. No automatic watermark removal or network test is adopted. |
+| `video.urls` | Explicit final address source in tt-dlp, supporting string/list and `urlList`/`UrlList`/`urls` containers. The inspected Cobalt/TikTok web-format paths do not consume this input field. Cobalt's returned `urls` is its own output property, not evidence about embed `video.urls`. Meaning/access conditions across embed layouts remain unproven; B's 403 does not make the field invalid. |
+
+Our existing selection stays playAddr, bitrateInfo in source order, downloadAddr,
+then urls, deduplicated with first-source provenance and exact destination admission.
+There is an evidence-based alternative for publications that actually expose an
+admitted playAddr/bitrateInfo/downloadAddr in the same identity-verified metadata.
+Those addresses are already considered offline; no additional endpoint, synthesized
+URL, changed priority, refresh, retry or network fallback is added. B exposed one
+unique candidate, so no demonstrated alternative for B exists.
+
+tt-dlp compares a present ID but can substitute the requested ID when missing;
+our resolver requires the source ID itself. Cobalt's inspected service uses itemStruct
+but has no equivalent explicit source-ID equality check. yt-dlp's web mapper returns
+the caller's ID, so that mapped ID alone is insufficient. Our pre-selection identity
+check stays unchanged. tt-dlp keeps a cookie-aware opener and retries/refreshes;
+Cobalt carries public-page cookies into its media context; yt-dlp uses Referer and
+its shared HTTP context, with additional authenticated/API behavior outside our scope.
+Signed URL, session, region or expiry restrictions are possible, not established for B.
+Merely discovering HTTPS metadata is not download evidence. No upstream access-policy
+workarounds or AGPL code were incorporated.
+
+## Reliability benchmark mode (offline preparation)
+
+Reason: test independent publications despite a case-local failure, without enlarging
+the network/resource boundary or integrating a provider. `--benchmark` is explicit;
+the ordinary URL-array interface retains two-case fail-fast behavior and its original
+first-case audio requirement.
+
+Benchmark stdin is a JSON array of **1–4** objects, each with exactly `url` and boolean
+`require_audio`. Only owner-supplied full public video URLs, distinct source IDs and
+explicit per-case expectations are accepted before worker creation. Use new videos,
+not A/B, and never select/search for examples automatically. Do not persist the input.
+
+Each case gets one existing embed resolution, one selected media candidate, one
+acquisition and its own fresh memory-only session. Failed cases do not trigger
+retries or alternate URLs: processing moves to the next approved publication.
+Owned case files are removed before continuing; cookie jars are cleared. Cleanup
+failure stops the series. Shared request/byte exhaustion and the original deadline
+stop before another case; `stop_reason` and `requested_cases` explain unprocessed
+cases. Failed cases still count against the common budgets.
+
+Limits remain **180 s + bounded cleanup, 6 metadata / 6 media HTTP attempts including
+redirects, 2 MiB metadata/response and 4 MiB total, 25 MiB/file, 50 MiB media total,
+128 MiB workspace**. Four cases are a ceiling, not a promise that budgets permit all
+four. Input/output size bounds, DNS/TLS/headers/cookies/redirect/framing policy and
+the process supervisor are unchanged. No media/metadata request is made in this task.
+
+`require_audio=true` requires an actual audio stream. False allows audio or its
+absence; it never asserts audible silence. Split-audio metadata still cannot cause
+another acquisition or muxing. Existing decode/preparation is reused without conversion.
+The benchmark preserves measured stream counts/codecs and HTTP completeness/bytes
+even if subsequent verification reports `audio_required` or preparation failure.
+`source_identity` is true after successful resolution, false for a source-ID refusal,
+and null if no reliable identity result is available. Other missing measurements
+remain absent/null, not guessed. No private input, IDs, raw HTML, full host/IP,
+cookie or signed URL is reported. Existing per-case/aggregate counters and exactness
+flags apply; interrupted workers may yield incomplete counters. A partial result
+has exit status 1 even when later cases passed; do not rerun because of that status.
+
+## Next separately authorized reliability experiment
+
+Before any network call the owner must approve up to four **new** URLs and the audio
+expectation for each, plus one common run. A and B must not be reused. Inspect exact
+HEAD, clean tracked state, existing interpreter/FFmpeg, absence of workers and exited
+containers. Do not perform preliminary probes, dependency changes or policy edits.
+
+After separate authorization, the following hidden-input example is suitable only
+when its expectation list matches the owner's approved cases (edit that list, not
+the tool; shorter lists are allowed):
 
 ```bash
-python -c 'import getpass,json; print(json.dumps([getpass.getpass("B full URL: ")]))' | python scripts/tiktok_native.py
+python -c 'import getpass,json; expected=[True,True,False,False]; print(json.dumps([{"url":getpass.getpass(f"Approved NEW URL {i+1}: "),"require_audio":required} for i,required in enumerate(expected)]))' | PYTHONPATH=src python scripts/tiktok_native.py --benchmark
 ```
 
-No preliminary TikTok probes, alternate formats, repeats or policy edits during the
-series. Missing state, forbidden host, HTTP error or incomplete file stops it.
-
-Verify explicit embed source identity, full MP4 HTTP completeness, actual video
-and audio/absent-audio via ffprobe, complete FFmpeg decode and existing preparation
-compatibility. Metadata does not assert AAC or silence. Explicit separate-audio
-metadata is recognized; if acquisition lacks muxed audio, report unsupported split
-streams instead of discarding audio or silently declaring silence. No transcode
-or extra audio acquisition in this first scope; incompatible media reports a
-preparation limitation. No Telegram upload, watermark manipulation, merge or deploy.
-
-GO requires actual complete MP4 plus stream/decode/preparation evidence, not metadata
-alone. Until a separately authorized successful run, access, CDN availability,
-embed stability, audio layouts and general reliability remain unverified.
+Run once, report every processed case and early-stop budgets, then verify process/
+workspace cleanup and unchanged Git/environment. No Telegram upload, merge or deploy.
+Real complete MP4, streams, full decode and preparation are necessary for successful
+cases. A small sample estimates only its tested surface, not production reliability
+or a general platform GO. This preparation authorizes no real benchmark.

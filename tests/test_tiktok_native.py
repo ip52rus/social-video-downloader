@@ -590,7 +590,8 @@ def test_public_worker_failure_cleans_only_owned_workspace(monkeypatch, tmp_path
     assert workers[0].returncode == 0
 
 
-def test_two_video_public_worker_probe_decode_cleanup(monkeypatch, tmp_path, workers):
+@pytest.mark.parametrize("benchmark", [False, True])
+def test_two_video_public_worker_probe_decode_cleanup(monkeypatch, tmp_path, workers, benchmark):
     sound, silent = tmp_path / "sound.mp4", tmp_path / "silent.mp4"
     generate(sound, audio=True)
     generate(silent, audio=False)
@@ -615,7 +616,8 @@ def test_two_video_public_worker_probe_decode_cleanup(monkeypatch, tmp_path, wor
         return [*argv[:2], bootstrap, *argv[3:]]
 
     monkeypatch.setattr(n, "_command", command)
-    result = n.run([A, B])
+    inputs = [{"url": A, "require_audio": True}, {"url": B, "require_audio": False}]
+    result = n.run(inputs if benchmark else [A, B], benchmark=benchmark)
     assert result["success"], result
     assert result["counts_exact"] and result["workspace_cleaned"]
     assert result["metadata_requests"] == result["media_requests"] == result["acquisitions"] == 2
@@ -626,6 +628,169 @@ def test_two_video_public_worker_probe_decode_cleanup(monkeypatch, tmp_path, wor
     )
     assert all(not path.exists() for path in workspaces)
     assert workers[0].returncode == 0
+    if benchmark:
+        assert result["stop_reason"] is None and result["requested_cases"] == 2
+        assert all(entry["source_identity"] for entry in result["results"])
+
+
+def test_benchmark_continues_after_403_with_independent_session(monkeypatch, tmp_path):
+    fixture = tmp_path / "silent.mp4"
+    generate(fixture, audio=False)
+    body = fixture.read_bytes()
+    second = EMBED.replace("11111111", "22222222")
+    wire = network(
+        monkeypatch,
+        {
+            key(EMBED): response(
+                page(),
+                fields=[("Set-Cookie", "scope=PRIVATE_COOKIE; Domain=.tiktok.com; Secure; Path=/")],
+            ),
+            key(MEDIA): (403, b"PRIVATE_HTML", {}),
+            key(second): response(
+                page(video={"playAddr": OTHER}).replace(b"11111111", b"22222222")
+            ),
+            key(OTHER): response(body, "video/mp4"),
+        },
+    )
+    owned = tmp_path / "owned"
+    owned.mkdir()
+    result = n._execute([A, B], owned, monotonic() + 30, [True, False])
+    first, last = result["results"]
+    assert not result["success"] and result["error"] == "http_403"
+    assert not first["success"] and last["success"] and last["http_complete"]
+    assert last["audio_streams"] == 0 and last["decoded"] and last["preparation"] == "passthrough"
+    assert all(case["metadata"] and case["source_identity"] for case in result["results"])
+    assert all(case["candidate_source"] == "playAddr" for case in result["results"])
+    assert wire.requests[2][3].get("Cookie") is None and wire.requests[3][3].get("Cookie") is None
+    assert len(wire.requests) == 4 and result["acquisitions"] == 2
+    for counter in n._budget():
+        assert sum(case["counts"][counter] for case in result["results"]) == result[counter]
+    assert result["counts_exact"] and not list(owned.iterdir()) and fixture.read_bytes() == body
+    assert all(
+        private not in json.dumps(result)
+        for private in [A, B, MEDIA, OTHER, "PRIVATE", "11111111", "22222222"]
+    )
+
+
+@pytest.mark.parametrize("require_audio", [True, False])
+def test_benchmark_audio_expectation_and_failure_file_cleanup(monkeypatch, tmp_path, require_audio):
+    source = tmp_path / "fixture.mp4"
+    generate(source, audio=False)
+    wire = network(
+        monkeypatch,
+        {key(EMBED): response(page()), key(MEDIA): response(source.read_bytes(), "video/mp4")},
+    )
+    owned = tmp_path / "owned"
+    owned.mkdir()
+    result = n._execute([A], owned, monotonic() + 30, [require_audio])
+    case = result["results"][0]
+    assert case["success"] is (not require_audio)
+    assert case["http_complete"] and case["bytes"] == source.stat().st_size
+    assert case["video_streams"] == 1 and case["audio_streams"] == 0
+    assert case["video_codec"] == "h264" and case["audio_codec"] == "absent"
+    if require_audio:
+        assert case["error"] == "audio_required" and case["decoded"] is None
+    assert len(wire.requests) == 2 and not list(owned.iterdir())
+
+
+@pytest.mark.parametrize(
+    "limit", ["metadata_requests", "media_requests", "metadata_bytes", "media_bytes", "deadline"]
+)
+def test_benchmark_shared_budgets_stop_before_further_cases(monkeypatch, tmp_path, limit):
+    urls = [A, B, A.replace("11111111", "33333333"), A.replace("11111111", "44444444")]
+    routes = {}
+    for number in ("11111111", "22222222", "33333333", "44444444"):
+        embed = EMBED.replace("11111111", number)
+        body = page().replace(b"11111111", number.encode())
+        routes[key(embed)] = (
+            (302, b"", {"Location": embed}) if limit == "metadata_requests" else response(body)
+        )
+    routes[key(MEDIA)] = (
+        (302, b"", {"Location": OTHER}) if limit == "media_requests" else (403, b"", {})
+    )
+    routes[key(OTHER)] = (302, b"", {"Location": MEDIA})
+    if limit == "metadata_bytes":
+        monkeypatch.setattr(n, "HTML_BYTES", len(page()))
+    if limit == "media_bytes":
+        monkeypatch.setattr(n, "TOTAL_BYTES", 8)
+        routes[key(MEDIA)] = response(b"abcdftyp", "video/mp4")
+        # No real decoding for this streaming-budget-only fixture.
+        monkeypatch.setattr(n, "verify", lambda *args: {"decoded": True})
+    wire = network(monkeypatch, routes)
+    result = n._execute(
+        urls, tmp_path, monotonic() + (-1 if limit == "deadline" else 10), [False] * 4
+    )
+    expected = (
+        "deadline"
+        if limit == "deadline"
+        else "request_limit"
+        if limit.endswith("requests")
+        else "byte_limit"
+    )
+    assert result["stop_reason"] == expected and not result["success"]
+    assert result["requested_cases"] == 4 and len(result["results"]) < 4
+    assert result["metadata_requests"] <= 6 and result["media_requests"] <= 6
+    assert len(wire.requests) == result["metadata_requests"] + result["media_requests"]
+    assert result["media_bytes"] <= n.TOTAL_BYTES and result["metadata_bytes"] <= 2 * n.HTML_BYTES
+    assert not list(tmp_path.iterdir()) and result["counts_exact"]
+
+
+def test_benchmark_cleanup_error_stops_before_next_case(monkeypatch, tmp_path):
+    source = tmp_path / "fixture.mp4"
+    generate(source, audio=False)
+    wire = network(
+        monkeypatch,
+        {key(EMBED): response(page()), key(MEDIA): response(source.read_bytes(), "video/mp4")},
+    )
+    owned = tmp_path / "owned"
+    owned.mkdir()
+    unlink = Path.unlink
+
+    def failure(path, *args, **kwargs):
+        if path.parent == owned:
+            raise OSError("PRIVATE_ERROR")
+        return unlink(path, *args, **kwargs)
+
+    try:
+        with monkeypatch.context() as patch:
+            patch.setattr(Path, "unlink", failure)
+            result = n._execute([A, B], owned, monotonic() + 30, [True, False])
+        assert result["error"] == result["stop_reason"] == "case_cleanup_failed"
+        assert len(result["results"]) == 1 and not result["results"][0]["success"]
+        assert len(wire.requests) == 2 and "PRIVATE" not in json.dumps(result)
+    finally:
+        for path in owned.iterdir():
+            unlink(path)
+
+
+@pytest.mark.parametrize(
+    "cases",
+    [
+        [A],
+        [{"url": A}],
+        [{"url": A, "require_audio": 1}],
+        [{"url": A, "require_audio": False, "extra": True}],
+        [{"url": A, "require_audio": False}] * 2,
+        [{"url": A, "require_audio": False}] * 5,
+    ],
+)
+def test_benchmark_input_validation_before_worker(monkeypatch, cases):
+    monkeypatch.setattr(n.subprocess, "Popen", lambda *a, **k: pytest.fail("Unexpected worker"))
+    assert n.run(cases, benchmark=True) == {"success": False, "error": "invalid_input"}
+
+
+@pytest.mark.parametrize("benchmark", [False, True])
+def test_public_cli_benchmark_flag_is_explicit(monkeypatch, capsys, benchmark):
+    inputs = [{"url": A, "require_audio": False}] if benchmark else [A]
+    calls = []
+    monkeypatch.setattr(sys, "argv", ["tiktok_native.py", *(["--benchmark"] if benchmark else [])])
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(inputs)))
+    monkeypatch.setattr(n.signal, "signal", lambda *a: None)
+    monkeypatch.setattr(
+        n, "run", lambda data, **kwargs: calls.append((data, kwargs)) or {"success": True}
+    )
+    assert n.main() == 0 and calls == [(inputs, {"benchmark": benchmark})]
+    assert json.loads(capsys.readouterr().out) == {"success": True}
 
 
 def test_deadline_kills_exited_leader_descendant(monkeypatch, tmp_path, workers):

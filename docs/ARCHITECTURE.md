@@ -87,6 +87,11 @@ parent-owned workspace bound native calls and cleanup. This isolation keeps the
 working downloader/transport contracts unchanged until actual MP4 acquisition,
 decode and preparation have passed a separately authorized gate. See
 [Phase 6C design and limits](PHASE6C_TIKTOK_NATIVE.md).
+The explicit experimental `--benchmark` mode reuses this same worker/transport,
+so reliability sampling can continue to independent approved publications after
+a case-local failure. It accepts at most four cases with explicit audio expectations
+inside the original common budgets, removes case files before continuing and stops
+on cleanup/resource failure. The ordinary two-case fail-fast interface is retained.
 
 ### Historical Reel-only opt-in MVP design
 

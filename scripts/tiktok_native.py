@@ -261,6 +261,7 @@ class Session:
         self.referer, self.deadline, self.budget = referer, deadline, budget
         self.jar = CookieJar(policy=_Cookies())
         self.media_http, self.codecs = [], {}
+        self.observed = {}
 
     def remaining(self):
         if (seconds := self.deadline - monotonic()) <= 0:
@@ -454,6 +455,7 @@ def verify(path, session, separate_audio, require_audio):
     streams = info.get("streams", [])
     videos = [s for s in streams if s.get("codec_type") == "video"]
     audios = [s for s in streams if s.get("codec_type") == "audio"]
+    session.observed.update(video_streams=len(videos), audio_streams=len(audios))
     if len(videos) != 1 or len(audios) > 1:
         raise Refusal("unsupported_streams")
     session.codecs.update(
@@ -488,8 +490,10 @@ def verify(path, session, separate_audio, require_audio):
         stderr=subprocess.DEVNULL,
         timeout=min(30, session.remaining()),
     )
+    session.observed["decoded"] = True
     if prepare_telegram_video(path, runner, allow_silent=True) != path:
         raise Refusal("preparation_not_passthrough")
+    session.observed["preparation"] = "passthrough"
     return {
         "bytes": path.stat().st_size,
         "container": "mp4",
@@ -508,10 +512,26 @@ def _budget():
     )
 
 
-def _execute(urls, workspace, deadline):
-    budget, results, error = _budget(), [], None
+def _series_limit(budget, deadline):
+    if monotonic() >= deadline:
+        return "deadline"
+    if budget["metadata_requests"] >= 6 or budget["media_requests"] >= 6:
+        return "request_limit"
+    if budget["metadata_bytes"] >= 2 * HTML_BYTES or budget["media_bytes"] >= TOTAL_BYTES:
+        return "byte_limit"
+    return None
+
+
+def _execute(urls, workspace, deadline, expectations=None):
+    benchmark = expectations is not None
+    budget, results, first_error, stop_reason = _budget(), [], None, None
     for index, url in enumerate(urls):
+        if benchmark and (stop_reason := _series_limit(budget, deadline)):
+            break
+        error, path = None, None
         entry = {"case": index + 1, "success": False}
+        if benchmark:
+            entry.update(metadata=False, source_identity=None, decoded=None, preparation=None)
         results.append(entry)
         session = None
         previous = budget.copy()
@@ -525,11 +545,18 @@ def _execute(urls, workspace, deadline):
                 candidate_source=resolved.source,
                 separate_audio=resolved.separate_audio,
             )
+            if benchmark:
+                entry["source_identity"] = True
             path = workspace / f"case-{index + 1}.mp4"
             session.acquire(resolved, path)
+            if benchmark:
+                entry.update(bytes=path.stat().st_size, http_complete=True)
             if sum(p.stat().st_size for p in workspace.rglob("*") if p.is_file()) > WORKSPACE_BYTES:
                 raise Refusal("workspace_limit")
-            entry.update(verify(path, session, resolved.separate_audio, index == 0), success=True)
+            require_audio = expectations[index] if benchmark else index == 0
+            entry.update(
+                verify(path, session, resolved.separate_audio, require_audio), success=True
+            )
             path.unlink()
         except Refusal as exc:
             error = str(exc)
@@ -540,24 +567,46 @@ def _execute(urls, workspace, deadline):
         finally:
             if session is not None:
                 entry.update(session.codecs, media_http=session.media_http)
+                if benchmark:
+                    entry.update(session.observed)
                 session.jar.clear()
+            if benchmark and path is not None:
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError:
+                    error = stop_reason = "case_cleanup_failed"
             entry["counts"] = {name: budget[name] - previous[name] for name in budget}
         if error:
             entry["error"] = error
-            break
+            first_error = first_error or error
+            if benchmark:
+                entry["success"] = False
+            if benchmark and error == "source_identity_mismatch":
+                entry["source_identity"] = False
+            if not benchmark or stop_reason:
+                break
+    error = stop_reason or first_error
     return {
         "success": error is None,
         "error": error,
         "results": results,
         **budget,
         "counts_exact": True,
+        **({"requested_cases": len(urls), "stop_reason": stop_reason} if benchmark else {}),
     }
 
 
 def _worker_main():
     request = json.loads(sys.stdin.read(16385))
     resource.setrlimit(resource.RLIMIT_FSIZE, (FILE_BYTES, FILE_BYTES))
-    print(json.dumps(_execute(request["urls"], Path(sys.argv[2]), request["deadline"])), flush=True)
+    print(
+        json.dumps(
+            _execute(
+                request["urls"], Path(sys.argv[2]), request["deadline"], request.get("expectations")
+            )
+        ),
+        flush=True,
+    )
 
 
 def _command(workspace):
@@ -605,11 +654,22 @@ def _exchange(process, payload, deadline, output):
         sleep(0.01)
 
 
-def run(urls):
+def run(urls, *, benchmark=False):
     started = monotonic()
+    expectations = None
     try:
-        if not isinstance(urls, list) or not 0 < len(urls) <= 2:
+        if not isinstance(urls, list) or not 0 < len(urls) <= (4 if benchmark else 2):
             raise Refusal("one_or_two_full_urls_required")
+        if benchmark:
+            if any(
+                not isinstance(case, dict)
+                or set(case) != {"url", "require_audio"}
+                or type(case["require_audio"]) is not bool
+                for case in urls
+            ):
+                raise Refusal("invalid_benchmark_cases")
+            expectations = [case["require_audio"] for case in urls]
+            urls = [case["url"] for case in urls]
         if len({publication(u)[0] for u in urls}) != len(urls):
             raise Refusal("duplicate_publication")
     except Exception:
@@ -641,7 +701,13 @@ def run(urls):
             signal.pthread_sigmask(signal.SIG_SETMASK, previous)
         _exchange(
             process,
-            json.dumps({"urls": urls, "deadline": started + SECONDS}),
+            json.dumps(
+                {
+                    "urls": urls,
+                    "deadline": started + SECONDS,
+                    **({"expectations": expectations} if benchmark else {}),
+                }
+            ),
             started + SECONDS,
             output,
         )
@@ -711,8 +777,13 @@ def main():
 
     signal.signal(signal.SIGTERM, interrupt)
     try:
+        if sys.argv[1:] not in ([], ["--benchmark"]):
+            raise Refusal("invalid_input")
         raw = sys.stdin.read(16385)
-        result = run(json.loads(raw) if len(raw) <= 16384 else None)
+        result = run(
+            json.loads(raw) if len(raw) <= 16384 else None,
+            benchmark=sys.argv[1:] == ["--benchmark"],
+        )
     except (Exception, KeyboardInterrupt):
         result = {"success": False, "error": "invalid_input"}
     print(json.dumps(result))

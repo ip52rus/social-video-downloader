@@ -554,9 +554,18 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
   codec names offline, without changing network or preparation behavior.
   Verification: 85 focused passed, full offline suite 1555 passed / 1 skipped,
   Ruff and differential scope review PASS. See Phase 6C of TESTING.
-- [ ] Obtain separate owner authorization for one B-only diagnostic live retest.
-  B's complete MP4/stream/decode/preparation gate remains open before integration;
-  metadata alone and A's single successful case are not general platform GO.
+- [x] One separately authorized B-only diagnostic retest on `f3213d6`: metadata
+  PASS, one `urls` candidate / tiktokcdn-eu.com, query present, cookies not sent,
+  media HTTP 403 / zero bytes. 1.788 s, exact counters and cleanup PASS. Cause unknown.
+- [x] Compare media-source semantics with pinned tt-dlp/Cobalt and installed yt-dlp;
+  retain `video.urls` as an uncertain supported source, without network fallback.
+- [x] Prepare explicit offline benchmark mode: at most four independent owner-approved
+  videos, per-case audio expectation, continuation after case-local errors, shared
+  original budgets and cleanup. Ordinary fail-fast remains available. Focused: 103 PASS;
+  full offline suite 1573 passed / 1 skipped, Ruff and scope checks PASS. See TESTING.
+- [ ] Obtain separate authorization for one reliability benchmark on new publications,
+  excluding A/B. No real request is authorized by preparation. B's complete MP4 remains
+  unavailable; A's one success does not establish general reliability or provider GO.
 - [ ] Run a technical spike.
 - [ ] Assess real-world reliability and extraction stability.
 - [ ] Make an explicit Go/No-Go decision before implementation.
