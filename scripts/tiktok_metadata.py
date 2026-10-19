@@ -160,8 +160,9 @@ class _Transport:
                 self.check()
                 if response.geturl() != url:
                     raise Stop("unexpected_redirect")
-                if response.headers.get_all("Set-Cookie"):
-                    raise Stop("cookies_forbidden")
+                # Message deletion removes all occurrences, case-insensitively.
+                # No CookieProcessor stores them; never expose them to yt-dlp.
+                del response.headers["Set-Cookie"]
                 if response.code in {301, 302, 303, 307, 308}:
                     target_kind, target = _url(urljoin(url, response.headers.get("Location", "")))
                     if kind == "full" and (

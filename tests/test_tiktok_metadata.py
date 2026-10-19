@@ -79,7 +79,10 @@ class Network(HTTPSHandler):
         route = self.routes[key]
         code, body, headers = route() if callable(route) else route
         message = Message()
-        for name, value in {"Content-Type": "text/html", **headers}.items():
+        message["Content-Type"] = "text/html"
+        for name, value in headers.items() if isinstance(headers, dict) else headers:
+            if name.lower() == "content-type":
+                del message[name]
             message[name] = value
         response = addinfourl(io.BytesIO(body), message, request.full_url, code)
         response.msg = "Synthetic"
@@ -307,12 +310,12 @@ def test_aggregate_body_budget(monkeypatch):
         (403, b"private", {}, "http_403"),
         (429, b"private", {}, "http_429"),
         (200, b"challenge", {}, "challenge_forbidden"),
-        (200, page(), {"Set-Cookie": "private=secret"}, "cookies_forbidden"),
         (200, page(), {"Content-Encoding": "gzip"}, "encoded_response"),
         (200, b"media", {"Content-Type": "video/mp4"}, "non_html_response"),
     ],
 )
 def test_forbidden_paths_no_retry(monkeypatch, code, body, headers, error):
+    headers = {**headers, "Set-Cookie": "private=secret"}
     net = network(monkeypatch, {("GET", FULL): (code, body, headers)})
     result = execute([FULL, FULL])
     assert result["error"] == error
@@ -321,10 +324,68 @@ def test_forbidden_paths_no_retry(monkeypatch, code, body, headers, error):
 
 
 def test_login_status_real_extractor_no_retry(monkeypatch):
-    net = network(monkeypatch, {("GET", FULL): (200, page(status=10216), {})})
+    net = network(
+        monkeypatch,
+        {("GET", FULL): (200, page(status=10216), {"Set-Cookie": "private=secret"})},
+    )
     result = execute([FULL, FULL])
     assert not result["success"] and result["error"] == "login_required"
     assert len(net.calls) == result["extractions"] == 1
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        [("Set-Cookie", "private=secret; Path=/")],
+        [
+            ("Set-Cookie", "private=secret; Path=/"),
+            ("sEt-CoOkIe", "another=secret; Path=/"),
+        ],
+    ],
+)
+@pytest.mark.parametrize("short", [False, True])
+def test_response_cookies_discarded_before_real_extractor_and_later_requests(
+    monkeypatch, headers, short
+):
+    net = network(
+        monkeypatch,
+        {
+            ("HEAD", SHORT): (302, b"", [("Location", FULL), *headers]),
+            ("HEAD", FULL): (200, b"", headers),
+            ("GET", FULL): (200, page(), headers),
+        },
+    )
+    original, jars, responses = h._YDL.urlopen, [], []
+
+    def inspect_response(self, request):
+        response = original(self, request)
+        responses.append(response)
+        jars.append(self.cookiejar)
+        assert not any(name.lower() == "set-cookie" for name in response.headers)
+        assert not list(self.cookiejar)
+        return response
+
+    monkeypatch.setattr(h._YDL, "urlopen", inspect_response)
+    result = execute([SHORT if short else FULL, FULL])
+    assert result["success"] and len(result["results"]) == 2
+    assert result["requests"] == len(net.calls) == (4 if short else 2)
+    assert result["extractions"] == len(responses) == (3 if short else 2)
+    assert all(not list(jar) for jar in jars)
+    assert all(name.lower() != "cookie" for _, _, sent in net.calls for name in sent)
+    assert "secret" not in json.dumps(result)
+
+
+def test_cookie_from_yt_dlp_internal_headers_blocked_before_network(monkeypatch):
+    net = network(monkeypatch, {})
+
+    def attempted_cookie(self, url):
+        return self._downloader.urlopen(Request(url, headers={"cOoKiE": "private=secret"}))
+
+    monkeypatch.setattr(h._MetadataIE, "_real_extract", attempted_cookie)
+    result = execute([FULL, FULL])
+    assert not result["success"] and result["error"] == "credentials_forbidden"
+    assert result["requests"] == len(net.calls) == 0
+    assert result["extractions"] == len(result["results"]) == 1
 
 
 def test_unsolicited_cdn_request_blocked_at_transport(monkeypatch):

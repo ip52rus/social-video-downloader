@@ -531,11 +531,14 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
 
 ## Phase 6 - TikTok Provider
 - [x] Phase 6B-0: implement and verify the isolated metadata-only harness offline.
-- [ ] Phase 6B-1: separately authorize and run one bounded A / A-short / B series.
+- [ ] Phase 6B-1: establish bounded real metadata feasibility; the first authorized
+  attempt stopped before HTML inspection on response Set-Cookie. Another series
+  requires separate authorization after focused review of the offline correction.
 
 The [Phase 6B procedure](PHASE6_TIKTOK_METADATA.md) defines strict page/redirect,
-request/body/deadline limits, cookie/challenge refusal and sanitized output. It
-does not register TikTok, download media or change Telegram runtime. Real metadata
+request/body/deadline limits, response-cookie discard, cookie-use/challenge refusal
+and sanitized output. It does not register TikTok, download media or change Telegram
+runtime. Real metadata
 availability, sound/silence and media acquisition remain unverified. No provider
 GO/NO-GO decision follows from synthetic responses alone.
 Verification: 46 new offline cases; full suite 1516 passed, 1 opt-in external
@@ -547,7 +550,16 @@ application providers, Telegram handlers or deployed configuration changed.
   process-group cleanup with an unreaped leader. Both old failures were reproduced;
   66 harness tests and 22 independent diagnostics pass. Full suite: 1536 passed,
   1 external opt-in skipped; Ruff lint/format, diff, documentation and security/scope
-  checks pass. Another independent review remains required before Phase 6B-1.
+  checks pass. Independent P2 re-review subsequently passed before the first live attempt.
+
+- [x] Remove refusal solely on response Set-Cookie; discard every occurrence before
+  passing headers to yt-dlp. Outgoing Cookie and `_set_cookie` remain blocked.
+  Offline regressions cover ordinary HTML, duplicate/case-varied headers, empty
+  cookiejar, later requests and unchanged challenge/login/403/429 refusal.
+  Verification: 70 harness cases (5 new, 1 obsolete refusal case removed),
+  28 retained independent diagnostics passed; full suite 1540 passed, 1 skipped.
+  Ruff lint/format, diff, documentation and security/scope checks pass.
+  Focused independent review remains pending; no live repeat was performed.
 
 - [ ] Run a technical spike.
 - [ ] Assess real-world reliability and extraction stability.

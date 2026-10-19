@@ -10,7 +10,7 @@ Earlier sections retain the evidence and open gates at each historical stage.
 urllib redirect/error handling with synthetic HTTPS responses. Socket connections
 are forbidden. Coverage includes canonical and short URLs, pre-request redirect
 rejection, identity changes/loops/hop limits, request/extractor/body/deadline caps,
-403/429/login without retries, cookie/challenge/API/CDN refusal, absent/incomplete
+403/429/login without retries, cookie-use/challenge/API/CDN refusal, absent/incomplete
 audio metadata, no format probes, private-output suppression, worker failure and
 process termination/reaping. No TikTok media, actual streams or Telegram delivery
 are validated. See [the separately authorized live procedure](PHASE6_TIKTOK_METADATA.md).
@@ -20,8 +20,8 @@ Focused offline result: **46 passed**; full suite: **1516 passed, 1 skipped**
 local FFmpeg/ffprobe regressions execute normally. Worker tests run only local
 sleep/output/bootstrap commands; the real bootstrap also forbids sockets.
 Ruff lint/format, diff, documentation links and security/scope review passed.
-No external experiment has been executed. These checks use Python 3.13.12 and
-yt-dlp 2026.08.19 without dependency updates.
+At that initial offline stage no external experiment had been executed. These
+checks use Python 3.13.12 and yt-dlp 2026.08.19 without dependency updates.
 
 PR #59 P2 corrections add 20 regression cases (66 harness cases total): matching,
 mismatching and unconfirmed source identities through the real web mapper, including
@@ -32,7 +32,28 @@ own emergency cleanup. The independent 22-case review diagnostics also pass,
 including the two cases that failed before correction. Full corrected suite:
 **1536 passed, 1 skipped**, with external socket connections forbidden in pytest.
 Ruff lint/format, diff, documentation and security/scope checks pass. No live TikTok
-request is part of these checks; independent re-review remains pending.
+request is part of these checks; independent P2 re-review subsequently passed.
+
+The first authorized real series then stopped on `cookies_forbidden` after one
+Set-Cookie-bearing response, before reading HTML; later cases were not run. This
+does not establish that TikTok requires cookies, login or challenge solving.
+
+The subsequent correction discards all Set-Cookie response headers before handing
+the response to yt-dlp, without storing or sending cookies. Four positive cases
+exercise ordinary HTML and real mapping with full/short links, single/duplicate
+case-varied headers, an empty cookiejar and subsequent cookie-free requests. An
+additional negative case injects an outgoing Cookie through yt-dlp and is blocked
+before HTTP. The obsolete Set-Cookie-only refusal case is replaced; existing
+challenge/login/403/429 cases now include Set-Cookie and still refuse safely.
+Two new header-discard scenarios failed on the old refusal before correction.
+Corrected results: **70 harness cases passed**, **1540 passed, 1 skipped** in the
+full suite with socket connections forbidden, including local FFmpeg/ffprobe checks.
+The retained independent diagnostics pass **28 cases**; only their old
+Set-Cookie-only refusal assertion is deselected because this policy intentionally
+changed. Both P2 fault-injection checks remain included. Ruff lint/format, diff,
+documentation links and security/scope checks pass. Focused independent review of
+this correction remains pending.
+All checks remain offline; another live series needs separate authorization.
 
 ## Phase 4 functional acceptance (2026-10-15)
 

@@ -15,9 +15,12 @@ Only these page paths are permitted, never API, CDN or media paths. Full-video
 redirects must retain the video identity. Short links use HEAD, then the resolved
 full page uses GET. No general URL support is intended.
 
-The transport disables environment proxies, automatic redirects, cookies and
-impersonation. Any Set-Cookie, challenge-solver invocation, login redirect, mobile
-API call or unexpected request aborts the series. There are no retries. A blocked
+The transport disables environment proxies, automatic redirects, cookie persistence
+and impersonation. All Set-Cookie response headers, including duplicates, are
+discarded before yt-dlp sees the response; their presence alone is not a refusal.
+No CookieProcessor is installed. Outgoing Cookie/credential headers, extractor
+`_set_cookie` calls, challenge-solver invocation, login redirects, mobile API calls
+and unexpected requests still abort the series. There are no retries. A blocked
 ordinary page is a useful feasibility result, not permission to bypass its checks.
 
 ## Bounds and evidence
@@ -76,7 +79,19 @@ budgets. The deadline starts after stdin is supplied. Exit 0 means metadata
 inspection completed; exit 1 means a sanitized failure. Neither proves media
 acquisition, actual audio streams, Telegram playback or provider readiness.
 
-If the default ceilings, cookie refusal or narrow page allowlist prevent inspection,
+If the default ceilings, cookie-use refusal or narrow page allowlist prevent inspection,
 record BLOCKED and review the specific obstacle. Do not silently broaden hosts,
 enable impersonation, supply cookies or add requests. Phase 6B-1 and any eventual
 provider decision remain pending.
+
+## First authorized attempt and offline correction
+
+After independent P2 re-review passed, the first authorized metadata-only series
+stopped on `cookies_forbidden` after one HTTP response containing Set-Cookie. No
+HTML body was read and later cases were not attempted. This established neither
+a cookie requirement nor a challenge/login requirement; no media was acquired.
+
+The response-header correction is verified only offline, using real yt-dlp mapping
+and synthetic HTTP responses. It does not weaken cookie-use, challenge or network
+boundaries. Focused independent review and separate authorization are required
+before another live series. No repeat experiment is part of this correction.

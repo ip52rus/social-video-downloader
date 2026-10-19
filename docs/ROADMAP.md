@@ -230,9 +230,11 @@ Where Instagram exposes meaningful format or quality choices, map them into the 
 
 ## Phase 6 - TikTok Provider
 Phase 6B-0 adds an isolated metadata-only harness, not a provider or Telegram route.
-Its bounded transport and supervised worker are verified offline before the next
-gate: a separately authorized A / A-short / B metadata series. No live TikTok
-result or technical GO for implementation is claimed. See the
+Its bounded transport and supervised worker are verified offline. The first
+authorized metadata attempt stopped on response Set-Cookie before HTML inspection;
+cookie necessity and metadata feasibility remain unconfirmed. The minimal offline
+response-cookie discard correction requires focused review before separately
+authorizing another bounded series. No technical GO for implementation is claimed. See
 [experiment procedure and limits](PHASE6_TIKTOK_METADATA.md).
 
 Use the same gated process as Instagram:
