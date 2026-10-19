@@ -450,8 +450,12 @@ def _exchange(process, payload, deadline, output):
 
 def run(urls, limits=None):
     """The supported entry point: own one worker/process group through reap."""
+    return _supervise(urls, limits or Limits(), _command)
+
+
+def _supervise(urls, limits, command):
+    """Private shared supervisor; each CLI supplies its own fixed worker command."""
     started = monotonic()
-    limits = limits or Limits()
     result = {
         "success": False,
         "error": "invalid_input",
@@ -481,7 +485,7 @@ def run(urls, limits=None):
         previous = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT, signal.SIGTERM})
         try:
             process = subprocess.Popen(
-                _command(),
+                command(),
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,

@@ -8,14 +8,25 @@ TikTok extractors and mapper but replaces their HTTP boundary with a small stdli
 transport. It is not imported by the application, registered as a provider, or
 connected to Telegram. No dependency or deployed configuration changes are needed.
 
-Only HTTPS `www.tiktok.com/@user/video/<digits>` and `vm.tiktok.com/<token>` /
+Phase 6B-2 uses a separate acquisition CLI because the metadata entry point must
+remain unable to download media. The new CLI reuses the metadata admission and
+source-ID checks and the same process-group supervisor. Its separate HTTP handler
+pins a validated public IPv4 address while retaining TLS hostname verification.
+Only `v16-webapp-prime.tiktok.com` and `v19-webapp-prime.tiktok.com` media hosts are
+admitted initially, never arbitrary public hosts or a wildcard CDN suffix. These
+specific hosts occur in upstream [issue 13771](https://github.com/yt-dlp/yt-dlp/issues/13771)
+and [issue 15891](https://github.com/yt-dlp/yt-dlp/issues/15891); reports establish
+observed endpoints, not availability or reliability. A different host requires a
+separate reviewed decision, not an automatic fallback.
+
+For the metadata CLI, only HTTPS `www.tiktok.com/@user/video/<digits>` and `vm.tiktok.com/<token>` /
 `vt.tiktok.com/<token>` are admitted. Tracking query/fragment data is stripped.
 Every redirect is checked before opening its target; at most two hops are allowed.
 Only these page paths are permitted, never API, CDN or media paths. Full-video
 redirects must retain the video identity. Short links use HEAD, then the resolved
 full page uses GET. No general URL support is intended.
 
-The transport disables environment proxies, automatic redirects, cookie persistence
+The metadata transport disables environment proxies, automatic redirects, cookie persistence
 and impersonation. All Set-Cookie response headers, including duplicates, are
 discarded before yt-dlp sees the response; their presence alone is not a refusal.
 No CookieProcessor is installed. Outgoing Cookie/credential headers, extractor
@@ -49,10 +60,10 @@ take up to five additional seconds. Progress counters after a
 forced stop are marked inexact: received-byte counts may be lower bounds. There
 are no global memory, concurrency, wire-byte or production-capacity guarantees.
 
-`process=False`, explicit no-probe configuration and the restrictive HTTP boundary
+In the metadata CLI, `process=False`, explicit no-probe configuration and the restrictive HTTP boundary
 prevent media acquisition and format probes. Codec/audio values are **extractor
 metadata only**, including upstream defaults; missing metadata is unknown, not
-proof of silence. No ffprobe, remux or transcode occurs. Reports retain only case
+proof of silence. That CLI runs no ffprobe, remux or transcode. Reports retain only case
 numbers, within-series pseudonyms, technical format categories, counters, elapsed
 time and sanitized errors. URLs, actual IDs, usernames, descriptions and cookies
 are not printed or persisted. Input URLs exist transiently in process memory.
@@ -81,8 +92,8 @@ acquisition, actual audio streams, Telegram playback or provider readiness.
 
 If the default ceilings, cookie-use refusal or narrow page allowlist prevent inspection,
 record BLOCKED and review the specific obstacle. Do not silently broaden hosts,
-enable impersonation, supply cookies or add requests. Phase 6B-1 and any eventual
-provider decision remain pending.
+enable impersonation, supply cookies or add requests. The limited repeat below
+does not close broader URL coverage or any eventual provider decision.
 
 ## First authorized attempt and offline correction
 
@@ -95,3 +106,89 @@ The response-header correction is verified only offline, using real yt-dlp mappi
 and synthetic HTTP responses. It does not weaken cookie-use, challenge or network
 boundaries. Focused independent review and separate authorization are required
 before another live series. No repeat experiment is part of this correction.
+
+The correction subsequently passed focused independent review. One separately
+authorized repeat with the owner's two full URLs A and B succeeded: two
+extractions, two HTTP attempts, 795,225 metadata body bytes, 3.355 seconds,
+`counts_exact=true`. A exposed seven MP4 and one MP3 formats; B exposed nine MP4
+and one MP3. Each had two HTTPS H.264/AAC MP4 candidates without a probe marker.
+One additional format per case was marked for probing; no probes were run.
+AAC metadata for B does not establish audible sound. No media was downloaded;
+short-link feasibility remains untested. This is metadata feasibility for two
+cases, not a TikTok Provider GO or download/playback evidence.
+
+## Phase 6B-2: offline acquisition preparation
+
+`scripts/tiktok_acquisition.py` is a separate experimental CLI. The metadata CLI's
+`run()` and command continue to select only its metadata worker. A private shared
+supervisor owns and terminates/reaps either CLI's fixed worker; no application
+provider, handler, configuration, dependency or deployment changes are involved.
+
+The acquisition CLI admits exactly two distinct full video URLs supplied by the
+operator, in A/B order. It cannot prove external owner authorization: the operator
+must use only the separately approved A and B. No URLs or IDs are embedded in Git.
+It reuses the existing metadata limits and pre-mapping source-ID guard. Before
+mapping, an immutable set records only source play/bitrate URLs. The first mapped
+HTTPS MP4 H.264/AAC format without `__needs_testing` must belong to that set and
+pass the narrow media-host policy above. There is no second extraction, probe,
+format fallback, cookie use, Referer/credential forwarding or retry.
+
+Each metadata/media connection uses the isolated pinned HTTPS handler. It rejects
+non-global/reserved/multicast and mixed public/private DNS answers, connects one
+validated IPv4 sockaddr without another lookup, and retains certificate/hostname
+verification and SNI for the original hostname. IPv6-only destinations are blocked.
+Media paths must be under `/video/` without encoded/ambiguous path segments.
+Redirects (at most two per acquisition) are checked before opening the next target;
+only the same explicit host set is permitted. Up to six media HTTP attempts can
+occur across the two one-attempt acquisitions, including redirects. Metadata's
+8-request budget is separate. CDN availability and the actual A/B media hosts
+have not been confirmed by this offline stage; an unlisted host blocks the run.
+
+| Bound | Enforced policy |
+| --- | --- |
+| Videos / acquisitions | Exactly two distinct full URLs, at most one acquisition each; fail-fast |
+| Media file / total received bodies | 25 MiB / 50 MiB; bounded reads before writes, independent of Content-Length |
+| Workspace | 128 MiB ceiling; only two originals (at most 50 MiB), no conversion outputs |
+| Wall time | **180 s for the whole series**, deliberately tighter than the authorized 360 s ceiling, retaining the existing hard metadata bound |
+| External tools | ffprobe at most 20 s per call; complete FFmpeg decode at most 30 s, always within remaining series time |
+| Cleanup | Existing process-group termination/reap (up to 5 additional seconds), then parent-owned temporary-directory cleanup |
+
+File size is checked on disk; a worker-only POSIX file-size limit is a backstop.
+Missing/false Content-Length cannot increase the streaming budget. Exact-cap
+bodies are conservatively refused rather than reading an extra byte to prove EOF.
+Counts describe returned HTTP body bytes, not total network traffic or buffers.
+No global concurrency, memory or production-capacity guarantees are claimed.
+
+ffprobe opens local MOV/MP4 only, with file/pipe protocols, and reports actual stream
+counts, codecs, dimensions and duration. A must contain an audio stream; B may or
+may not. Stream presence does not prove audible sound. Compatible MP4 is passed to
+the existing `prepare_telegram_video(..., allow_silent=True)`; its runner forbids
+conversion. Incompatible media is reported and blocked. Full local video/audio
+decode runs to the null muxer, never an upload or transcoding output.
+
+The parent creates an exclusive temporary directory, retains ownership through
+worker completion and removes originals/partials even after ordinary failure,
+timeout or interruption. It never cleans a caller-supplied directory. OS-level
+termination or filesystem cleanup failures are explicit blocking results; if worker
+termination is unconfirmed, its workspace is retained rather than removed under
+an active writer. Repeated interrupts are masked during cleanup. Such a result
+requires operator attention, never an automatic retry or a successful verdict.
+
+### Separately authorized live procedure
+
+Do not run the acquisition CLI during this offline preparation. After independent
+review and a new explicit live authorization, use the existing environment in this
+worktree and submit only the previously approved A and B through hidden stdin:
+
+```bash
+python -c 'import getpass,json; print(json.dumps([getpass.getpass("A full URL: "),getpass.getpass("B full URL: ")]))' | python scripts/tiktok_acquisition.py
+```
+
+Run exactly once. Do not split cases, reset budgets, retry or replace URLs. A
+blocking failure stops before B. Retain only sanitized JSON counters, per-case
+elapsed time, sizes, actual probe results, decode/preparation status and cleanup
+status. Check worker absence and unchanged Git/protected files after exit. The
+workspace is removed before the result is returned, so no media is retained.
+Docker must stay stopped; no Telegram polling/upload is part of the experiment.
+Real acquisition, audible sound, client playback and provider readiness remain
+unverified until separately evidenced; this preparation authorizes none of them.

@@ -531,15 +531,18 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
 
 ## Phase 6 - TikTok Provider
 - [x] Phase 6B-0: implement and verify the isolated metadata-only harness offline.
-- [ ] Phase 6B-1: establish bounded real metadata feasibility; the first authorized
-  attempt stopped before HTML inspection on response Set-Cookie. Another series
-  requires separate authorization after focused review of the offline correction.
+- [x] Phase 6B-1: limited metadata feasibility for two approved full URLs A/B.
+  The initial response-cookie refusal was corrected and independently reviewed;
+  one authorized repeat passed: 2 extractions / 2 HTTP / 795,225 body bytes /
+  3.355 s, exact counters. Two unprobed H.264/AAC MP4 candidates per case.
+  Short-link validation, actual media streams and acquisition remain open.
 
 The [Phase 6B procedure](PHASE6_TIKTOK_METADATA.md) defines strict page/redirect,
 request/body/deadline limits, response-cookie discard, cookie-use/challenge refusal
-and sanitized output. It does not register TikTok, download media or change Telegram
-runtime. Real metadata
-availability, sound/silence and media acquisition remain unverified. No provider
+and sanitized output. Neither CLI registers TikTok or changes Telegram runtime;
+the original CLI remains metadata-only, while acquisition has a separate gate.
+Only the two-case metadata result above is confirmed; actual sound/silence
+and media acquisition remain unverified. No provider
 GO/NO-GO decision follows from synthetic responses alone.
 Verification: 46 new offline cases; full suite 1516 passed, 1 opt-in external
 YouTube test skipped; local FFmpeg/ffprobe regressions passed. Ruff lint/format,
@@ -559,7 +562,20 @@ application providers, Telegram handlers or deployed configuration changed.
   Verification: 70 harness cases (5 new, 1 obsolete refusal case removed),
   28 retained independent diagnostics passed; full suite 1540 passed, 1 skipped.
   Ruff lint/format, diff, documentation and security/scope checks pass.
-  Focused independent review remains pending; no live repeat was performed.
+  Focused independent review subsequently passed, followed by the one repeat above.
+
+- [x] Phase 6B-2: offline preparation of the separate bounded media-acquisition CLI;
+  preserve the metadata CLI guarantee, reuse its supervisor, enforce source
+  provenance, pinned public IPv4/TLS, strict media hosts, byte/disk/time bounds,
+  actual ffprobe/decode, passthrough-only preparation and owned cleanup.
+  Verified: 37 new acquisition cases, 107 focused metadata/acquisition cases;
+  44 retained independent diagnostics pass (one obsolete cookie-policy assertion
+  deselected). Full offline suite: 1577 passed, 1 external opt-in skipped.
+  Local FFmpeg/ffprobe, Ruff lint/format, diff, documentation and security/scope
+  checks pass. The CLI uses a conservative 180 s series ceiling, below the
+  authorized 360 s maximum. No real acquisition was performed.
+- [ ] Independently review Phase 6B-2, then separately authorize one A/B acquisition
+  experiment. No Provider implementation or Telegram delivery is authorized.
 
 - [ ] Run a technical spike.
 - [ ] Assess real-world reliability and extraction stability.

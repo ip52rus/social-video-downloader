@@ -51,9 +51,41 @@ full suite with socket connections forbidden, including local FFmpeg/ffprobe che
 The retained independent diagnostics pass **28 cases**; only their old
 Set-Cookie-only refusal assertion is deselected because this policy intentionally
 changed. Both P2 fault-injection checks remain included. Ruff lint/format, diff,
-documentation links and security/scope checks pass. Focused independent review of
-this correction remains pending.
-All checks remain offline; another live series needs separate authorization.
+documentation links and security/scope checks pass. Those correction checks were
+offline. Focused independent review subsequently
+passed, followed by the separately authorized metadata-only repeat below.
+
+### Phase 6B-1 limited real metadata evidence
+
+One approved A/B full-URL series succeeded after the correction: 2 extractions,
+2 HTTP attempts, 795,225 body bytes, 3.355 s, `counts_exact=true`. Each case exposed
+two HTTPS H.264/AAC MP4 candidates without probe markers. No media/CDN probes,
+downloads, actual-stream inspection or Telegram operations occurred. B's AAC
+metadata does not establish audible sound. Short links were not tested. This is
+two-case metadata evidence only, not a general platform or provider GO.
+
+### Phase 6B-2 acquisition preparation (offline)
+
+`tests/test_tiktok_acquisition.py` uses the real installed mapper, synthetic urllib
+HTTP and generated local MP4 fixtures; external socket connections are forbidden,
+including worker bootstrap tests. The complete two-video worker path exercises
+actual ffprobe, full FFmpeg video/audio decode, silent B and byte-identical
+passthrough, followed by parent cleanup without deleting caller-owned fixtures.
+Negative cases cover source mismatch/provenance/probe markers, strict hosts and
+redirects, reserved/private/mixed DNS, a pinned sockaddr with original TLS SNI,
+actual 25 MiB reads despite absent/false Content-Length, aggregate/workspace
+budgets, partial files, 403/429/404 without fallback, deadlines, subprocess reap,
+worker interruption and explicit cleanup failure. The common supervisor's existing
+metadata tests continue to exercise exited leaders, descendants and repeated signals.
+Real acquisition remains untested. See [the separate authorization gate](PHASE6_TIKTOK_METADATA.md#separately-authorized-live-procedure).
+
+Offline results: **37 new acquisition cases**, **107 focused cases passed** with
+the existing 70 metadata cases. The 44 retained independent diagnostics pass; only
+the obsolete Set-Cookie-only refusal assertion is deselected. Full suite with
+external sockets forbidden: **1577 passed, 1 skipped** (external YouTube opt-in),
+including real local FFmpeg/ffprobe checks. Ruff lint/format, diff, documentation
+links and security/scope checks pass. No live requests or downloads are part of
+this preparation; independent review is still required.
 
 ## Phase 4 functional acceptance (2026-10-15)
 

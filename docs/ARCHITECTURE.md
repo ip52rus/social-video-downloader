@@ -4,6 +4,11 @@ The standalone [Phase 6B TikTok metadata experiment](PHASE6_TIKTOK_METADATA.md)
 uses existing yt-dlp mapping behind a restricted HTTP boundary and a supervised
 worker. It is outside the application runtime and adds no provider or Telegram
 dependency. Its limits apply to a diagnostic series, not global bot resources.
+Phase 6B-2 adds a separate acquisition CLI reusing its private supervisor and
+metadata/source-ID checks. A pinned HTTPS boundary admits only two explicit TikTok
+media hosts; bounded streaming, real local inspection/decode and passthrough reuse
+existing Telegram preparation without upload. The original CLI remains strictly
+metadata-only. This is offline experiment preparation, not a runtime provider.
 
 ## Target logical architecture
 Telegram -> Telegram handlers -> application/download service -> provider interface -> provider implementation -> media engine -> temporary storage.
