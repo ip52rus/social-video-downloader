@@ -587,8 +587,25 @@ application providers, Telegram handlers or deployed configuration changed.
   obsolete cookie refusal deselected). Full socket-forbidden suite: 1590 passed,
   1 external opt-in skipped. Local FFmpeg/ffprobe, Ruff lint/format, diff,
   documentation and security/scope checks pass; exact-head CI is checked after push.
-- [ ] Focused independent re-review of the HTTP completeness correction, then separately authorize one A/B acquisition
-  experiment. No Provider implementation or Telegram delivery is authorized.
+- [x] Focused HTTP framing re-review passed at `2dcf034`; one separately
+  authorized live A/B series stopped on A's media HTTP 403. Exact counters:
+  1 extraction / 1 metadata HTTP / 399,282 metadata body bytes, 1 acquisition /
+  1 media HTTP / 0 media bytes, 3.175 s; B not started, cleanup confirmed.
+  Downloaded media, actual audio and Telegram preparation remain unverified.
+- [x] Phase 6B-3: restore only validated yt-dlp HTTP context offline. Preserve the
+  native common/full-page/media UA, installed whole-format-map precedence and
+  canonical publication Referer; reject credentials, unknown headers, collisions
+  and injection before media GET. Signed queries and all old safety bounds remain.
+  Cookies, auth, challenge solving, impersonation and proxies remain forbidden.
+  Verification: 23 new cases; 73 acquisition / 143 focused cases passed, plus
+  63 retained independent boundary diagnostics (4 older policy expectations
+  deselected) and 23 independent HTTP framing cases. Full socket-forbidden suite:
+  1613 passed, 1 external opt-in skipped. Local FFmpeg/ffprobe, Ruff lint/format,
+  diff, documentation and security/scope checks pass; exact-head CI is checked
+  after publication. No live requests or downloads are part of this correction.
+- [ ] Focused independent review of the headers-only correction, then separately
+  decide whether to authorize one repeat acquisition experiment. No Provider
+  implementation or Telegram delivery is authorized.
 
 - [ ] Run a technical spike.
 - [ ] Assess real-world reliability and extraction stability.

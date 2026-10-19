@@ -117,8 +117,43 @@ Set-Cookie-only refusal; strict framing and streaming budgets are tested above.
 Full socket-forbidden suite: **1590 passed, 1 skipped** (external YouTube opt-in),
 including local FFmpeg/ffprobe regressions. Ruff lint/format, diff, documentation
 targets and security/scope checks pass. Exact-head CI is verified after publication.
-This patch still requires focused independent re-review before a separately
-authorized live acquisition. No real acquisition or Telegram upload is evidenced.
+The framing correction subsequently passed focused re-review; the one separately
+authorized live attempt stopped at A's media HTTP 403, as recorded below.
+
+### Phase 6B-3 headers-only correction (offline)
+
+One live series at `2dcf034` passed A metadata and failed the first media GET with
+HTTP 403. It read 399,282 metadata body bytes and 0 media bytes in 3.175 s:
+1 extraction / 1 metadata HTTP / 1 acquisition / 1 media HTTP, exact counters;
+B not started, workspace cleanup and process termination confirmed. No codecs,
+actual audio, decode, preparation or download feasibility were established.
+
+The subsequent offline audit identified lost result-level Referer and differing
+metadata/media diagnostic UAs. The correction uses the native yt-dlp common UA
+for full-page/media requests and preserves the installed format-map precedence.
+Canonical Referer is derived from the validated current publication. Cookies are
+still discarded and cannot be sent; no anonymous session is added. This does not
+establish a causal explanation or remedy for the live 403.
+
+Twenty-three added cases use the real installed TikTok mapper and compare selected
+headers with `YoutubeDL._calc_headers(ChainMap(format, result))`. They cover absent,
+empty and overriding format maps; result-map masking, neighboring formats, a
+byte-identical signed query, matching metadata/media UA, safe redirect context,
+cookie discard, wrong Referer, credentials, unknown headers, case collisions,
+CRLF injection and contradictory values. Malformed context stops before media GET
+without fallback or B. Existing source/provenance, DNS/TLS, framing, budgets,
+supervisor and metadata-only acquisition refusals remain regression checks.
+
+Results: **73 acquisition / 143 focused cases passed**; 63 retained independent
+boundary diagnostics passed (4 older framing/cookie policy expectations deselected),
+plus **23 independent HTTP framing cases passed**, including the original
+decodable truncated MP4 and the exact 25 MiB public-worker path. Full local suite
+with external sockets forbidden: **1613 passed, 1 skipped** (external YouTube
+opt-in), including local FFmpeg/ffprobe. Ruff lint/format, diff, local documentation
+targets and security/scope checks pass. Exact-head CI is checked after publication.
+
+No real request is part of this correction. Focused independent review and a new
+explicit owner authorization are required before any live repeat.
 
 ## Phase 4 functional acceptance (2026-10-15)
 

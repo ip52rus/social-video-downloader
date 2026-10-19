@@ -10,6 +10,7 @@ import signal
 import socket
 import subprocess
 import sys
+from collections import ChainMap
 from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
@@ -294,6 +295,121 @@ def test_complete_real_parser_body_can_use_exact_byte_budget(monkeypatch, tmp_pa
     path = tmp_path / "video.mp4"
     media.acquire(MEDIA, path)
     assert media.received == path.stat().st_size == 5
+
+
+def mapped_publication():
+    transport = m._Transport(m.Limits(), monotonic() + 10, lambda e: None)
+    transport.expected = A
+    with m._YDL(transport) as ydl:
+        info = a._SourceIE(ydl)._parse_aweme_video_web(
+            {"id": "123456789", "video": {"playAddr": MEDIA}}, A, "123456789"
+        )
+    return info, transport.headers
+
+
+@pytest.mark.parametrize(
+    "format_headers", [None, {}, {"Accept": "format", "Accept-Language": "fr"}]
+)
+def test_real_mapper_headers_match_installed_ytdlp_precedence(format_headers):
+    info, common = mapped_publication()
+    assert info["http_headers"] == {"Referer": A}
+    assert "http_headers" not in info["formats"][0]
+    info["http_headers"].update({"Accept": "result", "Accept-Language": "de"})
+    selected = info["formats"][0]
+    if format_headers is not None:
+        selected["http_headers"] = format_headers
+    info["formats"].append({**selected, "url": OTHER, "http_headers": {"Accept": "neighbor"}})
+    with m._YDL(m._Transport(m.Limits(), monotonic() + 10, lambda e: None)) as ydl:
+        expected = ydl._calc_headers(ChainMap(selected, info))
+    url, headers = a._candidate(info, frozenset({MEDIA, OTHER}), common, A)
+    assert url == MEDIA and headers["Referer"] == A
+    assert headers["Accept-Encoding"] == "identity"
+    for name in ("User-Agent", "Accept", "Accept-Language", "Sec-Fetch-Mode"):
+        assert headers[name] == expected[name]
+    assert headers["Accept"] != "neighbor"
+    if format_headers == {}:
+        # Stock yt-dlp selects the whole format map; no recursive result merge.
+        assert headers["Accept"] == common["Accept"]
+
+
+def test_header_context_signed_query_redirect_and_cookie_discard(monkeypatch, tmp_path):
+    signed = MEDIA + "?signature=fixture%2Bsig%2F%3D&tk=tt_chain_token&x=a+b&x=second"
+    data = routes(media_url=signed)
+    data[("GET", signed)] = (302, b"", {"Location": OTHER, "Set-Cookie": "fixture=discard"})
+    data[("GET", OTHER)] = (200, b"video", {"Content-Length": "5", "Set-Cookie": "other=discard"})
+    net = network(monkeypatch, data)
+
+    def stop_probe(*args):
+        raise m.Stop("headers_verified")
+
+    monkeypatch.setattr(a, "_validate", stop_probe)
+    result = a._execute([A, B], a.Limits(), monotonic() + 10, tmp_path, lambda e: None)
+    assert result["error"] == "headers_verified"
+    assert result["extractions"] == result["acquisitions"] == 1
+    assert result["media_requests"] == 2
+    assert [url for _, url, _ in net.calls] == [A, signed, OTHER]
+    for index, (_, _, raw) in enumerate(net.calls):
+        headers = {k.lower(): v for k, v in raw.items()}
+        assert headers["user-agent"] == m.std_headers["User-Agent"]
+        assert "metadata-check" not in headers["user-agent"]
+        assert headers["accept-encoding"] == "identity"
+        assert all(k not in headers for k in ("cookie", "authorization", "origin", "range"))
+        assert headers["accept"] == m.std_headers["Accept"]
+        if index:
+            assert headers["referer"] == A
+
+
+@pytest.mark.parametrize(
+    ("layer", "headers"),
+    [
+        ("result", {"Cookie": "forbidden"}),
+        ("format", {"cOoKiE": "forbidden"}),
+        ("format", {"Authorization": "forbidden"}),
+        ("result", {"Proxy-Authorization": "forbidden"}),
+        ("format", {"Host": "outside.invalid"}),
+        ("format", {"Range": "bytes=0-1"}),
+        ("result", {"Origin": "https://www.tiktok.com"}),
+        ("format", {"X-Unverified": "value"}),
+        ("result", {"Referer": B}),
+        ("format", {"Referer": "https://outside.invalid/"}),
+        ("result", {"Referer": A + "\r\nCookie: forbidden"}),
+        ("format", {"Accept": "video/mp4\r\nAuthorization: forbidden"}),
+        ("format", {"Accept": "one", "aCcEpT": "two"}),
+        ("format", {"User-Agent": "different"}),
+        ("result", {"Accept-Encoding": "gzip"}),
+        ("format", {"Sec-Fetch-Mode": "unverified"}),
+        ("result", {"Accept": None}),
+        ("format", [("Accept", "not-a-mapping")]),
+    ],
+)
+def test_unsafe_header_layers_block_before_media_without_fallback(
+    monkeypatch, tmp_path, layer, headers
+):
+    net = network(monkeypatch, routes())
+    mapper = a._SourceIE._parse_aweme_video_web
+
+    def fault(self, *args, **kwargs):
+        info = mapper(self, *args, **kwargs)
+        target = info if layer == "result" else info["formats"][0]
+        target["http_headers"] = headers
+        if layer == "result":
+            # A later format map must not hide invalid result-level credentials.
+            info["formats"][0]["http_headers"] = {"Accept": "safe"}
+        return info
+
+    monkeypatch.setattr(a._SourceIE, "_parse_aweme_video_web", fault)
+    result = a._execute([A, B], a.Limits(), monotonic() + 10, tmp_path, lambda e: None)
+    assert not result["success"] and result["acquisitions"] == result["media_requests"] == 0
+    assert result["extractions"] == 1 and len(net.calls) == 1
+    assert not list(tmp_path.iterdir())
+
+
+def test_media_boundary_validates_before_case_folding(monkeypatch, tmp_path):
+    net = network(monkeypatch, {})
+    media = a._Media(a.Limits(), monotonic() + 10, tmp_path, lambda e: None)
+    with pytest.raises(m.Stop, match="invalid_http_headers"):
+        media.acquire(MEDIA, tmp_path / "video.mp4", {"Accept": "one", "accept": "two"})
+    assert not net.calls and media.requests == media.attempts == 0
 
 
 @pytest.mark.parametrize("bad", ["source", "host", "provenance", "probe_required"])

@@ -234,9 +234,12 @@ Its bounded transport and supervised worker are verified offline. After the init
 Set-Cookie-only refusal and independently reviewed correction, a separately
 authorized repeat passed metadata inspection for two full URLs (A/B): 2 HTTP,
 2 extractions, 795,225 body bytes, 3.355 s. Short links and acquisition remain
-unverified. Phase 6B-2 prepares a separate bounded acquisition CLI offline; its
-180 s global deadline is deliberately stricter than the authorized 360 s ceiling.
-The next gate is independent review, then separate live-download authorization.
+unverified. Phase 6B-2 added a separate bounded acquisition CLI with a 180 s global
+deadline. After framing review passed, one authorized live series stopped on A's
+first media GET with HTTP 403: 0 media bytes, B not started, cleanup confirmed.
+Phase 6B-3 restores validated yt-dlp headers offline; cookies remain forbidden and
+the cause of 403 is unproven. The next gate is focused header review, then a new
+separate decision about one live repeat. No repeat is authorized by this patch.
 No technical GO for a runtime provider is claimed. See
 [experiment procedure and limits](PHASE6_TIKTOK_METADATA.md).
 

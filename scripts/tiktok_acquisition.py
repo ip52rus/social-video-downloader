@@ -11,6 +11,7 @@ import signal
 import socket
 import subprocess
 import sys
+from collections import ChainMap
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -156,7 +157,9 @@ class _SourceIE(meta._MetadataIE):
         return super()._parse_aweme_video_web(aweme_detail, webpage_url, video_id, extract_flat)
 
 
-def _candidate(info, source_urls):
+def _candidate(info, source_urls, common_headers, publication):
+    if meta._url(publication) != ("full", publication):
+        raise meta.Stop("invalid_referer")
     if info.get("_type", "video") != "video" or "entries" in info:
         raise meta.Stop("unsupported_publication")
     for f in info.get("formats") or []:
@@ -170,7 +173,18 @@ def _candidate(info, source_urls):
         ):
             if f.get("url") not in source_urls:
                 raise meta.Stop("unconfirmed_media_source")
-            return _media_url(f["url"])
+            # Match _calc_headers(ChainMap(format, result)) without cookie routines:
+            # the format's entire header map takes precedence, not a deep merge.
+            for layer in (common_headers, info.get("http_headers"), f.get("http_headers")):
+                meta._http_headers(
+                    layer, publication=publication, user_agent=common_headers["User-Agent"]
+                )
+            headers = meta.HTTPHeaderDict(common_headers, ChainMap(f, info).get("http_headers"))
+            # Trusted publication identity supplies Referer even if a format's
+            # header map masks the result-level Referer. Never trust another URL.
+            headers["Referer"] = publication
+            headers["Accept-Encoding"] = "identity"
+            return _media_url(f["url"]), headers
     raise meta.Stop("no_safe_format")
 
 
@@ -212,8 +226,17 @@ class _Media:
             raise meta.Stop("workspace_limit")
         return size
 
-    def acquire(self, url, path):
+    def acquire(self, url, path, headers=None, *, publication=None):
         _media_url(url)
+        checked = meta._http_headers(
+            headers, publication=publication, user_agent=meta.std_headers["User-Agent"]
+        )
+        headers = meta._http_headers(
+            meta.HTTPHeaderDict(meta.std_headers, checked),
+            publication=publication,
+            user_agent=meta.std_headers["User-Agent"],
+        )
+        headers["Accept-Encoding"] = "identity"
         if path.parent != self.workspace or path.exists() or path.is_symlink():
             raise meta.Stop("invalid_workspace")
         if self.attempts >= self.limits.max_urls:
@@ -233,7 +256,7 @@ class _Media:
                 response = self.opener.open(
                     Request(
                         url,
-                        headers={"Accept-Encoding": "identity", "User-Agent": "metadata-check/1"},
+                        headers=headers,
                     ),
                     timeout=min(10, self.deadline - monotonic()),
                 )
@@ -417,9 +440,9 @@ def _execute(urls, limits, deadline, workspace, emit):
                     transport.check()
                     if info.get("id") != url.rsplit("/", 1)[-1]:
                         raise meta.Stop("identity_changed")
-                    chosen = _candidate(info, ydl.source_urls)
+                    chosen, headers = _candidate(info, ydl.source_urls, transport.headers, url)
                     path = workspace / f"case-{index}.mp4"
-                    media.acquire(chosen, path)
+                    media.acquire(chosen, path, headers, publication=url)
                     entry["bytes"] = path.stat().st_size
                     entry["probe"] = _validate(path, deadline)
                     _prepare_and_decode(path, entry["probe"], index, deadline)

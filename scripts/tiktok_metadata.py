@@ -21,6 +21,7 @@ import yt_dlp
 from yt_dlp.extractor.tiktok import TikTokIE, TikTokVMIE
 from yt_dlp.networking.common import Response
 from yt_dlp.utils import determine_protocol
+from yt_dlp.utils.networking import HTTPHeaderDict, std_headers
 
 
 @dataclass(frozen=True)
@@ -53,6 +54,44 @@ class Limits:
 
 class Stop(BaseException):
     """Must escape upstream retry/fallback handlers without leaking upstream text."""
+
+
+def _http_headers(headers, *, publication=None, user_agent=None):
+    """Validate before case folding/merging can hide collisions or credentials."""
+    if headers is None:
+        headers = {}
+    if not isinstance(headers, dict):
+        raise Stop("invalid_http_headers")
+    allowed = {
+        "user-agent",
+        "referer",
+        "accept",
+        "accept-language",
+        "sec-fetch-mode",
+        "accept-encoding",
+    }
+    checked = HTTPHeaderDict()
+    for name, value in headers.items():
+        if (
+            not isinstance(name, str)
+            or name.lower() not in allowed
+            or name in checked
+            or not isinstance(value, str)
+            or not 0 < len(value) <= 4096
+            or any(ord(c) < 32 or ord(c) >= 127 for c in value)
+        ):
+            raise Stop("invalid_http_headers")
+        key = name.lower()
+        if key == "referer" and (value != publication or _url(value) != ("full", value)):
+            raise Stop("invalid_referer")
+        if key == "user-agent" and user_agent is not None and value != user_agent:
+            raise Stop("inconsistent_user_agent")
+        if (key == "accept-encoding" and value != "identity") or (
+            key == "sec-fetch-mode" and value != "navigate"
+        ):
+            raise Stop("invalid_http_headers")
+        checked[name] = value
+    return checked
 
 
 def _url(raw):
@@ -104,6 +143,7 @@ class _Transport:
         self.limits, self.deadline, self.emit = limits, deadline, emit
         self.requests = self.received = self.extractions = 0
         self.expected = None
+        self.headers = _http_headers(std_headers)
         self.opener = _opener()
 
     def progress(self):
@@ -130,6 +170,17 @@ class _Transport:
             raise Stop("credentials_forbidden")
         if request.extensions.get("impersonate"):
             raise Stop("impersonation_forbidden")
+        headers = HTTPHeaderDict(
+            self.headers,
+            _http_headers(
+                request.headers,
+                publication=url if kind == "full" else None,
+                # TikTokVMIE supplies its own HEAD resolver UA. Acquisition admits
+                # full URLs only; full-page and media requests share the common UA.
+                user_agent=self.headers["User-Agent"] if kind == "full" else None,
+            ),
+        )
+        headers["Accept-Encoding"] = "identity"
         seen = set()
         for _ in range(3):  # At most two redirects, checked BEFORE opening their targets.
             self.check()
@@ -145,10 +196,7 @@ class _Transport:
                     Request(
                         url,
                         method=method,
-                        headers={
-                            "User-Agent": "social-video-downloader-metadata-check/1",
-                            "Accept-Encoding": "identity",
-                        },
+                        headers=headers,
                     ),
                     timeout=min(10, self.deadline - monotonic()),
                 )
@@ -275,6 +323,7 @@ class _YDL(yt_dlp.YoutubeDL):
         )
         self.add_info_extractor(_MetadataIE(self))
         self.add_info_extractor(TikTokVMIE(self))
+        transport.headers = _http_headers(self.params["http_headers"])
 
     def urlopen(self, request):
         return self.transport.open(request)

@@ -131,7 +131,8 @@ It reuses the existing metadata limits and pre-mapping source-ID guard. Before
 mapping, an immutable set records only source play/bitrate URLs. The first mapped
 HTTPS MP4 H.264/AAC format without `__needs_testing` must belong to that set and
 pass the narrow media-host policy above. There is no second extraction, probe,
-format fallback, cookie use, Referer/credential forwarding or retry.
+format fallback, cookie use, credential forwarding or retry. Phase 6B-3 restores
+only validated HTTP headers; it does not introduce an anonymous cookie session.
 
 Each metadata/media connection uses the isolated pinned HTTPS handler. It rejects
 non-global/reserved/multicast and mixed public/private DNS answers, connects one
@@ -142,7 +143,8 @@ Redirects (at most two per acquisition) are checked before opening the next targ
 only the same explicit host set is permitted. Up to six media HTTP attempts can
 occur across the two one-attempt acquisitions, including redirects. Metadata's
 8-request budget is separate. CDN availability and the actual A/B media hosts
-have not been confirmed by this offline stage; an unlisted host blocks the run.
+were not confirmed by the offline preparation; the later single live refusal is
+recorded below. An unlisted host still blocks the run.
 
 | Bound | Enforced policy |
 | --- | --- |
@@ -183,6 +185,43 @@ termination or filesystem cleanup failures are explicit blocking results; if wor
 termination is unconfirmed, its workspace is retained rather than removed under
 an active writer. Repeated interrupts are masked during cleanup. Such a result
 requires operator attention, never an automatic retry or a successful verdict.
+
+### Phase 6B-2 live refusal and Phase 6B-3 header correction
+
+After framing re-review passed at `2dcf034`, one separately authorized A/B series
+obtained A metadata but stopped on the first media GET with HTTP 403. B did not
+start. Exact counters: 1 extraction, 1 metadata HTTP attempt / 399,282 body bytes,
+1 acquisition / 1 media HTTP attempt / 0 media bytes; 3.175 s for the series.
+The destination passed the existing host policy. Workspace cleanup and process
+termination passed; no actual streams, decode or preparation were verified.
+This does not establish that cookies, login or challenge solving are required.
+
+Offline source inspection found that the old media GET dropped yt-dlp's Referer
+and used a different diagnostic UA from the metadata request. The headers-only
+correction preserves the installed yt-dlp 2026.08.19 precedence: a format's entire
+`http_headers` map, if present, masks the result-level map; the selected map then
+overrides the common YoutubeDL headers. It is not a recursive three-map merge.
+Every source map is validated before merging so an overriding map cannot hide
+credentials, invalid values or case-colliding header names.
+
+Only User-Agent, Referer, Accept, Accept-Language, Sec-Fetch-Mode and
+Accept-Encoding are admitted. Full-page metadata and media use the same native
+yt-dlp common UA; a contradictory UA blocks the operation. The metadata-only
+short-link resolver retains its upstream HEAD UA; acquisition still accepts full
+URLs only. TLS/browser impersonation and randomized blocker headers stay disabled.
+Referer is always the verified current HTTPS publication URL, even when a format
+map masks the mapper's result-level Referer; another Referer fails closed.
+Streaming remains `Accept-Encoding: identity`; Sec-Fetch-Mode may only be the
+native `navigate` value. Non-string/empty/control/non-ASCII/over-4096-character
+values, unknown names and duplicate case variants block before a media request.
+Origin, Cookie, Authorization, Proxy-Authorization, external Host and Range are
+never forwarded. No CookieProcessor or cookie persistence is introduced, and
+Set-Cookie responses are still discarded. Signed media queries remain unchanged.
+
+The correction changes neither host/DNS/TLS/redirect policy nor framing,
+byte/workspace/deadline bounds, supervisor, source identity or media provenance.
+It does not prove the cause of 403 or successful CDN access. Focused independent
+review and separate authorization are required before any repeat live acquisition.
 
 ### Separately authorized live procedure
 
