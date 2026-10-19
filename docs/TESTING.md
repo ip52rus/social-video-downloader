@@ -4,6 +4,217 @@ Instagram's current narrow live acceptance is recorded in
 [Instagram live acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
 Earlier sections retain the evidence and open gates at each historical stage.
 
+## Phase 6B-0 TikTok metadata-only diagnostics
+
+`tests/test_tiktok_metadata.py` exercises the real installed TikTok mapper and
+urllib redirect/error handling with synthetic HTTPS responses. Socket connections
+are forbidden. Coverage includes canonical and short URLs, pre-request redirect
+rejection, identity changes/loops/hop limits, request/extractor/body/deadline caps,
+403/429/login without retries, cookie-use/challenge/API/CDN refusal, absent/incomplete
+audio metadata, no format probes, private-output suppression, worker failure and
+process termination/reaping. No TikTok media, actual streams or Telegram delivery
+are validated. See [the separately authorized live procedure](PHASE6_TIKTOK_METADATA.md).
+
+Focused offline result: **46 passed**; full suite: **1516 passed, 1 skipped**
+(external YouTube opt-in). The full run forbids socket connections in pytest;
+local FFmpeg/ffprobe regressions execute normally. Worker tests run only local
+sleep/output/bootstrap commands; the real bootstrap also forbids sockets.
+Ruff lint/format, diff, documentation links and security/scope review passed.
+At that initial offline stage no external experiment had been executed. These
+checks use Python 3.13.12 and yt-dlp 2026.08.19 without dependency updates.
+
+PR #59 P2 corrections add 20 regression cases (66 harness cases total): matching,
+mismatching and unconfirmed source identities through the real web mapper, including
+short links; exited leaders with descendants retaining or closing stdout; retained
+PGID ownership until group termination; real SIGINT/SIGTERM, repeated cleanup
+interrupts and explicit cleanup-failure handling. Spawned-process tests have their
+own emergency cleanup. The independent 22-case review diagnostics also pass,
+including the two cases that failed before correction. Full corrected suite:
+**1536 passed, 1 skipped**, with external socket connections forbidden in pytest.
+Ruff lint/format, diff, documentation and security/scope checks pass. No live TikTok
+request is part of these checks; independent P2 re-review subsequently passed.
+
+The first authorized real series then stopped on `cookies_forbidden` after one
+Set-Cookie-bearing response, before reading HTML; later cases were not run. This
+does not establish that TikTok requires cookies, login or challenge solving.
+
+The subsequent correction discards all Set-Cookie response headers before handing
+the response to yt-dlp, without storing or sending cookies. Four positive cases
+exercise ordinary HTML and real mapping with full/short links, single/duplicate
+case-varied headers, an empty cookiejar and subsequent cookie-free requests. An
+additional negative case injects an outgoing Cookie through yt-dlp and is blocked
+before HTTP. The obsolete Set-Cookie-only refusal case is replaced; existing
+challenge/login/403/429 cases now include Set-Cookie and still refuse safely.
+Two new header-discard scenarios failed on the old refusal before correction.
+Corrected results: **70 harness cases passed**, **1540 passed, 1 skipped** in the
+full suite with socket connections forbidden, including local FFmpeg/ffprobe checks.
+The retained independent diagnostics pass **28 cases**; only their old
+Set-Cookie-only refusal assertion is deselected because this policy intentionally
+changed. Both P2 fault-injection checks remain included. Ruff lint/format, diff,
+documentation links and security/scope checks pass. Those correction checks were
+offline. Focused independent review subsequently
+passed, followed by the separately authorized metadata-only repeat below.
+
+### Phase 6B-1 limited real metadata evidence
+
+One approved A/B full-URL series succeeded after the correction: 2 extractions,
+2 HTTP attempts, 795,225 body bytes, 3.355 s, `counts_exact=true`. Each case exposed
+two HTTPS H.264/AAC MP4 candidates without probe markers. No media/CDN probes,
+downloads, actual-stream inspection or Telegram operations occurred. B's AAC
+metadata does not establish audible sound. Short links were not tested. This is
+two-case metadata evidence only, not a general platform or provider GO.
+
+### Phase 6B-2 acquisition preparation (offline)
+
+`tests/test_tiktok_acquisition.py` uses the real installed mapper, synthetic urllib
+HTTP and generated local MP4 fixtures; external socket connections are forbidden,
+including worker bootstrap tests. The complete two-video worker path exercises
+actual ffprobe, full FFmpeg video/audio decode, silent B and byte-identical
+passthrough, followed by parent cleanup without deleting caller-owned fixtures.
+Negative cases cover source mismatch/provenance/probe markers, strict hosts and
+redirects, reserved/private/mixed DNS, a pinned sockaddr with original TLS SNI,
+actual 25 MiB streaming limits despite an overstated Content-Length, aggregate/workspace
+budgets, partial files, 403/429/404 without fallback, deadlines, subprocess reap,
+worker interruption and explicit cleanup failure. The common supervisor's existing
+metadata tests continue to exercise exited leaders, descendants and repeated signals.
+Real acquisition remains untested. See [the separate authorization gate](PHASE6_TIKTOK_METADATA.md#separately-authorized-live-procedure).
+
+Initial preparation results, before the HTTP correction below: **37 new acquisition
+cases**, **107 focused cases passed** with
+the existing 70 metadata cases. The 44 retained independent diagnostics pass; only
+the obsolete Set-Cookie-only refusal assertion is deselected. Full suite with
+external sockets forbidden: **1577 passed, 1 skipped** (external YouTube opt-in),
+including real local FFmpeg/ffprobe checks. Ruff lint/format, diff, documentation
+links and security/scope checks pass. No live requests or downloads are part of
+this preparation; independent review is still required.
+
+### PR #59 incomplete HTTP media response correction (offline)
+
+The original reviewer reproduction failed twice on the previous acquisition HEAD:
+a response promised 21,750 bytes but returned a 5,446-byte decodable MP4 prefix.
+Both the worker path and public supervised `run()` incorrectly reported success
+and started B. Both reproductions now pass: `incomplete_media_response`, no B,
+no ffprobe/preparation of the incomplete response, and parent workspace cleanup.
+
+The conservative media policy requires one valid Content-Length and exactly that
+many returned bytes. Duplicate/conflicting/comma-combined/malformed lengths and
+Content-Length with Transfer-Encoding fail closed. Both complete and incomplete
+chunked responses are refused before body reads, as are responses without length;
+no new chunk parser, retry, Range request or fallback is introduced. Exact-cap
+complete bodies can pass; streaming file/aggregate/workspace limits still apply.
+
+Thirteen added regression cases use real `http.client.HTTPResponse` framing with
+synthetic socket input, including generated fragmented MP4s whose incomplete
+prefix independently passes ffprobe and full local decode. Assertions cover fail-fast,
+exact returned-byte counters, no downstream probe, reaped workers, removed owned
+workspace and untouched caller files. Existing resource tests also use the real
+HTTP parser. No external socket connections are allowed.
+
+Verification: **50 acquisition / 120 focused metadata/acquisition cases passed**;
+**63 retained independent diagnostics passed, 4 deselected**. The latter excludes
+three older expectations of reading chunked/unknown-length media and one obsolete
+Set-Cookie-only refusal; strict framing and streaming budgets are tested above.
+Full socket-forbidden suite: **1590 passed, 1 skipped** (external YouTube opt-in),
+including local FFmpeg/ffprobe regressions. Ruff lint/format, diff, documentation
+targets and security/scope checks pass. Exact-head CI is verified after publication.
+The framing correction subsequently passed focused re-review; the one separately
+authorized live attempt stopped at A's media HTTP 403, as recorded below.
+
+### Phase 6B-3 headers-only correction (offline)
+
+One live series at `2dcf034` passed A metadata and failed the first media GET with
+HTTP 403. It read 399,282 metadata body bytes and 0 media bytes in 3.175 s:
+1 extraction / 1 metadata HTTP / 1 acquisition / 1 media HTTP, exact counters;
+B not started, workspace cleanup and process termination confirmed. No codecs,
+actual audio, decode, preparation or download feasibility were established.
+
+The subsequent offline audit identified lost result-level Referer and differing
+metadata/media diagnostic UAs. The correction uses the native yt-dlp common UA
+for full-page/media requests and preserves the installed format-map precedence.
+Canonical Referer is derived from the validated current publication. Cookies are
+still discarded and cannot be sent; no anonymous session is added. This does not
+establish a causal explanation or remedy for the live 403.
+
+Twenty-three added cases use the real installed TikTok mapper and compare selected
+headers with `YoutubeDL._calc_headers(ChainMap(format, result))`. They cover absent,
+empty and overriding format maps; result-map masking, neighboring formats, a
+byte-identical signed query, matching metadata/media UA, safe redirect context,
+cookie discard, wrong Referer, credentials, unknown headers, case collisions,
+CRLF injection and contradictory values. Malformed context stops before media GET
+without fallback or B. Existing source/provenance, DNS/TLS, framing, budgets,
+supervisor and metadata-only acquisition refusals remain regression checks.
+
+Results: **73 acquisition / 143 focused cases passed**; 63 retained independent
+boundary diagnostics passed (4 older framing/cookie policy expectations deselected),
+plus **23 independent HTTP framing cases passed**, including the original
+decodable truncated MP4 and the exact 25 MiB public-worker path. Full local suite
+with external sockets forbidden: **1613 passed, 1 skipped** (external YouTube
+opt-in), including local FFmpeg/ffprobe. Ruff lint/format, diff, local documentation
+targets and security/scope checks pass. Exact-head CI is checked after publication.
+
+No real request was part of that correction. Its focused independent review
+subsequently passed at `a41e7af`. One separately authorized live retest read 537
+metadata body bytes for A in 1 HTTP attempt / 1 extraction and stopped with the old
+`challenge_forbidden` label: 0 media HTTP / acquisitions / bytes, 1.5 s, exact
+counts, B not started, process/workspace cleanup confirmed. This did not test the
+effect of headers on the earlier media 403 or establish a real challenge.
+
+### Phase 6B-4 missing universal data classification (offline)
+
+The installed yt-dlp invokes its challenge hook for any empty universal-data result.
+The harness now classifies only structural evidence from the existing HTML;
+known `cs` + `_wafchallengeid`/`wci` markers yield `challenge_structure_detected`,
+an explicit trusted HTML login redirect yields `login_page_detected`, and other or
+ambiguous HTML yields `unrecognized_metadata_html`. None executes the upstream
+solver, decodes a payload, saves HTML or initiates another request.
+
+Added tests use the real installed TikTok extractor/mapper and synthetic HTTPS
+responses with external sockets forbidden. They distinguish valid universal data,
+paired/isolated/duplicate/conflicting markers, comment/script text, explicit versus
+untrusted login redirects and login links, short/Unicode/empty-universal HTML.
+They verify fail-fast before B, exact raw body counts, fixed diagnostic fields,
+privacy and no additional HTTP calls. Supervised acquisition tests exercise all
+three failure categories through the public parent/worker path: zero media calls,
+reaped worker and removed workspace. No real live HTML is available to classify
+retroactively.
+
+Results: **19 added regressions / 162 focused cases passed**; **50 retained
+independent header/framing diagnostics passed**, including actual outbound Request
+checks and the decodable truncated-MP4 reproduction. Full socket-forbidden suite:
+**1632 passed, 1 skipped** (external YouTube opt-in), including local FFmpeg/ffprobe.
+Ruff lint/format, diff, local documentation targets and security/scope checks pass.
+Exact-head CI is checked after publication. No live requests or downloads are part
+of Phase 6B-4. Focused independent review and new owner authorization remain gates
+before one final live experiment.
+
+### Phase 6B-4 HTML ambiguity correction (offline)
+
+Focused review found one P2 at `72a8b2d`: the classifier ignored base href and
+conflicting refresh directives. All four reviewer failures were reproduced on the
+old code with real HTTP parsing and the installed extractor, including both public
+CLI JSON paths. The unchanged reviewer file passes all 33 cases after correction.
+
+The classifier now marks any base href plus a relative refresh as ambiguous in
+either tag order, without interpreting or retaining base values. Multiple refresh
+directives are conservatively ambiguous even when identical or malformed. No
+directive is followed; no new response fields or categories are introduced.
+Twelve new project cases cover order, duplicate/conflicting refresh, ambiguous
+challenge, base without href, fake base in a comment and an absolute trusted login
+unaffected by base. All **174 focused metadata/acquisition cases pass**; failures
+stop after one metadata HTTP/extraction, before B/media, and expose no private HTML
+or URL values. Public-worker acquisition checks confirm cleanup. A separate compact
+fault review passed **12 cases** covering base order, empty/malformed base,
+identical/malformed refresh and absolute login independent of base; no additional
+P0–P2 was found in these boundaries. The reviewer diagnostic file was not modified.
+
+Full suite with external sockets forbidden: **1644 passed, 1 skipped** (external
+YouTube opt-in), including local FFmpeg/ffprobe. Ruff lint/format, diff, local
+documentation targets and security/scope checks pass. AST comparison confirms
+that only `_MetadataHTML` changed in runtime code; transport, headers, acquisition,
+identity, provenance, limits and supervisor are unchanged. Exact-head CI is checked
+after publication. No live requests, Docker or Telegram operations were performed;
+one final live test still requires separate owner authorization.
+
 ## Phase 4 functional acceptance (2026-10-15)
 
 Status: **ACCEPTED for the tested functional scope**, as confirmed by the user. This is

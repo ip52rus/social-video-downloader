@@ -229,6 +229,27 @@ Order:
 Where Instagram exposes meaningful format or quality choices, map them into the shared download-options model.
 
 ## Phase 6 - TikTok Provider
+Phase 6B-0 adds an isolated metadata-only harness, not a provider or Telegram route.
+Its bounded transport and supervised worker are verified offline. After the initial
+Set-Cookie-only refusal and independently reviewed correction, a separately
+authorized repeat passed metadata inspection for two full URLs (A/B): 2 HTTP,
+2 extractions, 795,225 body bytes, 3.355 s. Short links and acquisition remain
+unverified. Phase 6B-2 added a separate bounded acquisition CLI with a 180 s global
+deadline. After framing review passed, one authorized live series stopped on A's
+first media GET with HTTP 403: 0 media bytes, B not started, cleanup confirmed.
+Phase 6B-3 restored validated yt-dlp headers and passed focused review. One authorized
+live retest stopped before media GET on 537 bytes of A HTML; the old fallback
+error did not prove challenge. Phase 6B-4 classifies known challenge structure,
+explicit HTML login redirects and unrecognized HTML offline, with sanitized
+diagnostics and no solver or extra requests. Cookies remain forbidden; the cause
+of the earlier media 403 is unproven. Focused classification review found one P2
+in base-relative/multiple-refresh ambiguity; a narrow offline correction makes
+both unknown and retains safe failure. The next gate is a separate owner decision
+about one final live experiment after the correction's checks. No live experiment
+is authorized by this patch.
+No technical GO for a runtime provider is claimed. See
+[experiment procedure and limits](PHASE6_TIKTOK_METADATA.md).
+
 Use the same gated process as Instagram:
 
 1. technical spike;

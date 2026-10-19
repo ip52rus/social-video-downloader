@@ -530,6 +530,110 @@ Reel MVP verification: 32 new cases; focused 142 passed; full 1234 passed, 1 ski
 Ruff lint/format, diff, documentation and security/scope review PASS; no live requests.
 
 ## Phase 6 - TikTok Provider
+- [x] Phase 6B-0: implement and verify the isolated metadata-only harness offline.
+- [x] Phase 6B-1: limited metadata feasibility for two approved full URLs A/B.
+  The initial response-cookie refusal was corrected and independently reviewed;
+  one authorized repeat passed: 2 extractions / 2 HTTP / 795,225 body bytes /
+  3.355 s, exact counters. Two unprobed H.264/AAC MP4 candidates per case.
+  Short-link validation, actual media streams and acquisition remain open.
+
+The [Phase 6B procedure](PHASE6_TIKTOK_METADATA.md) defines strict page/redirect,
+request/body/deadline limits, response-cookie discard, cookie-use/challenge refusal
+and sanitized output. Neither CLI registers TikTok or changes Telegram runtime;
+the original CLI remains metadata-only, while acquisition has a separate gate.
+Only the two-case metadata result above is confirmed; actual sound/silence
+and media acquisition remain unverified. No provider
+GO/NO-GO decision follows from synthetic responses alone.
+Verification: 46 new offline cases; full suite 1516 passed, 1 opt-in external
+YouTube test skipped; local FFmpeg/ffprobe regressions passed. Ruff lint/format,
+diff, documentation links and security/scope review passed. No dependencies,
+application providers, Telegram handlers or deployed configuration changed.
+
+- [x] PR #59 P2 corrections implemented and verified offline: source identity before web mapping and
+  process-group cleanup with an unreaped leader. Both old failures were reproduced;
+  66 harness tests and 22 independent diagnostics pass. Full suite: 1536 passed,
+  1 external opt-in skipped; Ruff lint/format, diff, documentation and security/scope
+  checks pass. Independent P2 re-review subsequently passed before the first live attempt.
+
+- [x] Remove refusal solely on response Set-Cookie; discard every occurrence before
+  passing headers to yt-dlp. Outgoing Cookie and `_set_cookie` remain blocked.
+  Offline regressions cover ordinary HTML, duplicate/case-varied headers, empty
+  cookiejar, later requests and unchanged challenge/login/403/429 refusal.
+  Verification: 70 harness cases (5 new, 1 obsolete refusal case removed),
+  28 retained independent diagnostics passed; full suite 1540 passed, 1 skipped.
+  Ruff lint/format, diff, documentation and security/scope checks pass.
+  Focused independent review subsequently passed, followed by the one repeat above.
+
+- [x] Phase 6B-2: offline preparation of the separate bounded media-acquisition CLI;
+  preserve the metadata CLI guarantee, reuse its supervisor, enforce source
+  provenance, pinned public IPv4/TLS, strict media hosts, byte/disk/time bounds,
+  actual ffprobe/decode, passthrough-only preparation and owned cleanup.
+  Verified: 37 new acquisition cases, 107 focused metadata/acquisition cases;
+  44 retained independent diagnostics pass (one obsolete cookie-policy assertion
+  deselected). Full offline suite: 1577 passed, 1 external opt-in skipped.
+  Local FFmpeg/ffprobe, Ruff lint/format, diff, documentation and security/scope
+  checks pass. The CLI uses a conservative 180 s series ceiling, below the
+  authorized 360 s maximum. No real acquisition was performed.
+- [x] Reproduce and correct the Phase 6B-2 review P2: premature HTTP EOF could
+  accept a decodable MP4 prefix and start B. Both original real-parser reproductions
+  failed before the patch and pass after it. Media now requires one valid
+  Content-Length and exact body completion before ffprobe; unknown length,
+  duplicate/invalid framing and all Transfer-Encoding responses fail closed.
+  Partial A stops the series; parent cleanup removes the owned workspace.
+  Thirteen real-parser regression cases were added; no HTTP framework, new
+  dependencies, fallback, retry, network policy or resource-limit expansion.
+  Verified: 50 acquisition / 120 focused cases passed; 63 retained independent
+  diagnostics passed (three obsolete no-length/chunked-read expectations and one
+  obsolete cookie refusal deselected). Full socket-forbidden suite: 1590 passed,
+  1 external opt-in skipped. Local FFmpeg/ffprobe, Ruff lint/format, diff,
+  documentation and security/scope checks pass; exact-head CI is checked after push.
+- [x] Focused HTTP framing re-review passed at `2dcf034`; one separately
+  authorized live A/B series stopped on A's media HTTP 403. Exact counters:
+  1 extraction / 1 metadata HTTP / 399,282 metadata body bytes, 1 acquisition /
+  1 media HTTP / 0 media bytes, 3.175 s; B not started, cleanup confirmed.
+  Downloaded media, actual audio and Telegram preparation remain unverified.
+- [x] Phase 6B-3: restore only validated yt-dlp HTTP context offline. Preserve the
+  native common/full-page/media UA, installed whole-format-map precedence and
+  canonical publication Referer; reject credentials, unknown headers, collisions
+  and injection before media GET. Signed queries and all old safety bounds remain.
+  Cookies, auth, challenge solving, impersonation and proxies remain forbidden.
+  Verification: 23 new cases; 73 acquisition / 143 focused cases passed, plus
+  63 retained independent boundary diagnostics (4 older policy expectations
+  deselected) and 23 independent HTTP framing cases. Full socket-forbidden suite:
+  1613 passed, 1 external opt-in skipped. Local FFmpeg/ffprobe, Ruff lint/format,
+  diff, documentation and security/scope checks pass; exact-head CI is checked
+  after publication. No live requests or downloads are part of this correction.
+- [x] Headers-only correction passed focused review at `a41e7af`. One separately
+  authorized live retest stopped during A metadata: 537 body bytes, 1 HTTP /
+  1 extraction, 1.5 s, exact counts; 0 media HTTP / acquisitions / bytes.
+  B not started, worker/workspace cleanup confirmed. `challenge_forbidden`
+  identified the empty-universal-data fallback, not a confirmed JS challenge.
+  The earlier media 403 and real download feasibility remain unresolved.
+- [x] Phase 6B-4: classify only already-received HTML as known challenge structure,
+  explicit HTML login redirect or unrecognized metadata HTML. All outcomes fail
+  closed; report only response category/status/type/byte count and boolean flags.
+  Never decode/execute challenge payloads or retain HTML. Preserve source identity,
+  headers, cookie refusal, networking, framing, resource limits and supervisor.
+  Verification: 19 new / 162 focused cases and 50 retained independent
+  header/framing diagnostics pass; full socket-forbidden suite 1632 passed,
+  1 external opt-in skipped. Ruff lint/format, diff, documentation and security/scope
+  checks pass; exact-head CI is checked after publication. See
+  [TESTING](TESTING.md#phase-6b-4-missing-universal-data-classification-offline).
+- [x] Focused independent classification review at `72a8b2d` found one P2:
+  external base with relative login and conflicting refresh incorrectly yielded
+  `login_page_detected`. Four independent failing cases were reproduced unchanged.
+- [x] Correct HTML ambiguity conservatively: any base href with a relative refresh,
+  in either order, or multiple refresh directives yields unrecognized HTML. No base
+  URLs are retained/followed; absolute trusted login and ordinary challenge labels
+  remain available. Add 12 regressions; all 4 former failures / 33 reviewer cases
+  and 174 focused project cases pass. A compact additional fault review passes
+  12 cases without new P0–P2. Full socket-forbidden suite: 1644 passed,
+  1 external opt-in skipped; Ruff lint/format, diff and security/scope checks pass.
+  Exact-head CI is checked after publication. Details are recorded in
+  [TESTING](TESTING.md#phase-6b-4-html-ambiguity-correction-offline).
+- [ ] Separate owner decision about one final live experiment after correction
+  checks. No Provider implementation, retries or Telegram delivery are authorized.
+
 - [ ] Run a technical spike.
 - [ ] Assess real-world reliability and extraction stability.
 - [ ] Make an explicit Go/No-Go decision before implementation.
