@@ -539,7 +539,14 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
   44 focused cases and full suite 1514 passed / 1 external opt-in skipped.
   Ruff lint/format, diff, MIT attribution and security/scope checks pass; exact-head
   CI is checked after publication. See [TESTING](TESTING.md#phase-6c-native-tiktok-offline).
-- [ ] Owner authorization for one bounded native A/B experiment: prove complete
+- [x] First separately authorized native A/B run: A refused as `unsupported_photo`
+  after one metadata response; no media GET, B not run, cleanup confirmed. This
+  is not evidence of a real photo layout because HTML was not retained.
+- [x] Fix key-presence photo detection offline: permit null/empty object/array
+  placeholders only with independently valid video data; refuse populated image
+  data and unknown/conflicting structures. Offline verification: 72 focused cases,
+  full suite 1542 passed / 1 skipped, Ruff and scope review pass. See Phase 6C in TESTING.
+- [ ] Obtain new owner authorization for a bounded native A/B retest: prove complete
   MP4, actual video/audio or absent audio, decode and existing preparation before
   any provider/Telegram integration. Metadata alone is not a technical GO.
 - [ ] Run a technical spike.

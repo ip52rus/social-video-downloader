@@ -154,7 +154,21 @@ def resolve(body, post_id):
             item.get(key) for key in ("privateItem", "isPrivate", "isDRM")
         ):
             raise Refusal("non_public_or_drm")
-        if any(k in obj for obj in (item, video_data) for k in ("imagePost", "imagePostInfo")):
+        photo = False
+        for obj in (item, video_data):
+            for key in ("imagePost", "imagePostInfo"):
+                value = obj.get(key)
+                if value is None or (isinstance(value, (dict, list)) and not value):
+                    continue  # Empty placeholders do not establish either photos or video.
+                images = value.get("images") if isinstance(value, dict) else None
+                if not (
+                    isinstance(images, list)
+                    and images
+                    and all(isinstance(image, dict) and image for image in images)
+                ):
+                    raise Refusal("metadata_schema")
+                photo = True
+        if photo:
             raise Refusal("unsupported_photo")
         video = item["video"]
         addresses = [video.get("playAddr")]

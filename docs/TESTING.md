@@ -35,6 +35,23 @@ FFmpeg/ffprobe. Ruff lint/format, diff, local documentation targets, MIT notice
 comparison and security/scope review pass. Exact-head GitHub CI is checked after
 publication. Only a separately authorized real A/B experiment can close the live gate.
 
+Photo-placeholder regression: the old key-presence check was reproduced failing on
+valid synthetic video with `imagePost=null`. Both photo keys and both source levels
+now accept only null/empty object/empty array placeholders, while still requiring
+valid video data and admitted candidates. Filled image lists, unknown/malformed or
+conflicting structures, identity mismatch, no extra HTTP requests and sanitized
+failure results are covered. Updated offline verification: **72 focused cases
+passed**, full suite **1542 passed, 1 skipped**, with an inherited Python audit
+hook denying socket connections/DNS and synthetic HTTP/local FFmpeg only. Ruff
+lint/format, diff and security/scope checks pass. Code outside `resolve()` is
+unchanged; exact-head CI is verified after publication.
+
+The first owner-authorized native live run was **BLOCKED** on A:
+`unsupported_photo`, one metadata request / 281,910 bytes, 1.376 s, no media request
+or acquisition, B not run, exact counters and successful cleanup. HTML was not
+retained; the actual photo-field values and media availability remain unknown.
+No TikTok/Telegram request or Docker operation was made for the offline fix.
+
 ## Phase 4 functional acceptance (2026-10-15)
 
 Status: **ACCEPTED for the tested functional scope**, as confirmed by the user. This is

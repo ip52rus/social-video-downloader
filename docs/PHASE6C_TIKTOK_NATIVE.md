@@ -30,6 +30,12 @@ Only HTTPS full `www.tiktok.com/@user/video/<decimal_id>` input. Tracking is rem
 story selectors and non-public content are rejected. The only metadata destination
 is the current ID's exact embed route. JSON is parsed, never evaluated as JS.
 Missing/duplicate scripts, duplicate JSON keys and mismatched identity refuse.
+Photo fields (`imagePost` / `imagePostInfo`, in itemInfos or videoData) may be absent
+or contain only a null, empty object or empty array placeholder. These placeholders
+do not establish video: the existing video structure/candidate checks still apply.
+A nonempty `images` array of nonempty image objects refuses as `unsupported_photo`;
+other significant, malformed or conflicting photo structures refuse as
+`metadata_schema`. No image URL is fetched or used as a video candidate.
 
 Media destinations must originate in that item's recognized video address fields.
 Only a numbered `v` video label (optionally a letter and bounded hyphen segments)
@@ -62,6 +68,17 @@ Only the already-reviewed private process-group ownership/termination pattern is
 adapted from PR #59: native DNS/network/FFmpeg calls need a hard deadline. No yt-dlp
 extractor, HTTP framework or old metadata/acquisition flow is imported. The parent
 owns workspace removal after group termination, including error/interrupt paths.
+
+## First native live result and next gate
+
+The owner's one authorized native A/B run stopped on A with `unsupported_photo`:
+one metadata HTTP attempt, 281,910 body bytes, 1.376 seconds, zero media requests/
+acquisitions/bytes, exact counters and completed workspace cleanup. B was not run.
+The HTML was not retained, so its photo-field values are unknown. The old resolver
+refused on key presence alone; an offline regression reproduced that false refusal
+with null/empty placeholders. The fix does not prove that A will now resolve or
+download. Another live run needs new owner authorization; no live request was made
+during this patch. Complete MP4/stream/decode/preparation evidence remains pending.
 
 ## Next separately authorized A/B experiment
 

@@ -150,6 +150,87 @@ def test_embed_real_schema_candidates_and_separate_audio():
     assert n.publication(A + "?utm_source=share#harmless") == ("11111111", A)
 
 
+def photo_page(location, field, value, *, video=True, identity="11111111"):
+    state = json.loads(page(identity=identity).decode().split(">", 1)[1].rsplit("<", 1)[0])
+    data = state["source"]["data"]["/embed/v2/11111111"]["videoData"]
+    target = data["itemInfos"] if location == "itemInfos" else data
+    target[field] = value
+    if not video:
+        data["itemInfos"].pop("video")
+    return ('<script id="__FRONTITY_CONNECT_STATE__">' + json.dumps(state) + "</script>").encode()
+
+
+@pytest.mark.parametrize("location", ["itemInfos", "videoData"])
+@pytest.mark.parametrize("field", ["imagePost", "imagePostInfo"])
+@pytest.mark.parametrize("value", [None, {}, []])
+def test_empty_photo_placeholders_require_valid_video(location, field, value):
+    assert n.resolve(photo_page(location, field, value), "11111111").url == MEDIA
+    with pytest.raises(n.Refusal, match="^metadata_schema$"):
+        n.resolve(photo_page(location, field, value, video=False), "11111111")
+
+
+@pytest.mark.parametrize("location", ["itemInfos", "videoData"])
+@pytest.mark.parametrize("field", ["imagePost", "imagePostInfo"])
+def test_populated_photo_data_still_refused(location, field):
+    value = {"images": [{"imageURL": {"urlList": ["https://images.invalid/private"]}}]}
+    with pytest.raises(n.Refusal, match="^unsupported_photo$"):
+        n.resolve(photo_page(location, field, value), "11111111")
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        False,
+        0,
+        "",
+        "PRIVATE",
+        ["PRIVATE"],
+        {"images": []},
+        {"images": [None]},
+        {"unknown": "PRIVATE"},
+    ],
+)
+def test_unknown_photo_structures_fail_closed(value):
+    with pytest.raises(n.Refusal, match="^metadata_schema$"):
+        n.resolve(photo_page("itemInfos", "imagePost", value), "11111111")
+
+
+def test_empty_photo_does_not_bypass_identity_or_candidate_validation():
+    with pytest.raises(n.Refusal, match="^source_identity_mismatch$"):
+        n.resolve(photo_page("videoData", "imagePostInfo", {}, identity="22222222"), "11111111")
+    body = photo_page("itemInfos", "imagePost", {}).replace(
+        MEDIA.encode(), b"https://evil.invalid/x"
+    )
+    with pytest.raises(n.Refusal, match="^forbidden_media_destination$"):
+        n.resolve(body, "11111111")
+
+
+def test_conflicting_photo_fields_fail_closed():
+    body = photo_page("itemInfos", "imagePost", {"images": [{"imageURL": {"urlList": [MEDIA]}}]})
+    body = body.replace(b'"videoData": {', b'"videoData": {"imagePostInfo": {"unknown": true},')
+    with pytest.raises(n.Refusal, match="^metadata_schema$"):
+        n.resolve(body, "11111111")
+
+
+def test_empty_photo_inspection_uses_only_existing_metadata_request(monkeypatch):
+    wire = network(monkeypatch, {key(EMBED): response(photo_page("videoData", "imagePost", {}))})
+    s = session()
+    assert n.resolve(s.metadata(), "11111111").url == MEDIA
+    assert len(wire.requests) == s.budget["metadata_requests"] == 1
+    assert s.budget["media_requests"] == s.budget["acquisitions"] == 0
+
+
+def test_unknown_photo_stops_after_metadata_without_leaking(monkeypatch, tmp_path):
+    body = photo_page("itemInfos", "imagePost", {"unknown": "PRIVATE_PHOTO"})
+    wire = network(monkeypatch, {key(EMBED): response(body)})
+    result = n._execute([A, B], tmp_path, monotonic() + 10)
+    assert result["error"] == "metadata_schema"
+    assert len(wire.requests) == result["metadata_requests"] == 1
+    assert result["media_requests"] == result["acquisitions"] == 0
+    assert len(result["results"]) == 1 and not list(tmp_path.iterdir())
+    assert all(private not in json.dumps(result) for private in [A, MEDIA, "PRIVATE_PHOTO"])
+
+
 @pytest.mark.parametrize(
     "url",
     [
