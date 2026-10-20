@@ -46,8 +46,9 @@ and HTTPS share links on exact `vm.tiktok.com` / `vt.tiktok.com` hosts are suppo
 Short references must contain one alphanumeric path token without query or fragment;
 redirects resolve only inside the admitted supervised operation. Separate streams and
 retries remain unsupported. This is not a production-readiness or deployment approval.
-Phase 6H passed one full-link live case; the new short-link path is offline-verified
-only and needs its own authorized live gate. See
+Phase 6H passed one full-link live case; Phase 6I passed one owner-authorized `vm`
+short-link delivery/playback case. `vt` remains offline-only; broader mobile-link
+coverage, high-load reliability and general TikTok availability are unverified. See
 [Phase 6I limits and next gate](docs/PHASE6I_TIKTOK_SHORT_LINKS.md).
 
 Optional settings are

@@ -60,14 +60,73 @@ pass. External socket/DNS denial is inherited by Python workers.
 AST/source comparison confirms unchanged pinned transport, framing, acquisition,
 media verification, exchange/reap ownership, native policy constants and public-page
 parser. Domain routing, configuration, dependencies, CI and MIT notice are unchanged.
-The Draft PR requires successful exact committed-head GitHub CI before handoff;
-its checks record the publication result. No real TikTok/Telegram request, polling,
-Docker operation, media download, merge or deployment was performed.
+Implementation HEAD `b08f57d25e4c6ba0815a25c270495f59c17b3703` passed GitHub CI
+[#39511176476](https://github.com/ip52rus/social-video-downloader/actions/runs/39511176476):
+1769 passed / 1 skipped. The offline implementation stage performed no real
+TikTok/Telegram request, polling, Docker operation, media download, merge or deployment.
 
-A separately authorized **one short-link LIVE test** remains required. Only HTTP
-redirects via exact vm/vt intermediates to a full www publication are supported;
+## Owner-confirmed SHORT-LINK LIVE PASS
+
+The separately authorized local Telegram test on that implementation HEAD processed
+one new mobile-app share link on `vm.tiktok.com` through the existing dispatcher,
+provider and supervised public-page worker. No real short token, publication identity,
+user identity or media locator is retained in this evidence.
+
+| Check | Measured result |
+|---|---|
+| Short-link HTTP redirect / final publication validation | PASS, HTTP 301 |
+| Public-page metadata / source identity | PASS, HTTP 200 |
+| Selected media | One candidate from `playAddr` |
+| Media GET / Content-Length completeness | PASS, HTTP 200, complete 1,049,546-byte MP4 |
+| Verified streams / codecs | One H.264 video stream, one AAC audio stream |
+| Resolution / duration | 720×720, 14 seconds |
+| Full FFmpeg decode / Telegram preparation | PASS, passthrough without transcoding |
+| Telegram delivery | One sendVideo attempt; confirmed video Message in the correct chat |
+| Owner playback, orientation and sound check | PASS |
+
+Metadata: 2 HTTP attempts (one short redirect and one public page), 415,102 body bytes.
+Media: 1 HTTP attempt, 1,049,546 bytes; one acquisition, `counts_exact=true`.
+Redirect bodies were not read and are excluded from the byte counter, as are headers
+and wire overhead. Native operation: 3.409 s. The 643.211 s controlled-runner lifetime
+includes waiting for the owner's message and is not download/upload latency.
+The file remained present through the successful Telegram API response; worker reap
+completed before upload. Polling stopped, Bot API session closed, worker/FFmpeg and
+private/caller workspace cleanup passed. Containers remained exited. No retry,
+fallback, merge or deployment occurred.
+
+With the owner's explicit permission, pre-existing updates were left untouched:
+getUpdates used no offset/acknowledgement/deletion and only a new message containing
+the approved reference was fed once through the existing dispatcher. Restart replay
+prevention and ordinary polling queue acknowledgement were not validated by this test.
+
+This closes the single-case `vm.tiktok.com` end-to-end gate. `vt.tiktok.com` has
+offline coverage only, not a separate live test. A broader set of mobile links and
+high-load reliability remain unverified. Earlier TikTok HTTP 429/403 outcomes are
+historical limitations and have not been universally eliminated.
+
+## Final documentation and review
+
+The docs-only preparation repeated the full network-blocked offline suite:
+**1769 passed, 1 skipped**, 219.88 s. The opt-in real YouTube case remained skipped;
+the Python socket/DNS guard was inherited and checked in a child process. Ruff
+lint/format, diff-check, privacy and local-link checks passed.
+
+Final review against main `fc7868610efb7bebb66b7873273ff2a4cf939c99` found no new
+code defect. Admission precedes network resolution; the existing transport, public-page
+parser, policy constants, supervisor exchange/reap and handler ownership remain intact.
+Full-link requests gain no extra HTTP; default two-per-process/one-per-user capacity,
+quarantine, YouTube/Instagram routes, configuration, dependencies and MIT notice are
+unchanged. Documentation alone records the live result; no new platform request,
+polling, container start, merge or deployment is performed. Exact documentation-head
+CI must pass before handoff; its result is recorded in PR #66 GitHub checks.
+
+## Remaining limits and next decision
+
+Only HTTP redirects via exact vm/vt intermediates to a full www publication are supported;
 other intermediate routes, query-bearing short links and HTML/JS navigation refuse.
 The 20-second sub-deadline is cooperative: blocked DNS is ultimately bounded by the
 existing hard 180-second process supervisor, not a separate DNS timer. Discovering a
 canonical URL does not prove MP4 availability; existing 403/429 outcomes remain
-possible. Merge and deployment need independent owner decisions after live evidence.
+possible. Final documentation/review preparation requires exact new-head CI before
+handoff. Merge and deployment remain separate owner decisions; neither is performed
+or authorized by the documentation preparation.

@@ -60,8 +60,10 @@ Instagram's separate opt-in/production restriction is unchanged. Phase 6H passed
 one separately authorized full-link public-user live case. Phase 6I additionally
 admits HTTPS `vm.tiktok.com`/`vt.tiktok.com` share links with one alphanumeric token
 and no query/fragment. Expansion starts only in the admitted supervised worker and
-shares the original operation budgets. The new short-link path is offline-only so
-far; no polling, deployment or live test is implied by its implementation. Diagnostic
+shares the original operation budgets. A separately authorized test passed for one
+`vm` mobile share link, including Telegram delivery and owner playback/orientation/
+sound confirmation; `vt` remains offline-only. Broader mobile-link/high-load behavior
+and general reliability remain unverified; no deployment is implied. Diagnostic
 embed/public-page CLI and benchmark retain their full-link interfaces. See
 [Phase 6I](PHASE6I_TIKTOK_SHORT_LINKS.md).
 

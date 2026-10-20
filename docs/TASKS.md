@@ -649,8 +649,24 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
   PASS; full network-blocked 1769 passed / 1 skipped, Ruff/diff/privacy/security/link
   checks PASS. Exact Draft PR HEAD CI is required before handoff; see
   [Phase 6I](PHASE6I_TIKTOK_SHORT_LINKS.md).
-- [ ] Separately authorize one controlled short-link LIVE test, then independently
-  decide merge/deployment. No real short-link request is authorized by preparation.
+- [x] Owner-authorized SHORT-LINK LIVE PASS on `b08f57d`: one new mobile-app `vm`
+  share link, HTTP 301 redirect, validated full publication/source ID, public-page
+  metadata HTTP 200, one `playAddr`, complete 1,049,546-byte MP4 via HTTP 200.
+  H.264/AAC (one video/one audio), 720×720, 14 s, full decode and passthrough PASS;
+  one confirmed sendVideo and owner playback/orientation/sound PASS. Metadata
+  2 attempts / 415,102 bytes, media 1 attempt, one acquisition, exact counters,
+  native 3.409 s. Polling/session, worker/FFmpeg and workspace cleanup PASS;
+  containers stayed exited, no retry/fallback/merge/deployment. Old updates were
+  preserved unacknowledged by explicit owner approval; restart replay was not tested.
+  See [Phase 6I live evidence](PHASE6I_TIKTOK_SHORT_LINKS.md#owner-confirmed-short-link-live-pass).
+- [x] Final PR #66 documentation and code/scope review: no new defect found;
+  full network-blocked pytest 1769 passed / 1 skipped (219.88 s), Ruff/diff/privacy
+  and local links PASS. Only docs changed; exact documentation-head CI is required
+  before handoff and recorded in GitHub checks.
+- [ ] Independently decide PR #66 merge and deployment after successful exact
+  documentation-head CI. The live gate covers one `vm` URL; `vt` remains
+  offline-only. Broader mobile-link coverage, high-load behavior and general TikTok
+  reliability remain unverified; historical HTTP 429/403 are not universally resolved.
 
 ## Phase 7 - Additional Social Platforms
 - [ ] Select candidate platforms based on user demand, feasibility, legal/platform restrictions, extraction reliability, and maintenance burden.
