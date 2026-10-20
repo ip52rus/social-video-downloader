@@ -1,5 +1,9 @@
 # Phase 6H — Public TikTok MVP
 
+Historical stage record: PR #65 merged at main `fc78686` after successful CI.
+[Phase 6I](PHASE6I_TIKTOK_SHORT_LINKS.md) adds offline short-link support; the original
+full-link acceptance below did not test it. No deployment is implied by either stage.
+
 ## Decision and scope
 
 Phase 6G verified one real public-page download and owner-confirmed Telegram playback,

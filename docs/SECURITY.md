@@ -109,6 +109,21 @@ unchanged. These are process-local controls, not distributed capacity management
 proof of platform availability. Public live acceptance/deployment require separate
 authorization; see [Phase 6H](PHASE6H_TIKTOK_PUBLIC_MVP.md).
 
+Phase 6I permits short-reference resolution only inside the admitted worker. Exact
+HTTPS vm/vt hosts and bounded alphanumeric token paths are accepted; query, fragment,
+credentials, ports and unknown paths are refused. Every redirect destination is
+validated before connect, using the original public-IPv4 pinning and TLS/SNI checks.
+Only short intermediates or a full video accepted by `native.publication()` are
+allowed; external hosts, IP literals, login/photo/media destinations and cycles fail
+closed. Redirect bodies are ignored, not executed or saved, and headers retain the
+existing cap. The original redirect/request budget applies, with a 20-second
+cooperative short-resolution deadline inside the hard 180-second worker bound.
+No header/CDN/cookie-policy expansion is introduced. Standard scoped anonymous cookies
+stay operation-local and are cleared on all outcomes. Tokens/queries, publication
+locators, HTML and cookie values are absent from reports/user errors. No short-link
+network activity occurs in admission/planning; capacity, cancellation, quarantine
+and upload ownership remain unchanged. See [Phase 6I](PHASE6I_TIKTOK_SHORT_LINKS.md).
+
 ## Experimental Instagram provider
 
 The first Reel provider uses only anonymous extraction: no supplied cookies, browser

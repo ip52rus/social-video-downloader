@@ -85,7 +85,7 @@ class TelegramTikTokHandler:
         try:
             url = self._provider.canonical_url(raw_url)
         except DownloaderError:
-            await _notice(message, "Отправь полную ссылку на отдельное публичное TikTok-видео.")
+            await _notice(message, "Отправь полную или короткую ссылку на публичное TikTok-видео.")
             return
         if self._blocked:
             await _notice(

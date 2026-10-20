@@ -288,15 +288,37 @@ prevention was not tested.
 Final documentation-only preparation and PR review passed, including another full
 network-blocked offline run (1716 passed / 1 skipped, 186.73 s), Ruff/diff/privacy
 checks and 30 internal links/anchors. Source/configuration/dependencies/CI are unchanged
-by that update. Next is successful exact documentation-head CI (see Draft PR #65
-checks) and a separate owner merge decision. Deployment is not authorized. One success
-does not validate scalability, short links (unsupported), general TikTok reliability or
-production readiness; earlier 429/403 remain historical
-limitations, not universally resolved outcomes. See
+by that update. Documentation-head CI passed; PR #65 then merged at main `fc78686`
+with successful post-merge CI. Deployment was not performed. The full-link success
+does not validate scalability or general TikTok reliability; earlier 429/403 remain
+historical limitations, not universally resolved outcomes.
+
+Phase 6I prepares exact vm/vt HTTPS short share links using the same native transport
+and owned worker. Local intake remains network-free; resolution starts after user/
+process admission and consumes the original metadata request budget and deadline.
+Only verified full-video destinations reach the existing public-page parser and one
+media acquisition. No fallback, retry, CDN/header/cookie-policy expansion or second
+HTTP client is introduced. Offline verification passed: 53 targeted tests, full
+1769 passed / 1 skipped, Ruff/diff/privacy/security/link checks. Implementation HEAD
+`b08f57d` passed CI #39511176476. The separately authorized SHORT-LINK LIVE test then
+passed for one new mobile-app `vm.tiktok.com` link: HTTP 301 redirect, valid full
+publication/source ID, public page 200, one `playAddr`, one complete 1,049,546-byte
+MP4 (200), H.264/AAC, full decode and passthrough, one confirmed Telegram video and
+owner playback/orientation/sound confirmation. Metadata 2 attempts / 415,102 bytes,
+media 1 attempt, one acquisition, exact counters; native operation 3.409 s.
+Polling/session, worker/FFmpeg and workspace cleanup passed; containers stayed exited,
+without retry, fallback, merge or deployment. Old updates were preserved without
+acknowledgement by owner permission; restart replay prevention was not tested.
+Live coverage is one `vm` link; `vt` remains offline-only, and broader mobile-link
+coverage/high-load stability are unverified. Earlier 429/403 are not universally
+resolved. Final docs-only review found no new defect; full network-blocked pytest
+again passed (1769 passed / 1 skipped, 219.88 s), with Ruff/diff/privacy/link checks.
+Next gates: exact documentation-head CI, then independent merge and deployment
+decisions. General TikTok reliability is not established. See
 [Phase 6C](PHASE6C_TIKTOK_NATIVE.md), [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md),
 [Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md), [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md),
-[Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md) and
-[Phase 6H](PHASE6H_TIKTOK_PUBLIC_MVP.md).
+[Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md),
+[Phase 6H](PHASE6H_TIKTOK_PUBLIC_MVP.md) and [Phase 6I](PHASE6I_TIKTOK_SHORT_LINKS.md).
 
 Use the same gated process as Instagram:
 

@@ -4,6 +4,66 @@ Instagram's current narrow live acceptance is recorded in
 [Instagram live acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
 Earlier sections retain the evidence and open gates at each historical stage.
 
+## Phase 6I short TikTok share links (offline and controlled LIVE)
+
+Short-reference tests use synthetic HTTP parsed by the real HTTP parser, generated
+local MP4 and fake Telegram. Exact vm/vt host/path admission and capability planning
+are network-free. Tests cover both hosts, multiple redirects, cycles/hop limits,
+ambiguous Location, external/IP/login/photo destinations, public-IP/TLS policy,
+identity mismatch, deadline/request budget refusal and no short/Embed/CLI fallback.
+Redirect bodies are not read; scoped cookies are transferred only within the current
+publication and cleared on error. Full links retain one metadata resolution without
+short-link overhead. Reports/messages contain no tokens, locators, HTML or cookies.
+
+Actual supervised workers exercise short-link MP4/decode/preparation/upload lifetime,
+two concurrent short-link users with separate workspaces, hard timeout and cancellation
+while short HTTP resolution is demonstrably active, worker reap and caller cleanup.
+Synthetic admission tests additionally hold two slots, reject third/same-user work
+before network, and keep a cancelled resolver's slot until ownership settles without
+interrupting the other user's upload. Existing quarantine/repeated-cancel, silent/full
+video, HTTP/framing limits, embed/benchmark, YouTube and Instagram remain regressions.
+
+**53 targeted PASS; full offline 1769 passed / 1 skipped**, 227.63 s, with inherited
+external socket/DNS denial in Python workers. Ruff lint/format, diff-check, local
+links and privacy/scope/security review PASS. AST/source review confirms existing
+transport/framing/acquisition/verification, supervisor exchange/reap, native policy
+constants, public parser, configuration, dependencies, CI and MIT notice unchanged.
+Implementation HEAD `b08f57d` passed CI #39511176476 (1769 passed / 1 skipped).
+The offline stage performed no real TikTok/Telegram, polling, Docker or media download.
+See [Phase 6I design and limitations](PHASE6I_TIKTOK_SHORT_LINKS.md).
+
+### SHORT-LINK LIVE PASS on the implementation HEAD
+
+A separately authorized local Telegram test processed one new `vm.tiktok.com`
+mobile-app share link on `b08f57d`. The short redirect returned 301; final publication
+validation and public-page metadata/source identity passed (page HTTP 200). One
+`playAddr` candidate produced one complete MP4 via HTTP 200: 1,049,546 bytes,
+one H.264 video stream and one AAC audio stream, 720×720, 14 seconds. Full FFmpeg
+decode and passthrough preparation passed. One sendVideo returned a confirmed video
+Message in the correct chat, with the file present through the response. The owner
+confirmed playback, orientation and sound.
+
+Metadata: 2 attempts / 415,102 body bytes; media: 1 attempt / 1,049,546 bytes;
+one acquisition and one upload attempt, exact counters. Unread redirect bodies,
+headers and wire overhead are excluded from body-byte counters. Native operation:
+3.409 s; controlled runner: 643.211 s including waiting for the owner's message,
+not a measured download/upload duration. Polling/session, worker/FFmpeg and both
+workspaces were cleaned; containers stayed exited. No retry, fallback, merge or
+deployment. With owner approval, old updates stayed unacknowledged and untouched;
+only a new approved-link update was fed once to the existing dispatcher. Restart
+replay prevention and ordinary polling acknowledgement were not validated.
+
+Live evidence covers one `vm` link only. `vt` has offline coverage, no separate live
+test; broader mobile-link coverage, high-load behavior and general reliability are
+unverified. Previous HTTP 429/403 remain possible. See
+[the detailed acceptance](PHASE6I_TIKTOK_SHORT_LINKS.md#owner-confirmed-short-link-live-pass).
+
+Final docs-only preparation repeated the full network-blocked suite: **1769 passed,
+1 skipped**, 219.88 s. Ruff lint/format, diff-check, local links, privacy/security and
+final PR review passed. No Python/configuration/dependency/CI changes or new real
+platform calls were made. Exact new documentation-head CI is required before handoff
+(PR #66 checks); merge and deployment remain separate owner decisions.
+
 ## Phase 6H public TikTok MVP (offline and controlled LIVE)
 
 **356 focused PASS; full offline 1716 passed / 1 skipped**, 191.87 s. The skipped

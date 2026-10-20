@@ -147,6 +147,18 @@ the reservation and globally blocks new work; other already admitted operations 
 their independent ownership. Instagram admission is unchanged. See
 [Phase 6H decision, limitations and acceptance](PHASE6H_TIKTOK_PUBLIC_MVP.md).
 
+Phase 6I adds pure short-reference admission to the same provider. Only after the
+handler reserves a user/process slot does its owned worker expand exact vm/vt share
+hosts. `ShortLinkSession` inherits `Session.open`/the pinned transport, validating
+short intermediates or a final `native.publication()` destination before connection.
+A private control-flow signal stops at that final redirect without a duplicate page
+GET. The normal public-page parser then checks source ID and obtains one playAddr.
+The operation-local cookiejar and original metadata budgets span both stages; tokens
+and resolved publication locators are not added to reports. Existing transport,
+media/verification/export, supervisor and handler ownership are reused. Only internal
+public-page export opts in; embed, benchmark and diagnostic CLI behavior stays intact.
+See [Phase 6I design and live gate](PHASE6I_TIKTOK_SHORT_LINKS.md).
+
 ### Historical Reel-only opt-in MVP design
 
 The original Reel-only stage reused `InstagramProvider`, `DownloadedMedia` and the
