@@ -42,9 +42,13 @@ TikTok public-video delivery is an explicit opt-in: set
 TikTok operations per bot process and one per user; set
 `TIKTOK_MAX_CONCURRENT_OPERATIONS` to an integer 1–8 to adjust the process limit.
 Saturated requests receive a busy response without queuing. Full public video URLs
-are supported; short links, separate streams and retries are not. This configuration
-permission is not a production-readiness claim or deployment approval. See
-[Phase 6H and its separate acceptance gate](docs/PHASE6H_TIKTOK_PUBLIC_MVP.md).
+and HTTPS share links on exact `vm.tiktok.com` / `vt.tiktok.com` hosts are supported.
+Short references must contain one alphanumeric path token without query or fragment;
+redirects resolve only inside the admitted supervised operation. Separate streams and
+retries remain unsupported. This is not a production-readiness or deployment approval.
+Phase 6H passed one full-link live case; the new short-link path is offline-verified
+only and needs its own authorized live gate. See
+[Phase 6I limits and next gate](docs/PHASE6I_TIKTOK_SHORT_LINKS.md).
 
 Optional settings are
 APP_ENV (development, test, or production), LOG_LEVEL (DEBUG, INFO, WARNING, ERROR, or

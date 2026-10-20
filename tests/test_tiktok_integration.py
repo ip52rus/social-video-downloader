@@ -95,7 +95,7 @@ class FixtureProvider(TikTokProvider):
 def test_provider_local_capabilities_and_modes_need_no_http(monkeypatch, tmp_path):
     provider = TikTokProvider()
     monkeypatch.setattr(n, "download_video", lambda *a, **k: pytest.fail("Unexpected acquisition"))
-    assert provider.can_handle(A) and not provider.can_handle("https://vm.tiktok.com/fixture")
+    assert provider.can_handle(A) and provider.can_handle("https://vm.tiktok.com/Synthetic01/")
     assert provider.extract_metadata(A + "?tracking=1").source_url == A
     plan = DownloadService((provider,)).create_choice_plan(A)
     assert plan.state is ChoicePlanState.DIRECT_DOWNLOAD
@@ -207,7 +207,7 @@ async def test_invalid_user_identity_denies_before_provider(user):
     "url",
     [
         "https://www.tiktok.com/@fixture",
-        "https://vm.tiktok.com/example",
+        "https://vm.tiktok.com/invalid/extra/",
         "http://www.tiktok.com/@fixture/video/11111111",
         A.replace("/video/", "/photo/"),
         A + "?img_index=1",

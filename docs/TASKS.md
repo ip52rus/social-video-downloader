@@ -639,10 +639,18 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
 - [x] Final PR #65 docs-only preparation: LIVE evidence recorded without private data,
   final diff/security review PASS, full network-blocked pytest 1716 passed / 1 skipped
   (186.73 s), Ruff/diff PASS and 30 local links/anchors PASS. Exact documentation-head
-  CI is required before handoff and reported in PR checks; PR remains Draft.
-- [ ] Obtain separate merge authorization for Draft PR #65 after exact new-head CI.
-  Deployment is a separate gate. One public scenario does not prove scalability,
-  short-link support, all-publication support, general reliability or production readiness.
+  CI passed on documentation HEAD `a662406` before handoff.
+- [x] Owner-authorized PR #65 merge completed at main `fc78686`, post-merge CI SUCCESS.
+  No deployment followed. The one full-link case does not prove short-link support,
+  all-publication support, scalability, general reliability or production readiness.
+- [x] Phase 6I offline short-link support: pure vm/vt admission, resolution inside the
+  existing supervised public-page operation after slot reservation, bounded pinned
+  redirects, shared metadata budget/cookies, no retry or Embed fallback. 53 targeted
+  PASS; full network-blocked 1769 passed / 1 skipped, Ruff/diff/privacy/security/link
+  checks PASS. Exact Draft PR HEAD CI is required before handoff; see
+  [Phase 6I](PHASE6I_TIKTOK_SHORT_LINKS.md).
+- [ ] Separately authorize one controlled short-link LIVE test, then independently
+  decide merge/deployment. No real short-link request is authorized by preparation.
 
 ## Phase 7 - Additional Social Platforms
 - [ ] Select candidate platforms based on user demand, feasibility, legal/platform restrictions, extraction reliability, and maintenance burden.

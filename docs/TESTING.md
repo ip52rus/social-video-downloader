@@ -4,6 +4,35 @@ Instagram's current narrow live acceptance is recorded in
 [Instagram live acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
 Earlier sections retain the evidence and open gates at each historical stage.
 
+## Phase 6I short TikTok share links (offline)
+
+Short-reference tests use synthetic HTTP parsed by the real HTTP parser, generated
+local MP4 and fake Telegram. Exact vm/vt host/path admission and capability planning
+are network-free. Tests cover both hosts, multiple redirects, cycles/hop limits,
+ambiguous Location, external/IP/login/photo destinations, public-IP/TLS policy,
+identity mismatch, deadline/request budget refusal and no short/Embed/CLI fallback.
+Redirect bodies are not read; scoped cookies are transferred only within the current
+publication and cleared on error. Full links retain one metadata resolution without
+short-link overhead. Reports/messages contain no tokens, locators, HTML or cookies.
+
+Actual supervised workers exercise short-link MP4/decode/preparation/upload lifetime,
+two concurrent short-link users with separate workspaces, hard timeout and cancellation
+while short HTTP resolution is demonstrably active, worker reap and caller cleanup.
+Synthetic admission tests additionally hold two slots, reject third/same-user work
+before network, and keep a cancelled resolver's slot until ownership settles without
+interrupting the other user's upload. Existing quarantine/repeated-cancel, silent/full
+video, HTTP/framing limits, embed/benchmark, YouTube and Instagram remain regressions.
+
+**53 targeted PASS; full offline 1769 passed / 1 skipped**, 227.63 s, with inherited
+external socket/DNS denial in Python workers. Ruff lint/format, diff-check, local
+links and privacy/scope/security review PASS. AST/source review confirms existing
+transport/framing/acquisition/verification, supervisor exchange/reap, native policy
+constants, public parser, configuration, dependencies, CI and MIT notice unchanged.
+Exact-head Draft PR CI is required before handoff and recorded in GitHub checks.
+No real TikTok/Telegram, polling, Docker or media download was performed. A future
+single short-link live test is a separate gate, not established by fixtures.
+See [Phase 6I design and limitations](PHASE6I_TIKTOK_SHORT_LINKS.md).
+
 ## Phase 6H public TikTok MVP (offline and controlled LIVE)
 
 **356 focused PASS; full offline 1716 passed / 1 skipped**, 191.87 s. The skipped

@@ -44,7 +44,7 @@ Use Conventional Commit prefixes. One coherent change per commit.
 ## Synchronization
 After each commit, verify the commit SHA and branch state. After each push, verify the remote branch and CI. Do not overwrite unrelated local work while synchronizing.
 
-## Public TikTok configuration (Phase 6H)
+## Public TikTok configuration
 
 TikTok remains disabled by default. `TIKTOK_TELEGRAM_ENABLED=true` enables supported
 full public-video URLs for any Telegram user, including in production configuration.
@@ -56,9 +56,14 @@ Cleanup failure blocks new TikTok requests and retains quarantine for operator
 inspection; do not force-delete workspaces while a worker may still own them.
 The Compose template forwards the flag/capacity with false/2 defaults; this is
 configuration preparation only, without running Docker or changing the real `.env`.
-Instagram's separate opt-in/production restriction is unchanged. This stage is
-implemented and tested offline only: no polling, deployment or public live acceptance
-is implied. See [Phase 6H](PHASE6H_TIKTOK_PUBLIC_MVP.md).
+Instagram's separate opt-in/production restriction is unchanged. Phase 6H passed
+one separately authorized full-link public-user live case. Phase 6I additionally
+admits HTTPS `vm.tiktok.com`/`vt.tiktok.com` share links with one alphanumeric token
+and no query/fragment. Expansion starts only in the admitted supervised worker and
+shares the original operation budgets. The new short-link path is offline-only so
+far; no polling, deployment or live test is implied by its implementation. Diagnostic
+embed/public-page CLI and benchmark retain their full-link interfaces. See
+[Phase 6I](PHASE6I_TIKTOK_SHORT_LINKS.md).
 
 ## Controlled main-bot Reel smoke
 

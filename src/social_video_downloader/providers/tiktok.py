@@ -20,6 +20,7 @@ from social_video_downloader.domain.models import (
     Platform,
 )
 from social_video_downloader.infrastructure import tiktok_native as native
+from social_video_downloader.infrastructure.tiktok_short_links import is_short, reference
 
 
 class TikTokProvider:
@@ -27,10 +28,11 @@ class TikTokProvider:
 
     @staticmethod
     def canonical_url(url: str) -> str:
+        # Short forms remain local references here; only the owned worker resolves them.
         try:
-            return native.publication(url.strip())[1]
+            return reference(url.strip())
         except Exception:
-            raise InvalidMediaURLError("Public TikTok video URL required.") from None
+            raise InvalidMediaURLError("Public TikTok video or short share URL required.") from None
 
     def can_handle(self, url: str) -> bool:
         try:
@@ -62,7 +64,11 @@ class TikTokProvider:
             raise UnsupportedQualityError("TikTok quality selection is unavailable.")
         try:
             video = native.download_video(
-                canonical, output_dir, cancelled=cancelled, public_page=True
+                canonical,
+                output_dir,
+                cancelled=cancelled,
+                public_page=True,
+                **({"short_links": True} if is_short(canonical) else {}),
             )
         except native.Refusal as exc:
             category = str(exc)

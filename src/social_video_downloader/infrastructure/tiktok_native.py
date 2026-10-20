@@ -522,7 +522,15 @@ def _series_limit(budget, deadline):
     return None
 
 
-def _execute(urls, workspace, deadline, expectations=None, keep_file=False, public_page=False):
+def _execute(
+    urls,
+    workspace,
+    deadline,
+    expectations=None,
+    keep_file=False,
+    public_page=False,
+    short_links=False,
+):
     benchmark = expectations is not None
     detailed = benchmark or public_page
     budget, results, first_error, stop_reason = _budget(), [], None, None
@@ -537,6 +545,19 @@ def _execute(urls, workspace, deadline, expectations=None, keep_file=False, publ
         session = None
         previous = budget.copy()
         try:
+            if short_links and (not public_page or len(urls) != 1):
+                raise Refusal("invalid_input")
+            short_jar = None
+            if short_links:
+                from social_video_downloader.infrastructure.tiktok_short_links import (
+                    ShortLinkSession,
+                    is_short,
+                )
+
+                if is_short(url):
+                    session = ShortLinkSession(deadline, budget)
+                    url = session.resolve(url)
+                    short_jar = session.jar
             post_id, canonical = publication(url)
             if public_page:
                 from social_video_downloader.infrastructure.tiktok_public_page import (
@@ -545,6 +566,8 @@ def _execute(urls, workspace, deadline, expectations=None, keep_file=False, publ
                 )
 
                 session = _PublicPageMediaSession(post_id, canonical, deadline, budget)
+                if short_jar is not None:
+                    session.jar = short_jar
                 resolved = resolve_public_page(session.metadata(), canonical)
             else:
                 session = Session(post_id, canonical, deadline, budget)
@@ -623,6 +646,7 @@ def _worker_main():
                 request.get("expectations"),
                 request.get("keep_file", False),
                 request.get("public_page", False),
+                request.get("short_links", False),
             )
         ),
         flush=True,
@@ -681,12 +705,16 @@ def _exchange(process, payload, deadline, output, cancelled=None):
         sleep(0.01)
 
 
-def run(urls, *, benchmark=False, output_dir=None, cancelled=None, public_page=False):
+def run(
+    urls, *, benchmark=False, output_dir=None, cancelled=None, public_page=False, short_links=False
+):
     started = monotonic()
     expectations = None
     try:
         if public_page and (benchmark or not isinstance(urls, list) or len(urls) != 1):
             raise Refusal("one_public_page_url_required")
+        if short_links and (not public_page or benchmark or output_dir is None):
+            raise Refusal("invalid_input")
         if not isinstance(urls, list) or not 0 < len(urls) <= (4 if benchmark else 2):
             raise Refusal("one_or_two_full_urls_required")
         if benchmark:
@@ -699,7 +727,11 @@ def run(urls, *, benchmark=False, output_dir=None, cancelled=None, public_page=F
                 raise Refusal("invalid_benchmark_cases")
             expectations = [case["require_audio"] for case in urls]
             urls = [case["url"] for case in urls]
-        if len({publication(u)[0] for u in urls}) != len(urls):
+        if short_links:
+            from social_video_downloader.infrastructure.tiktok_short_links import reference
+
+            urls = [reference(urls[0])]
+        elif len({publication(u)[0] for u in urls}) != len(urls):
             raise Refusal("duplicate_publication")
         if output_dir is not None:
             if benchmark or len(urls) != 1 or Path(output_dir).is_symlink():
@@ -745,6 +777,7 @@ def run(urls, *, benchmark=False, output_dir=None, cancelled=None, public_page=F
                     "urls": urls,
                     "deadline": started + SECONDS,
                     **({"public_page": True} if public_page else {}),
+                    **({"short_links": True} if short_links else {}),
                     **({"expectations": expectations} if benchmark else {}),
                     **({"expectations": expectations, "keep_file": True} if output_dir else {}),
                 }
@@ -861,19 +894,22 @@ class NativeVideo:
     parameters: dict
 
 
-def download_video(url, output_dir, *, cancelled=None, public_page=False):
+def download_video(url, output_dir, *, cancelled=None, public_page=False, short_links=False):
     """Publish one verified file into the caller's owned workspace, without upload.
 
     Only this operation's fixed destination is created, with exclusive hard-link
     publication after worker termination/reap. Existing files are never replaced.
     The caller must keep its workspace until delivery and then remove the file.
     ``public_page=True`` explicitly selects the verified page path, with no fallback.
+    ``short_links=True`` is limited to this internal single-publication export path;
+    the diagnostic CLI cannot opt into resolving short references.
     """
     result = run(
         [url],
         output_dir=output_dir,
         cancelled=cancelled,
         **({"public_page": True} if public_page else {}),
+        **({"short_links": True} if short_links else {}),
     )
     if not result.get("success"):
         raise Refusal(result.get("error", "worker_failed"))
