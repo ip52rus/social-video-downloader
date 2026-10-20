@@ -249,10 +249,16 @@ The owner then authorized Phase 6D offline integration in a new stacked branch:
 one reusable native engine, standard-video/silent-capable provider and a default-off
 Telegram handler restricted to configured test users in development/test. The native
 CLI/benchmark, original limits and working YouTube/Instagram paths are preserved.
-The next gate is independent review followed by separately authorized controlled
-Telegram acceptance. No real TikTok/Telegram request, activation, deployment or merge
-is part of implementation. See [Phase 6C](PHASE6C_TIKTOK_NATIVE.md) and
-[Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md).
+Controlled owner-authorized Telegram attempts subsequently started and stopped
+correctly but received embed metadata HTTP 429 before any media GET/upload. Real
+Telegram video delivery remains unverified. Phase 6E confirms equivalent CLI/provider
+HTTP and prepares a separate public-page universal-state parser/session adapter,
+without modifying the working embed/Telegram paths or adding fallback. Source
+inspection and synthetic tests justify one separately authorized supervised
+metadata-only page experiment; they do not establish that it avoids 429. No live
+request, deployment or merge is part of preparation. See
+[Phase 6C](PHASE6C_TIKTOK_NATIVE.md), [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md) and
+[Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md).
 
 Use the same gated process as Instagram:
 
