@@ -4,7 +4,7 @@ on:
   push:
     branches: ["main"]
   pull_request:
-    branches: ["main", "feat/tiktok-native-public", "feat/tiktok-telegram-integration", "feat/tiktok-public-page-prototype"]
+    branches: ["main", "feat/tiktok-native-public", "feat/tiktok-telegram-integration", "feat/tiktok-public-page-prototype", "feat/tiktok-public-page-mp4"]
 
 jobs:
   quality:

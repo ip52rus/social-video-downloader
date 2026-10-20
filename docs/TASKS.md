@@ -580,11 +580,13 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
 - [x] Separately authorized controlled Telegram attempts on PR #61 started polling
   and processed one owner message each, then stopped on embed metadata HTTP 429;
   one metadata request per attempt, no media GET/acquisition/upload, exact counters
-  and process/session/workspace cleanup. No successful Telegram video delivery yet.
-- [ ] Complete independent Phase 6D review before further activation. See
+  and process/session/workspace cleanup. No delivery in those embed attempts;
+  subsequent public-page Phase 6G delivery passed as recorded below.
+- [ ] Complete independent Phase 6D review before broader activation. See
   [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md); initial offline checks are not live delivery.
-- [ ] Validate real Telegram delivery within that approved scope before deciding
-  further activation, production readiness or broader TikTok UX/quality support.
+- [x] Validate restricted real Telegram delivery through the subsequent public-page
+  Phase 6G path below. The old embed failures remain; broader activation, production
+  readiness and wider TikTok UX/quality support are not accepted by this one case.
 - [x] Phase 6E source comparison: standalone and Telegram have identical shared
   transport/canonicalization; tracking queries are removed. No client-side cause
   of HTTP 429 established. Public-page universal-state schema corroborated by
@@ -595,7 +597,7 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
   Ruff, diff/documentation and scope/security PASS. Evidence: [TESTING](TESTING.md).
 - [x] Separately authorized Phase 6E metadata-only experiment on `4265328`: HTTP 200,
   matching source ID, one admitted `playAddr`, 1 request / 405,981 bytes, 2.632 s,
-  exact counters and cleanup PASS. No media GET; MP4 availability remains untested.
+  exact counters and cleanup PASS. No media GET in that gate; see later Phase 6F below.
   See [Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md).
 - [x] Implement and verify Phase 6F offline: explicit one-publication `--public-page`
   acquisition using the same transport, verifier and process supervisor. Preserve
@@ -603,9 +605,25 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
   PASS, full offline 1678 passed / 1 skipped, six supplemental fault injections,
   Ruff and scope/security PASS. Exact-head publication CI is required before handoff. See
   [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md).
-- [ ] Obtain separate authorization for one public-page MP4 live test, then verify
-  actual completeness, streams, full decode, preparation and cleanup. No automatic
-  fallback, bot activation, merge or general reliability claim follows from metadata.
+- [x] Separately authorized Phase 6F MP4 test on `f31fdb5`: complete 571,013-byte MP4,
+  matching source ID, one playAddr, H.264/AAC, 576×1024, 12 s per CLI, full decode and
+  passthrough PASS. One metadata request / 410,890 bytes, one media request (200),
+  one acquisition, 5.506 s, exact counters and cleanup PASS. No Telegram delivery.
+- [x] Implement and verify Phase 6G offline: internal public-page export to caller
+  workspace, existing provider/handler with silent support, no embed fallback.
+  19 new cases / 226 focused PASS, full offline 1696 passed / 1 skipped; Ruff,
+  diff-check and scope/security PASS. Exact-head CI is required before handoff. See
+  [Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md).
+- [x] Owner-authorized Phase 6G LIVE PASS on `5896383`: one queued owner message,
+  public-page metadata / matching ID, one media GET (200), complete 571,013-byte
+  H.264/AAC MP4, full decode and passthrough. One confirmed sendVideo; owner confirmed
+  normal playback, correct orientation and sound. Metadata 1 request / 411,812 bytes,
+  media 1 request / 571,013 bytes, one acquisition, 5.432 s handler/delivery, exact
+  counters and worker/session/private/caller workspace cleanup PASS. Bot stopped;
+  containers remained exited, no retry, fallback, merge or deployment.
+- [ ] Obtain separate authorization for staged merge of PRs #60–64 after exact-head
+  checks. Keep TikTok off by default and restricted to development/test allowlisted
+  users; broader reliability, all-publication support and production readiness remain open.
 
 ## Phase 7 - Additional Social Platforms
 - [ ] Select candidate platforms based on user demand, feasibility, legal/platform restrictions, extraction reliability, and maintenance burden.

@@ -29,7 +29,8 @@ def html(identity="11111111", video=None, **fields):
 @pytest.mark.parametrize(
     "query", ["", "?is_from_webapp=1", "?is_from_webapp=1&sender_device=pc#share"]
 )
-def test_cli_and_telegram_have_identical_canonical_transport(monkeypatch, query):
+def test_embed_transport_uses_the_same_canonical_url_as_provider(monkeypatch, query):
+    # Provider now selects public-page metadata; this checks shared canonicalization.
     assert cli is native and TikTokProvider.download_prepared.__globals__["native"] is native
     embed = "https://www.tiktok.com/embed/v2/11111111"
     wire = network(monkeypatch, {key(embed): response(b"<html>synthetic</html>")})

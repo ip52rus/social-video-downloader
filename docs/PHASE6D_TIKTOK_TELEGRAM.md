@@ -1,5 +1,11 @@
 # Phase 6D: experimental TikTok delivery (offline implementation)
 
+Phase 6G switches the existing provider to explicit public-page acquisition while
+retaining this handler, activation rules and ownership model. The following Phase
+6D evidence describes the earlier embed implementation. See
+[Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md) for current preparation and the
+still-open real Telegram acceptance gate.
+
 ## Subsequent controlled live evidence
 
 Owner-authorized local attempts on this revision reached the native embed endpoint
@@ -46,8 +52,9 @@ the next separately authorized acceptance gate are recorded below.
 `scripts/tiktok_native.py` is its compatibility entry point. Ordinary CLI and
 benchmark input/output policies remain available. `TikTokProvider` implements the
 existing provider protocol with a local generic capability descriptor, standard
-video only, and no quality/audio menu. The descriptor performs no HTTP; download
-does one embed resolution, verifies source identity and downloads one candidate.
+video only, and no quality/audio menu. The descriptor performs no HTTP. Initially
+download used one embed resolution; Phase 6G now explicitly selects one public-page
+resolution, verifies source identity and downloads only its admitted `playAddr`.
 Silent files are accepted. The verified original is exported without conversion.
 
 `TelegramTikTokHandler` is dispatcher-local and handles only TikTok. YouTube,

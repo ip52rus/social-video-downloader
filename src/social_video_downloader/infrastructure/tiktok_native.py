@@ -685,9 +685,7 @@ def run(urls, *, benchmark=False, output_dir=None, cancelled=None, public_page=F
     started = monotonic()
     expectations = None
     try:
-        if public_page and (
-            benchmark or output_dir is not None or not isinstance(urls, list) or len(urls) != 1
-        ):
+        if public_page and (benchmark or not isinstance(urls, list) or len(urls) != 1):
             raise Refusal("one_public_page_url_required")
         if not isinstance(urls, list) or not 0 < len(urls) <= (4 if benchmark else 2):
             raise Refusal("one_or_two_full_urls_required")
@@ -863,14 +861,20 @@ class NativeVideo:
     parameters: dict
 
 
-def download_video(url, output_dir, *, cancelled=None):
+def download_video(url, output_dir, *, cancelled=None, public_page=False):
     """Publish one verified file into the caller's owned workspace, without upload.
 
     Only this operation's fixed destination is created, with exclusive hard-link
     publication after worker termination/reap. Existing files are never replaced.
     The caller must keep its workspace until delivery and then remove the file.
+    ``public_page=True`` explicitly selects the verified page path, with no fallback.
     """
-    result = run([url], output_dir=output_dir, cancelled=cancelled)
+    result = run(
+        [url],
+        output_dir=output_dir,
+        cancelled=cancelled,
+        **({"public_page": True} if public_page else {}),
+    )
     if not result.get("success"):
         raise Refusal(result.get("error", "worker_failed"))
     report = result["results"][0]

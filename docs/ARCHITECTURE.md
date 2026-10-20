@@ -126,6 +126,17 @@ There is no endpoint fallback, provider registration, export or Telegram upload
 from this diagnostic mode. Existing `inspect_public_page()` still forbids media.
 See [Phase 6F decision and acceptance gate](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md).
 
+Phase 6G explicitly selects public-page acquisition in `TikTokProvider` through
+`download_video(..., public_page=True)`. Internal `run(public_page=True, output_dir=...)`
+reuses the existing verified exclusive hard-link export after worker/group reap;
+CLI inputs still cannot request export. The unchanged TelegramTikTokHandler holds
+that file through awaited `answer_video`, then cleans its caller-owned workspace.
+Feature flag, allowlist, production guard, executor cancellation, serialization,
+120-second upload timeout and quarantine/blocking remain unchanged. Public parser
+errors map to fixed safe domain errors; planning still performs no HTTP. Embed CLI
+and benchmark retain their paths, without any public/embed fallback. See
+[Phase 6G decision and gates](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md).
+
 ### Historical Reel-only opt-in MVP design
 
 The original Reel-only stage reused `InstagramProvider`, `DownloadedMedia` and the
