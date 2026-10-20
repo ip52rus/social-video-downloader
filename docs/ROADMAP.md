@@ -255,14 +255,18 @@ Telegram video delivery remains unverified. Phase 6E confirms equivalent CLI/pro
 HTTP and adds a separate public-page universal-state parser/session adapter.
 Its separately authorized metadata-only test obtained HTTP 200, a matching source
 ID and one admitted `playAddr` (1 request / 405,981 bytes); no media GET occurred.
-Phase 6F prepares an explicit one-publication `--public-page` MP4 mode using the
-same native transport, verifier and process supervisor. It adds no embed fallback
-or provider/Telegram route. The next gate is separately authorized real MP4
-completeness, streams, decode, preparation and cleanup, after offline verification
-and exact-head CI. No live request, deployment or merge is part of preparation;
-neither a general 429 fix nor real page-based MP4 acquisition is established. See
+Phase 6F's explicit `--public-page` mode then passed one separately authorized native
+MP4 test: complete 571,013-byte H.264/AAC file, original ID, full decode, passthrough
+and cleanup in 5.506 s. It used one metadata request and one media GET (200), without
+Telegram upload. Phase 6G now prepares explicit public-page selection in the existing
+TikTokProvider and verified caller-workspace export to the unchanged handler.
+No embed fallback, retry, network policy change or new handler is introduced. The
+next gate is one separately authorized controlled Telegram delivery after offline
+checks and exact-head CI. No live request, deployment or merge is part of this
+preparation; general reliability and a general 429 fix remain unproven. See
 [Phase 6C](PHASE6C_TIKTOK_NATIVE.md), [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md) and
-[Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md) and [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md).
+[Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md), [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md)
+and [Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md).
 
 Use the same gated process as Instagram:
 

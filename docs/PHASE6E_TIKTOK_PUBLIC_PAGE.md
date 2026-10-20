@@ -108,5 +108,7 @@ solution to HTTP 429.
 
 [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md) prepares a separate explicit supervised
 acquisition mode. `inspect_public_page()` retains its metadata-only restriction;
-provider/Telegram do not acquire a page fallback. A real MP4 test requires new
-owner authorization after offline checks and exact-head CI.
+provider/Telegram do not acquire a page fallback. The subsequent separately
+authorized Phase 6F MP4 test passed; Phase 6G prepares explicit provider selection
+without fallback. See [Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md) for the
+still-open controlled real Telegram acceptance gate.

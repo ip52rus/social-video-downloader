@@ -12,8 +12,9 @@ process-group supervisor, HTTP transport, acquisition, file verification and
 cleanup instead of creating another downloader. The mode accepts one publication,
 uses the strict public-page parser, and never selects embed or another source.
 Its session retains the existing scoped, memory-only cookies for this operation.
-The Phase 6E metadata-only entry point remains unable to fetch media. Provider,
-Telegram, default embed CLI and benchmark do not opt into the new mode.
+The Phase 6E metadata-only entry point remains unable to fetch media. Initially no
+provider/Telegram path opted in. Phase 6G subsequently connects the existing provider
+through the internal export API; default embed CLI and benchmark remain independent.
 
 The worker imports the packaged engine rather than evaluating its file a second
 time with `runpy`. This keeps its `Refusal` class identical to the parser/session's
@@ -32,9 +33,11 @@ Python environment:
 python -c 'import getpass,json; print(json.dumps([getpass.getpass("Approved full URL: ")]))' | PYTHONPATH=src python scripts/tiktok_native.py --public-page
 ```
 
-The input is one JSON array containing exactly one full TikTok video URL. Other
-case counts, combination with benchmark and file export are rejected before a
-worker starts. No raw URL arguments, HTML files, locator logs or persistent cookies
+The CLI input is one JSON array containing exactly one full TikTok video URL. Other
+case counts, combination with benchmark and CLI export requests are rejected before
+a worker starts. Phase 6G separately permits export through the internal provider
+API, without exposing workspace settings in CLI arguments or stdin. No raw URL
+arguments, HTML files, locator logs or persistent cookies
 are needed. The ordinary CLI and `--benchmark` retain their interfaces and paths.
 
 One canonical public-page metadata resolution verifies the original item ID,
@@ -93,3 +96,15 @@ refusal without retries or changing policy. Success must confirm real complete
 MP4, original ID, actual streams/codecs, full decode, passthrough preparation and
 process/workspace cleanup. Metadata alone is not GO, and this mode is not a bot
 fallback, a general 429 solution or evidence of broad TikTok reliability.
+
+## Separately authorized live result
+
+The one public-page MP4 call on `f31fdb5` passed: 1 metadata request / 410,890 bytes,
+1 media request (HTTP 200) / 571,013 bytes and 1 acquisition. Original ID matched,
+one `playAddr` was used, Content-Length was complete, actual streams were H.264/AAC
+(one video and one audio), 576×1024, duration 12 s as reported by the CLI. Full decode,
+passthrough preparation and cleanup passed in 5.506 s with exact counters. Metadata
+HTTP status was not separately exposed by the CLI. No Telegram upload occurred.
+This is one successful native publication, not general platform reliability.
+[Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md) prepares the existing provider and
+handler to use this source; real Telegram delivery still needs separate approval.

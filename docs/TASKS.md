@@ -595,7 +595,7 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
   Ruff, diff/documentation and scope/security PASS. Evidence: [TESTING](TESTING.md).
 - [x] Separately authorized Phase 6E metadata-only experiment on `4265328`: HTTP 200,
   matching source ID, one admitted `playAddr`, 1 request / 405,981 bytes, 2.632 s,
-  exact counters and cleanup PASS. No media GET; MP4 availability remains untested.
+  exact counters and cleanup PASS. No media GET in that gate; see later Phase 6F below.
   See [Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md).
 - [x] Implement and verify Phase 6F offline: explicit one-publication `--public-page`
   acquisition using the same transport, verifier and process supervisor. Preserve
@@ -603,9 +603,18 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
   PASS, full offline 1678 passed / 1 skipped, six supplemental fault injections,
   Ruff and scope/security PASS. Exact-head publication CI is required before handoff. See
   [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md).
-- [ ] Obtain separate authorization for one public-page MP4 live test, then verify
-  actual completeness, streams, full decode, preparation and cleanup. No automatic
-  fallback, bot activation, merge or general reliability claim follows from metadata.
+- [x] Separately authorized Phase 6F MP4 test on `f31fdb5`: complete 571,013-byte MP4,
+  matching source ID, one playAddr, H.264/AAC, 576×1024, 12 s per CLI, full decode and
+  passthrough PASS. One metadata request / 410,890 bytes, one media request (200),
+  one acquisition, 5.506 s, exact counters and cleanup PASS. No Telegram delivery.
+- [x] Implement and verify Phase 6G offline: internal public-page export to caller
+  workspace, existing provider/handler with silent support, no embed fallback.
+  19 new cases / 226 focused PASS, full offline 1696 passed / 1 skipped; Ruff,
+  diff-check and scope/security PASS. Exact-head CI is required before handoff. See
+  [Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md).
+- [ ] Separately authorize and validate one controlled public-page Telegram delivery
+  for an allowed test user, including API response, playback and cleanup. No general
+  platform/reliability or production acceptance follows from one native download.
 
 ## Phase 7 - Additional Social Platforms
 - [ ] Select candidate platforms based on user demand, feasibility, legal/platform restrictions, extraction reliability, and maintenance burden.

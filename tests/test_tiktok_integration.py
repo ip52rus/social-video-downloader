@@ -47,7 +47,7 @@ def message(user=7):
     return value
 
 
-def synthetic_worker(monkeypatch, fixture, failure=None):
+def synthetic_worker(monkeypatch, fixture, failure=None, *, public_page=False):
     original = n._command
 
     def command(workspace):
@@ -62,14 +62,15 @@ def synthetic_worker(monkeypatch, fixture, failure=None):
             else f"response(Path({str(fixture)!r}).read_bytes(),'video/mp4')"
         )
         bootstrap = (
-            "import socket,runpy,sys; from pathlib import Path; "
+            "import socket,sys; from pathlib import Path; "
             "socket.socket.connect=socket.socket.connect_ex=lambda *a,**k: "
             "(_ for _ in ()).throw(AssertionError('No sockets')); "
-            "from tests.test_tiktok_native import install,key,EMBED,MEDIA,page,response; "
-            f"install({{key(EMBED):response(page()),key(MEDIA):{media}}}); "
-            "from social_video_downloader.infrastructure import tiktok_native as patched; "
-            "worker=runpy.run_path(sys.argv[1])['_worker_main']; "
-            "worker.__globals__['_Pinned']=patched._Pinned; worker()"
+            "from tests.test_tiktok_native import install,key,A,EMBED,MEDIA,page,response; "
+            "from tests.test_tiktok_public_page import html; "
+            f"wire=install({{key({'A' if public_page else 'EMBED'}):"
+            f"response({'html' if public_page else 'page'}()),key(MEDIA):{media}}}); "
+            + argv[2]
+            + "; assert len(wire.requests)==2"
         )
         return [*argv[:2], bootstrap, *argv[3:]]
 
@@ -111,7 +112,7 @@ async def test_real_native_worker_to_fake_telegram_keeps_file_until_response(
 ):
     source = tmp_path / "fixture.mp4"
     generate(source, audio=audio)
-    synthetic_worker(monkeypatch, source)
+    synthetic_worker(monkeypatch, source, public_page=True)
     msg = message()
     paths = []
 
@@ -153,7 +154,7 @@ def test_export_wire_errors_remove_only_owned_files(monkeypatch, tmp_path, worke
 def test_export_never_overwrites_existing_destination(monkeypatch, tmp_path, workers):
     fixture = tmp_path / "fixture.mp4"
     generate(fixture, audio=True)
-    synthetic_worker(monkeypatch, fixture)
+    synthetic_worker(monkeypatch, fixture, public_page=True)
     foreign = tmp_path / "tiktok.mp4"
     foreign.write_text("keep")
     with pytest.raises(DownloadFailedError):

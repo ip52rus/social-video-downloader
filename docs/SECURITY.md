@@ -77,11 +77,21 @@ It accepts one publication, verifies the original ID before media admission, use
 only its `playAddr`, and refuses explicit separate streams before acquisition.
 The existing 180-second supervisor and bounded termination/reap own its private
 workspace, including on interruption. The metadata-only entry point still forbids
-media; embed/benchmark/provider/Telegram do not opt into this mode. No retries,
+media; embed/benchmark do not opt in. Phase 6G explicitly selects acquisition in the
+provider through the internal API, without exposing CLI export. No retries,
 fallback, header changes or new destinations/credentials are introduced. Reports
 contain only fixed categories, bounded probe fields, safe CDN families and body
 counters; body counters do not measure full TLS/network traffic. Live MP4 validation
 requires separate authorization. See [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md).
+
+Phase 6G allows the existing internal verified-file export for explicit public-page
+operations. CLI input has no export surface. TikTokProvider opts in without embed
+fallback, parser errors become fixed domain errors, and the existing handler retains
+flag/allowlist/production guards and file ownership until upload finishes/unwinds.
+Exclusive publication occurs only after worker termination/reap; failures retain
+existing quarantine/blocking and no-retry behavior. Transport, headers/cookie scope,
+pinning/TLS, redirects, framing, budgets and supervisor are unchanged. Native live
+success is not real Telegram delivery. See [Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md).
 
 ## Experimental Instagram provider
 

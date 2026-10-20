@@ -191,10 +191,8 @@ def test_public_stalled_stream_deadline_or_cancellation_reaps_worker(
     assert all(not p.exists() for p in workspaces) and list(tmp_path.iterdir()) == [source]
 
 
-@pytest.mark.parametrize(
-    "urls,options", [([A, B], {}), ([A], {"benchmark": True}), ([A], {"output_dir": "."})]
-)
-def test_public_mode_is_one_explicit_diagnostic_only(monkeypatch, urls, options):
+@pytest.mark.parametrize("urls,options", [([A, B], {}), ([A], {"benchmark": True})])
+def test_public_mode_requires_one_case_without_benchmark(monkeypatch, urls, options):
     monkeypatch.setattr(n.subprocess, "Popen", lambda *a, **k: pytest.fail("Unexpected worker"))
     assert n.run(urls, public_page=True, **options) == {"success": False, "error": "invalid_input"}
 

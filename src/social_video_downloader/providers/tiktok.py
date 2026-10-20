@@ -61,7 +61,9 @@ class TikTokProvider:
         if options.quality_id is not None:
             raise UnsupportedQualityError("TikTok quality selection is unavailable.")
         try:
-            video = native.download_video(canonical, output_dir, cancelled=cancelled)
+            video = native.download_video(
+                canonical, output_dir, cancelled=cancelled, public_page=True
+            )
         except native.Refusal as exc:
             category = str(exc)
             if category in {"cleanup_failed", "workspace_cleanup_failed", "case_cleanup_failed"}:
@@ -71,9 +73,14 @@ class TikTokProvider:
             elif category in {
                 "metadata_schema",
                 "missing_embed_state",
+                "missing_public_state",
                 "source_identity_mismatch",
                 "ambiguous_metadata",
                 "non_public_or_drm",
+                "non_public_or_unavailable",
+                "unsupported_page_video",
+                "metadata_body_limit",
+                "metadata_content_type",
                 "unsupported_photo",
             }:
                 error = MetadataExtractionError
