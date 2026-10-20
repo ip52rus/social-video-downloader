@@ -577,11 +577,25 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
   denied, including existing CLI/benchmark and fake Telegram delivery/failures.
   Full offline/quality and exact-head CI evidence: [TESTING](TESTING.md).
   Architecture/security and protected environment reviewed in the same change.
-- [ ] Independently review Phase 6D and obtain separate authorization for one
-  controlled Telegram live test. No real delivery/polling/deployment is authorized
-  by implementation. See [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md).
+- [x] Separately authorized controlled Telegram attempts on PR #61 started polling
+  and processed one owner message each, then stopped on embed metadata HTTP 429;
+  one metadata request per attempt, no media GET/acquisition/upload, exact counters
+  and process/session/workspace cleanup. No successful Telegram video delivery yet.
+- [ ] Complete independent Phase 6D review before further activation. See
+  [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md); initial offline checks are not live delivery.
 - [ ] Validate real Telegram delivery within that approved scope before deciding
   further activation, production readiness or broader TikTok UX/quality support.
+- [x] Phase 6E source comparison: standalone and Telegram have identical shared
+  transport/canonicalization; tracking queries are removed. No client-side cause
+  of HTTP 429 established. Public-page universal-state schema corroborated by
+  installed yt-dlp 2026.08.19 and pinned Cobalt source research (no AGPL code copied).
+- [x] Prepare an isolated explicit public-page parser/session prototype, source ID
+  before media admission, existing bounded transport and no media GET/fallback or
+  handler/CLI change. 45 new focused PASS, full offline suite 1658 passed / 1 skipped;
+  Ruff, diff/documentation and scope/security PASS. Evidence: [TESTING](TESTING.md).
+- [ ] Obtain separate authorization for one supervised metadata-only page experiment.
+  Availability and a solution to HTTP 429 remain unproven. See
+  [Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md); no live request in prototype preparation.
 
 ## Phase 7 - Additional Social Platforms
 - [ ] Select candidate platforms based on user demand, feasibility, legal/platform restrictions, extraction reliability, and maintenance burden.

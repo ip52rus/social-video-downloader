@@ -1,5 +1,15 @@
 # Phase 6D: experimental TikTok delivery (offline implementation)
 
+## Subsequent controlled live evidence
+
+Owner-authorized local attempts on this revision reached the native embed endpoint
+but received HTTP 429 before media GET/acquisition/upload. Owner messages were
+received, progress/error messages confirmed, polling stopped, API sessions closed
+and native workspaces/processes cleaned. Video delivery and playback remain unverified.
+No fallback or handler change follows from this evidence. The separate offline-only
+[Phase 6E prototype](PHASE6E_TIKTOK_PUBLIC_PAGE.md) investigates public-page metadata;
+it is not connected to this handler and does not establish a solution to HTTP 429.
+
 ## Design decision
 
 Phase 6C's separately authorized four-new-publication benchmark passed 4/4, with

@@ -106,6 +106,15 @@ It serializes TikTok operations, bounds upload independently and never retries a
 uncertain send. Failed OS cleanup blocks further TikTok work and quarantines the
 owned workspace. See [Phase 6D ownership and gates](PHASE6D_TIKTOK_TELEGRAM.md).
 
+Phase 6E adds only an isolated public-page parser and a metadata-only Session
+subclass. It reads universal JSON, checks original item identity and admits one
+`playAddr` candidate through the existing CDN policy. The subclass reuses the same
+HTTP/DNS/TLS/cookie/body-budget implementation with the current canonical page path.
+It is not registered in the provider, CLI or Telegram handler, and introduces no
+automatic fallback. Live execution requires the existing owned process supervisor;
+the synchronous function alone is not a hard DNS/process deadline. See
+[Phase 6E decision and limits](PHASE6E_TIKTOK_PUBLIC_PAGE.md).
+
 ### Historical Reel-only opt-in MVP design
 
 The original Reel-only stage reused `InstagramProvider`, `DownloadedMedia` and the

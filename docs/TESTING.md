@@ -4,6 +4,38 @@ Instagram's current narrow live acceptance is recorded in
 [Instagram live acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
 Earlier sections retain the evidence and open gates at each historical stage.
 
+## Phase 6E public-page prototype (offline)
+
+Controlled Telegram attempts after Phase 6D received owner messages and stopped
+on embed metadata HTTP 429, before media GET/acquisition/upload. Polling/session/
+workspace cleanup completed. This is an observed HTTP refusal, not proof that
+Telegram changes HTTP headers, that cookies are required or that a public page
+will succeed. No real delivery/playback acceptance is closed by those attempts.
+
+**45 new focused cases pass** with synthetic wire responses, the real HTTP parser
+and inherited socket/DNS denial. Coverage includes actual CLI/provider outbound
+request equality for tracking queries, installed yt-dlp schema/mapper comparison,
+original identity checks, intact signed queries, script/JSON ambiguity, inert/comment
+markers, status/photo/private refusals, hostile destinations/redirects, HTTP 403/429
+without retry, body/request/deadline budgets, scoped cookie destruction, no media
+phase request and fixed-category parser errors without raw data. Existing native
+CLI/benchmark and Telegram regressions are retained unchanged.
+
+Source review: PR #60 and #61 URL/Session/pinned transport/cookie/framing ASTs match;
+the prototype changes no engine, handler, CLI, header, cookie or dependency policy.
+Only schema facts were studied in pinned Cobalt and installed yt-dlp; no upstream
+AGPL implementation was copied. Ruff lint/format and diff-check pass. The CI base
+filter includes `feat/tiktok-telegram-integration` so this separate stacked Draft PR
+receives the same checks without changing PR #61. Final full suite with inherited
+external socket/DNS denial: **1658 passed, 1 skipped** (opt-in real YouTube test),
+including all original native CLI/benchmark/Telegram regressions. Exact-head CI
+must also pass before handoff. No test worker or FFmpeg process may remain.
+
+This prototype has no new live entry point. Any future real metadata inspection
+requires separate approval and owned process supervision; cooperative session
+timeouts alone are not a hard DNS/process bound. MP4/CDN availability, codecs/audio
+and any improvement to 429 remain untested. See [Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md).
+
 ## Phase 6D restricted TikTok integration (offline)
 
 The preceding separately authorized native reliability benchmark on `511b538`

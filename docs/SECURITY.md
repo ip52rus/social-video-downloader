@@ -62,6 +62,15 @@ User messages contain fixed safe categories, without raw exceptions/locators or
 diagnostic data. No CDN/cookie/header/dependency or production-registry expansion.
 See [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md) for the separate live acceptance gate.
 
+The isolated Phase 6E adapter admits only the current canonical public page and
+inherits the existing pinned transport and scoped cookies. It refuses media phase
+requests, other metadata paths and unsafe redirects. JSON parsing never evaluates
+script code; duplicate/missing state and ID mismatch fail closed. Raw HTML, locators
+and parser messages are not logged. It supplies no bot integration or live CLI.
+Any future live call must be explicitly authorized and process-supervised; socket
+timeouts/cooperative checks are not a hard deadline for DNS. No bypass, fallback,
+header/cookie policy expansion, new CDN or dependency is introduced.
+
 ## Experimental Instagram provider
 
 The first Reel provider uses only anonymous extraction: no supplied cookies, browser
