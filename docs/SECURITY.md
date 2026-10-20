@@ -50,6 +50,18 @@ Benchmark continuation is only to another explicitly approved publication with a
 fresh session, never a retry/fallback. All cases consume the original shared limits;
 case cleanup failure stops further work. No benchmark live call is implicit.
 
+Phase 6D reuses that engine without another HTTP implementation. TikTok delivery is
+off by default, development/test only, and restricted to an explicit test-user
+allowlist; an empty list denies everyone and production activation is rejected.
+Native work runs outside the event loop in a supervised group. Cancellation waits
+for executor completion before deleting its workspace. Upload has a separate timeout,
+confirmed API response requirement and no automatic retry. Failed process cleanup
+refuses success, blocks further TikTok work and quarantines owned files rather than
+deleting under a potentially live worker. Filesystem cleanup failure also blocks work.
+User messages contain fixed safe categories, without raw exceptions/locators or
+diagnostic data. No CDN/cookie/header/dependency or production-registry expansion.
+See [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md) for the separate live acceptance gate.
+
 ## Experimental Instagram provider
 
 The first Reel provider uses only anonymous extraction: no supplied cookies, browser

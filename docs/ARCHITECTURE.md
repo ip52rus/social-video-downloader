@@ -77,8 +77,9 @@ The remux path is an optimization for compatible streams when only the container
 
 ### Isolated native TikTok feasibility
 
-Phase 6C adds only `scripts/tiktok_native.py`: a standalone embed-state resolver
-and bounded HTTP downloader using stdlib, not yt-dlp or a provider/Telegram route.
+Phase 6C introduced a standalone embed-state resolver and bounded HTTP downloader
+using stdlib, not yt-dlp. Phase 6D moves that single engine to
+`infrastructure/tiktok_native.py`, with `scripts/tiktok_native.py` a thin CLI wrapper.
 It requires explicit matching source ID, constrained video-host admission, pinned
 public IPv4/TLS, scoped per-publication in-memory cookies and complete HTTP framing.
 Existing inspection/preparation helpers are used only for local verification;
@@ -92,6 +93,18 @@ so reliability sampling can continue to independent approved publications after
 a case-local failure. It accepts at most four cases with explicit audio expectations
 inside the original common budgets, removes case files before continuing and stops
 on cleanup/resource failure. The ordinary two-case fail-fast interface is retained.
+
+The separately authorized native reliability benchmark passed 4/4, with full MP4,
+decode and passthrough preparation; it did not test Telegram delivery. Phase 6D
+adds an explicit `TikTokProvider` and dispatcher-local `TelegramTikTokHandler` behind
+a default-off flag, production guard and test-user allowlist. The default provider
+registry remains unchanged. Local capability planning performs no extra extraction.
+For provider use, the supervised engine exports one verified file to a caller-owned
+workspace only after worker termination/reap. The async handler signals cancellation
+and waits for the executor future before releasing files, even on repeated cancel.
+It serializes TikTok operations, bounds upload independently and never retries an
+uncertain send. Failed OS cleanup blocks further TikTok work and quarantines the
+owned workspace. See [Phase 6D ownership and gates](PHASE6D_TIKTOK_TELEGRAM.md).
 
 ### Historical Reel-only opt-in MVP design
 

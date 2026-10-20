@@ -563,17 +563,25 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
   videos, per-case audio expectation, continuation after case-local errors, shared
   original budgets and cleanup. Ordinary fail-fast remains available. Focused: 103 PASS;
   full offline suite 1573 passed / 1 skipped, Ruff and scope checks PASS. See TESTING.
-- [ ] Obtain separate authorization for one reliability benchmark on new publications,
-  excluding A/B. No real request is authorized by preparation. B's complete MP4 remains
-  unavailable; A's one success does not establish general reliability or provider GO.
-- [ ] Run a technical spike.
-- [ ] Assess real-world reliability and extraction stability.
-- [ ] Make an explicit Go/No-Go decision before implementation.
-- [ ] Implement the provider only if the spike is viable.
-- [ ] Add deterministic validation.
-- [ ] Add external validation within a documented scope.
-- [ ] Map meaningful TikTok format or quality choices into the shared download-options model where available.
-- [ ] Integrate the provider into the common Telegram UX.
+- [x] Separately authorized four-new-publication reliability benchmark on `511b538`:
+  4/4 complete MP4, H.264/AAC, one video/audio stream, decode/preparation passthrough.
+  Metadata 4 requests / 1,142,585 bytes; media 4 requests / 14,460,237 bytes;
+  4 acquisitions, 19.152 s, exact counters, cleanup PASS. This small sample is not
+  general platform reliability; earlier B's repeated 403 remains unexplained.
+- [x] Owner authorized an isolated Phase 6D offline implementation on a new stacked
+  branch, without modifying PR #60/main or activating Telegram. Extract one shared
+  engine, keep CLI/benchmark, add standard-video/silent-capable TikTokProvider and
+  dispatcher-local restricted handler. Default-off dev/test flag, deny-empty user
+  allowlist, owned file lifetime, bounded upload and cancellation/group cleanup.
+- [x] Deterministic Phase 6D validation: 143 focused cases pass with external sockets
+  denied, including existing CLI/benchmark and fake Telegram delivery/failures.
+  Full offline/quality and exact-head CI evidence: [TESTING](TESTING.md).
+  Architecture/security and protected environment reviewed in the same change.
+- [ ] Independently review Phase 6D and obtain separate authorization for one
+  controlled Telegram live test. No real delivery/polling/deployment is authorized
+  by implementation. See [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md).
+- [ ] Validate real Telegram delivery within that approved scope before deciding
+  further activation, production readiness or broader TikTok UX/quality support.
 
 ## Phase 7 - Additional Social Platforms
 - [ ] Select candidate platforms based on user demand, feasibility, legal/platform restrictions, extraction reliability, and maintenance burden.

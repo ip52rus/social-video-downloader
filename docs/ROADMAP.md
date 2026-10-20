@@ -242,13 +242,17 @@ is unknown. Safe diagnostics now report candidate origin, CDN family, query/cook
 presence, actual statuses, counters and measured codec names without new requests.
 The authorized B-only diagnostic retest again returned media 403 (`urls`, EU CDN
 family, query present, no cookies sent); B remains unverified and the cause unknown.
-The next gate is a separately authorized reliability benchmark on up to four new
-independent publications, excluding A/B. Its explicit offline-prepared mode keeps
-the existing aggregate budgets, per-case sessions and audio expectations, and can
-continue after case-local errors without retries. No request is authorized by this
-preparation. A single success is not general platform GO; no provider/Telegram
-integration before the reliability decision.
-See [Phase 6C](PHASE6C_TIKTOK_NATIVE.md). No live request is part of preparation.
+The separately authorized four-new-publication benchmark passed 4/4: complete MP4,
+actual H.264/AAC streams, full decode and passthrough preparation, with exact bounded
+counters and cleanup. This small sample does not establish general platform reliability.
+The owner then authorized Phase 6D offline integration in a new stacked branch:
+one reusable native engine, standard-video/silent-capable provider and a default-off
+Telegram handler restricted to configured test users in development/test. The native
+CLI/benchmark, original limits and working YouTube/Instagram paths are preserved.
+The next gate is independent review followed by separately authorized controlled
+Telegram acceptance. No real TikTok/Telegram request, activation, deployment or merge
+is part of implementation. See [Phase 6C](PHASE6C_TIKTOK_NATIVE.md) and
+[Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md).
 
 Use the same gated process as Instagram:
 

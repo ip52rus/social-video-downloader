@@ -25,6 +25,10 @@ class DownloadTimeoutError(DownloadFailedError):
     """Raised when downloading exceeds the allowed time."""
 
 
+class DownloadCleanupError(DownloadFailedError):
+    """Owned native resources could not be safely released; quarantine workspace."""
+
+
 class MediaProcessingError(DownloadFailedError):
     """Raised when downloaded media cannot be assembled or processed."""
 

@@ -1,5 +1,20 @@
 # Phase 6C: standalone native TikTok feasibility
 
+## Latest gate and shared-engine extraction
+
+The separately authorized four-new-publication reliability benchmark on `511b538`
+completed 4/4: complete MP4, verified H.264/AAC video/audio streams, full decode and
+Telegram preparation passthrough, exact counters and cleanup. Four publications do
+not establish general platform reliability; the earlier B's repeated CDN 403 remains
+unexplained. These were native-only checks, without Telegram upload.
+
+On the separate Phase 6D stacked branch, the same native implementation is moved
+to `infrastructure/tiktok_native.py`; `scripts/tiktok_native.py` remains the public
+CLI wrapper, including ordinary and benchmark interfaces. Network behavior, source
+checks and limits below are preserved. Caller-workspace export and restricted
+experimental Telegram integration are described in [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md).
+Historical preparation/live instructions below do not authorize another run.
+
 ## Design and gate
 
 PR #59's yt-dlp experiment is discontinued and remains unmerged/unchanged. Its
