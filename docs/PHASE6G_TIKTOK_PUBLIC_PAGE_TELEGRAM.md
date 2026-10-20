@@ -1,5 +1,9 @@
 # Phase 6G — public-page provider and restricted Telegram delivery
 
+Historical stage record: [Phase 6H](PHASE6H_TIKTOK_PUBLIC_MVP.md) supersedes the
+TikTok test-user/production guards and single-operation admission described here.
+The original verification and owner-only live evidence below remain unchanged.
+
 ## Decision before implementation
 
 The separately authorized Phase 6F call on `f31fdb5` obtained one complete MP4:

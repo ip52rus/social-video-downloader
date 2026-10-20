@@ -621,9 +621,28 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
   media 1 request / 571,013 bytes, one acquisition, 5.432 s handler/delivery, exact
   counters and worker/session/private/caller workspace cleanup PASS. Bot stopped;
   containers remained exited, no retry, fallback, merge or deployment.
-- [ ] Obtain separate authorization for staged merge of PRs #60–64 after exact-head
-  checks. Keep TikTok off by default and restricted to development/test allowlisted
-  users; broader reliability, all-publication support and production readiness remain open.
+- [x] Owner-authorized sequential merge of PRs #60–64 completed at main `fe59c1d`;
+  exact final main CI passed (1696 passed / 1 skipped). No deployment followed.
+- [x] Phase 6H offline public MVP: remove TikTok test-user/production guards, retain
+  the default-off flag, add bounded process capacity (default two, one per user),
+  independent ownership/cancellation and fail-closed cleanup. 356 focused PASS, full
+  offline 1716 passed / 1 skipped, Ruff/diff/security PASS. Publication requires exact-
+  head Draft PR CI before handoff; see [Phase 6H](PHASE6H_TIKTOK_PUBLIC_MVP.md).
+- [x] Owner-authorized Phase 6H PUBLIC TIKTOK LIVE PASS on `6665b90`: one second-account
+  full-link request without personal allowlist; public-page metadata/source ID, one
+  complete 565,847-byte MP4 (HTTP 200), H.264/AAC, full decode/passthrough and one
+  confirmed sendVideo. Owner confirmed playback, orientation and sound. Polling/session,
+  worker and workspace cleanup PASS; Docker stayed exited, no retry/fallback/deployment.
+  The approved queued update was read without acknowledgement/deletion; restart replay
+  prevention was not tested. See
+  [Phase 6H evidence](PHASE6H_TIKTOK_PUBLIC_MVP.md#owner-confirmed-public-tiktok-live-pass).
+- [x] Final PR #65 docs-only preparation: LIVE evidence recorded without private data,
+  final diff/security review PASS, full network-blocked pytest 1716 passed / 1 skipped
+  (186.73 s), Ruff/diff PASS and 30 local links/anchors PASS. Exact documentation-head
+  CI is required before handoff and reported in PR checks; PR remains Draft.
+- [ ] Obtain separate merge authorization for Draft PR #65 after exact new-head CI.
+  Deployment is a separate gate. One public scenario does not prove scalability,
+  short-link support, all-publication support, general reliability or production readiness.
 
 ## Phase 7 - Additional Social Platforms
 - [ ] Select candidate platforms based on user demand, feasibility, legal/platform restrictions, extraction reliability, and maintenance burden.

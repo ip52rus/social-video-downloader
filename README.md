@@ -35,6 +35,17 @@ blocking known item selectors. On 2026-10-18 the owner confirmed one full-link s
 post and one ordered three-video silent album with normal Telegram playback. This is
 [narrow user acceptance](docs/TESTING.md#instagram-live-acceptance-2026-10-18), not broad
 publication, device, file-size or production-capacity validation.
+
+TikTok public-video delivery is an explicit opt-in: set
+`TIKTOK_TELEGRAM_ENABLED=true` to admit any Telegram user, including with
+`APP_ENV=production`. No test-user allowlist is required. Default capacity is two
+TikTok operations per bot process and one per user; set
+`TIKTOK_MAX_CONCURRENT_OPERATIONS` to an integer 1–8 to adjust the process limit.
+Saturated requests receive a busy response without queuing. Full public video URLs
+are supported; short links, separate streams and retries are not. This configuration
+permission is not a production-readiness claim or deployment approval. See
+[Phase 6H and its separate acceptance gate](docs/PHASE6H_TIKTOK_PUBLIC_MVP.md).
+
 Optional settings are
 APP_ENV (development, test, or production), LOG_LEVEL (DEBUG, INFO, WARNING, ERROR, or
 CRITICAL), TELEGRAM_API_BASE_URL, and TELEGRAM_API_TIMEOUT_SECONDS. Never commit the real

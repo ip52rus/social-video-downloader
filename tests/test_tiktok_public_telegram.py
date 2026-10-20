@@ -182,7 +182,7 @@ async def test_public_faults_through_provider_and_handler_no_upload_retry_or_lea
     monkeypatch.setattr(n, "run", record)
     monkeypatch.setattr(t, "TemporaryDirectory", track)
     msg = message()
-    handler = t.TelegramTikTokHandler({7}, provider=ObservedProvider())
+    handler = t.TelegramTikTokHandler(provider=ObservedProvider())
     await handler.handle(msg, A)
     assert len(errors) == 1 and type(errors[0]) is domain
     assert len(reports) == 1 and reports[0]["error"] == error
@@ -193,7 +193,7 @@ async def test_public_faults_through_provider_and_handler_no_upload_retry_or_lea
     assert len(workers) == 1 and workers[0].returncode == 0
     assert all(not p.exists() for p in private + callers)
     msg.answer_video.assert_not_awaited()
-    assert not handler._active and not handler._blocked
+    assert not handler._active_users and not handler._blocked
     rendered = json.dumps(report) + str(errors[0]) + repr(msg.answer.await_args_list)
     assert not any(secret in rendered for secret in (A, MEDIA, "11111111", "22222222", "PRIVATE"))
 

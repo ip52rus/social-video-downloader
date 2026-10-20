@@ -40,6 +40,14 @@ open.
 
 ## Current implementation boundary
 
+Phase 6G subsequently verified one public-page TikTok download and Telegram video
+delivery, with owner-confirmed playback, orientation and sound. Phase 6H prepares
+public opt-in TikTok access on that same engine: no personal allowlist, one operation
+per user and bounded process capacity (default two). The feature stays off by default;
+permitting production configuration does not establish production readiness. Public
+acceptance and deployment remain separate gates. See
+[Phase 6H](PHASE6H_TIKTOK_PUBLIC_MVP.md) for offline evidence and limits.
+
 Phase 4 functional scope is ACCEPTED as of 2026-10-15 for the recorded real Telegram
 Video/Audio, playlist-context, landscape/portrait quality, M4A duration/playback and
 interaction-protection cases. See

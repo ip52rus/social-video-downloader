@@ -1,4 +1,4 @@
-"""Restricted TikTok experiment on the existing bot, without another poller."""
+"""Opt-in public TikTok delivery with bounded admission on the existing bot."""
 
 import asyncio
 from contextlib import suppress
@@ -47,15 +47,17 @@ async def _notice(message, text):
 
 
 class TelegramTikTokHandler:
-    def __init__(self, allowed_user_ids=frozenset(), *, provider=None):
-        self._allowed = frozenset(allowed_user_ids)
+    def __init__(self, *, max_concurrent=2, provider=None):
+        if type(max_concurrent) is not int or not 1 <= max_concurrent <= 8:
+            raise ValueError("TikTok concurrency must be an integer from 1 to 8.")
+        self._max_concurrent = max_concurrent
         self._provider = provider or TikTokProvider()
-        self._active = False
+        self._active_users: set[int] = set()
         self._blocked = False
 
     def allows(self, message):
         user_id = getattr(getattr(message, "from_user", None), "id", None)
-        return type(user_id) is int and user_id in self._allowed
+        return type(user_id) is int and 0 < user_id < 2**63
 
     def _prepare(self, url, workspace, cancelled):
         media, parameters = self._provider.download_prepared(url, workspace, cancelled=cancelled)
@@ -90,13 +92,17 @@ class TelegramTikTokHandler:
                 message, "Загрузка TikTok приостановлена после ошибки завершения операции."
             )
             return
-        if self._active:
-            await _notice(message, "Уже обрабатываю TikTok-видео. Дождись завершения.")
+        user_id = message.from_user.id
+        # One dispatcher/event loop owns admission. No await between checking
+        # capacity/user ownership and reserving: no waiters, queue or extra tasks.
+        if user_id in self._active_users or len(self._active_users) >= self._max_concurrent:
+            await _notice(message, "Бот занят, попробуйте позже.")
             return
-        self._active = True
+        self._active_users.add(user_id)
         sending = False
         directory = None
         quarantine = False
+        cleanup_failed = False
         try:
             await _notice(message, "Ссылка TikTok распознана. Начинаю скачивание…")
             directory = TemporaryDirectory(prefix="telegram-tiktok-")
@@ -148,10 +154,14 @@ class TelegramTikTokHandler:
                 else:
                     try:
                         directory.cleanup()
-                    except OSError:
-                        self._blocked = True
+                    except Exception:
+                        cleanup_failed = quarantine = self._blocked = True
                         directory._finalizer.detach()
-                        await _notice(
-                            message, "Ошибка очистки файлов. Загрузка TikTok приостановлена."
-                        )
-            self._active = False
+            # Failed cleanup keeps its reservation, even if the notification is
+            # cancelled. Another admitted operation retains its own lifecycle.
+            if not quarantine:
+                self._active_users.remove(user_id)
+            if cleanup_failed:
+                await _notice(
+                    message, "Ошибка завершения операции. Загрузка TikTok приостановлена."
+                )

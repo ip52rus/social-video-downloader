@@ -1,5 +1,9 @@
 # Phase 6D: experimental TikTok delivery (offline implementation)
 
+Historical stage record: [Phase 6H](PHASE6H_TIKTOK_PUBLIC_MVP.md) supersedes the
+TikTok test-user/production guards and single-operation admission described here.
+The original verification and owner-only live evidence below remain unchanged.
+
 Phase 6G switches the existing provider to explicit public-page acquisition while
 retaining this handler, activation rules and ownership model. The following Phase
 6D evidence describes the earlier embed implementation. See

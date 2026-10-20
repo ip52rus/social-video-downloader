@@ -44,6 +44,22 @@ Use Conventional Commit prefixes. One coherent change per commit.
 ## Synchronization
 After each commit, verify the commit SHA and branch state. After each push, verify the remote branch and CI. Do not overwrite unrelated local work while synchronizing.
 
+## Public TikTok configuration (Phase 6H)
+
+TikTok remains disabled by default. `TIKTOK_TELEGRAM_ENABLED=true` enables supported
+full public-video URLs for any Telegram user, including in production configuration.
+`TIKTOK_TEST_USER_IDS` is removed and has no effect. Set
+`TIKTOK_MAX_CONCURRENT_OPERATIONS` to an integer 1–8 (default 2) for the single bot
+process; each user can hold only one operation through download, upload and cleanup.
+There is no waiting queue. Do not increase native time/size budgets or HTTP retries.
+Cleanup failure blocks new TikTok requests and retains quarantine for operator
+inspection; do not force-delete workspaces while a worker may still own them.
+The Compose template forwards the flag/capacity with false/2 defaults; this is
+configuration preparation only, without running Docker or changing the real `.env`.
+Instagram's separate opt-in/production restriction is unchanged. This stage is
+implemented and tested offline only: no polling, deployment or public live acceptance
+is implied. See [Phase 6H](PHASE6H_TIKTOK_PUBLIC_MVP.md).
+
 ## Controlled main-bot Reel smoke
 
 PR #53 is merged. The user chose the existing main Telegram bot for one approved public

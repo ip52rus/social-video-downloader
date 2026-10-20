@@ -267,14 +267,36 @@ Phase 6G Telegram test passed for one short public video: matching ID, complete
 confirmation of normal playback/orientation/sound and process/file cleanup.
 The operation used one metadata request, one media GET (200), one acquisition and
 one sendVideo attempt, without retry or fallback; handler/delivery took 5.432 s.
-This closes only the controlled single-case end-to-end gate. TikTok remains off by
-default, development/test-only and allowlisted. General reliability, all-publication
-support, the cause of earlier 429 and production readiness remain unproven. Next is
-separately authorized staged merge consideration for PRs #60–64; merge, deployment
-and further live runs have not been performed or authorized by that acceptance. See
-[Phase 6C](PHASE6C_TIKTOK_NATIVE.md), [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md) and
-[Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md), [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md)
-and [Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md).
+This closes only the controlled single-case end-to-end gate. PRs #60–64 were then
+sequentially merged at main `fe59c1d`, with successful final CI (1696 passed / 1 skipped).
+Phase 6H implements public opt-in access: TikTok remains off by default, but when
+enabled admits any Telegram user and permits production configuration. Bounded local
+capacity defaults to two operations per bot process and one per user, retaining worker,
+upload and cleanup ownership. Instagram restrictions remain unchanged. Offline checks
+passed (356 focused; full 1716 passed / 1 skipped, Ruff/diff/security), and implementation
+HEAD `6665b90` passed exact-head CI #39469733288.
+
+The separately authorized **PUBLIC TIKTOK LIVE PASS** confirms one second-account
+full-link scenario without a personal allowlist: public-page metadata/source ID, one
+HTTP 200 media acquisition, complete 565,847-byte H.264/AAC MP4, FFmpeg decode and
+passthrough preparation, one confirmed Telegram video Message, and owner-confirmed
+playback/orientation/sound. Polling/session, worker and file cleanup passed; Docker
+remained exited. No retries, fallback, merge or deployment were performed. The approved
+queued update was read without acknowledgement/deletion; future restart replay
+prevention was not tested.
+
+Final documentation-only preparation and PR review passed, including another full
+network-blocked offline run (1716 passed / 1 skipped, 186.73 s), Ruff/diff/privacy
+checks and 30 internal links/anchors. Source/configuration/dependencies/CI are unchanged
+by that update. Next is successful exact documentation-head CI (see Draft PR #65
+checks) and a separate owner merge decision. Deployment is not authorized. One success
+does not validate scalability, short links (unsupported), general TikTok reliability or
+production readiness; earlier 429/403 remain historical
+limitations, not universally resolved outcomes. See
+[Phase 6C](PHASE6C_TIKTOK_NATIVE.md), [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md),
+[Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md), [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md),
+[Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md) and
+[Phase 6H](PHASE6H_TIKTOK_PUBLIC_MVP.md).
 
 Use the same gated process as Instagram:
 
