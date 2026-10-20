@@ -113,9 +113,12 @@ async def _notify_download_error(message: Message, error: DownloaderError) -> No
         )
 
 
-async def handle_start(message: Message, instagram_reels=None) -> None:
+async def handle_start(message: Message, instagram_reels=None, tiktok_videos=None) -> None:
     """Explain current capabilities and how to submit a link."""
-    if instagram_reels is None:
+    if tiktok_videos is not None and tiktok_videos.allows(message):
+        instagram = ", публичный Instagram Reel или /p/" if instagram_reels is not None else ""
+        await message.answer(f"Отправь ссылку на YouTube{instagram} или публичное TikTok-видео.")
+    elif instagram_reels is None:
         await message.answer(_START_MESSAGE)
     else:
         await message.answer(
@@ -125,7 +128,7 @@ async def handle_start(message: Message, instagram_reels=None) -> None:
         )
 
 
-async def handle_text(message: Message, instagram_reels=None) -> None:
+async def handle_text(message: Message, instagram_reels=None, tiktok_videos=None) -> None:
     """Validate a submitted URL, download YouTube media, and deliver the file."""
     submitted_text = (message.text or "").strip()
 
@@ -152,6 +155,9 @@ async def handle_text(message: Message, instagram_reels=None) -> None:
         return
 
     platform_label = _PLATFORM_LABELS[platform]
+    if platform is Platform.TIKTOK and tiktok_videos is not None:
+        await tiktok_videos.handle(message, submitted_text)
+        return
     if platform is Platform.INSTAGRAM and instagram_reels is not None:
         await instagram_reels.handle(message, submitted_text)
         return

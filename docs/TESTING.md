@@ -4,6 +4,34 @@ Instagram's current narrow live acceptance is recorded in
 [Instagram live acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
 Earlier sections retain the evidence and open gates at each historical stage.
 
+## Phase 6D restricted TikTok integration (offline)
+
+The preceding separately authorized native reliability benchmark on `511b538`
+passed 4/4 new publications: complete MP4, one actual video/audio stream, H.264/AAC,
+FFmpeg decode and preparation passthrough. Metadata: 4 requests / 1,142,585 bytes;
+media: 4 requests / 14,460,237 bytes; four acquisitions, 19.152 s, exact counters and
+cleanup PASS. This is native live evidence, not Telegram delivery or population-wide
+reliability; earlier B still returned 403 in its two authorized experiments.
+
+Phase 6D uses synthetic HTTP, generated local MP4 and fake Telegram clients under
+inherited external socket/DNS denial. **143 focused cases pass**: the 103 original
+CLI/benchmark cases plus 40 integration cases. Tests verify local provider capabilities,
+silent/sound output, file lifetime through upload, exclusive publication, 403/oversize/
+incomplete response, flag/access/config guards, actual dispatcher routing, uncertain
+Telegram response, upload error/timeout and cancellation. Repeated cancellation with
+live/exited group leaders confirms termination/reap and continued event-loop progress.
+Injected OS cleanup refusal blocks work and quarantines rather than deleting files;
+the test emergency-cleans its own processes and workspace.
+
+Full offline suite: **1613 passed, 1 skipped** (opt-in live YouTube test), including
+existing YouTube/Instagram and local FFmpeg checks. Ruff lint/format and diff-check
+pass. Scope review confirms unchanged native resolver, transport, preparation,
+network/resource constants and complete MIT attribution; no dependency changes.
+Exact-head CI must also pass on the new stacked Draft PR before handoff; the CI
+pull-request base filter includes `feat/tiktok-native-public` for this purpose.
+No real TikTok/Telegram call, Docker operation, polling or deployment is performed
+by these tests. A separately authorized restricted Telegram live test remains open.
+
 ## Phase 6C native TikTok (offline)
 
 Separate from discontinued PR #59, the native CLI uses the embed-state schema

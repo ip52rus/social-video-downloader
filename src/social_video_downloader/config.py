@@ -20,10 +20,18 @@ class Settings:
     telegram_api_base_url: str | None = None
     telegram_api_timeout_seconds: int = 1800
     instagram_telegram_enabled: bool = False
+    tiktok_telegram_enabled: bool = False
+    tiktok_test_user_ids: frozenset[int] = field(default_factory=frozenset, repr=False)
 
     def __post_init__(self) -> None:
         if type(self.instagram_telegram_enabled) is not bool:
             raise ConfigurationError("INSTAGRAM_TELEGRAM_ENABLED must be true or false.")
+        if type(self.tiktok_telegram_enabled) is not bool:
+            raise ConfigurationError("TIKTOK_TELEGRAM_ENABLED must be true or false.")
+        if not isinstance(self.tiktok_test_user_ids, frozenset) or any(
+            type(value) is not int or not 0 < value < 2**63 for value in self.tiktok_test_user_ids
+        ):
+            raise ConfigurationError("TIKTOK_TEST_USER_IDS must contain positive integer IDs.")
         if not self.telegram_bot_token.strip():
             raise ConfigurationError("TELEGRAM_BOT_TOKEN must not be empty.")
 
@@ -34,6 +42,8 @@ class Settings:
             raise ConfigurationError(
                 "Instagram Reel MVP is restricted to isolated development/test."
             )
+        if self.tiktok_telegram_enabled and self.app_env == "production":
+            raise ConfigurationError("TikTok testing is restricted to development/test.")
 
         normalized_log_level = self.log_level.upper()
         if normalized_log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
@@ -87,6 +97,17 @@ class Settings:
         instagram_enabled = source.get("INSTAGRAM_TELEGRAM_ENABLED", "false").strip().lower()
         if instagram_enabled not in {"true", "false"}:
             raise ConfigurationError("INSTAGRAM_TELEGRAM_ENABLED must be true or false.")
+        tiktok_enabled = source.get("TIKTOK_TELEGRAM_ENABLED", "false").strip().lower()
+        if tiktok_enabled not in {"true", "false"}:
+            raise ConfigurationError("TIKTOK_TELEGRAM_ENABLED must be true or false.")
+        raw_ids = source.get("TIKTOK_TEST_USER_IDS", "").strip()
+        try:
+            parts = [value.strip() for value in raw_ids.split(",")] if raw_ids else []
+            if any(not value.isascii() or not value.isdecimal() for value in parts):
+                raise ValueError
+            tiktok_ids = frozenset(int(value) for value in parts)
+        except ValueError:
+            raise ConfigurationError("TIKTOK_TEST_USER_IDS must be comma-separated IDs.") from None
         return cls(
             telegram_bot_token=token,
             app_env=source.get("APP_ENV", "development").strip().lower(),
@@ -94,4 +115,6 @@ class Settings:
             telegram_api_base_url=api_base_url,
             telegram_api_timeout_seconds=api_timeout_seconds,
             instagram_telegram_enabled=instagram_enabled == "true",
+            tiktok_telegram_enabled=tiktok_enabled == "true",
+            tiktok_test_user_ids=tiktok_ids,
         )

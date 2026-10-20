@@ -24,9 +24,19 @@ def create_bot(settings: Settings) -> Bot:
     return Bot(token=settings.telegram_bot_token, session=session)
 
 
-def create_dispatcher(settings: Settings | None = None, *, instagram_reels=None) -> Dispatcher:
+def create_dispatcher(
+    settings: Settings | None = None, *, instagram_reels=None, tiktok_videos=None
+) -> Dispatcher:
     """Create the root dispatcher and register Telegram handlers."""
     dispatcher = Dispatcher()
+    if settings is not None and settings.tiktok_telegram_enabled:
+        from social_video_downloader.telegram_tiktok import TelegramTikTokHandler
+
+        dispatcher["tiktok_videos"] = (
+            tiktok_videos
+            if tiktok_videos is not None
+            else TelegramTikTokHandler(settings.tiktok_test_user_ids)
+        )
     if settings is not None and settings.instagram_telegram_enabled:
         from social_video_downloader.telegram_instagram import InstagramReelHandler
 
