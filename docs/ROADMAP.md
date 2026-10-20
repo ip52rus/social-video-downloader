@@ -252,13 +252,17 @@ CLI/benchmark, original limits and working YouTube/Instagram paths are preserved
 Controlled owner-authorized Telegram attempts subsequently started and stopped
 correctly but received embed metadata HTTP 429 before any media GET/upload. Real
 Telegram video delivery remains unverified. Phase 6E confirms equivalent CLI/provider
-HTTP and prepares a separate public-page universal-state parser/session adapter,
-without modifying the working embed/Telegram paths or adding fallback. Source
-inspection and synthetic tests justify one separately authorized supervised
-metadata-only page experiment; they do not establish that it avoids 429. No live
-request, deployment or merge is part of preparation. See
+HTTP and adds a separate public-page universal-state parser/session adapter.
+Its separately authorized metadata-only test obtained HTTP 200, a matching source
+ID and one admitted `playAddr` (1 request / 405,981 bytes); no media GET occurred.
+Phase 6F prepares an explicit one-publication `--public-page` MP4 mode using the
+same native transport, verifier and process supervisor. It adds no embed fallback
+or provider/Telegram route. The next gate is separately authorized real MP4
+completeness, streams, decode, preparation and cleanup, after offline verification
+and exact-head CI. No live request, deployment or merge is part of preparation;
+neither a general 429 fix nor real page-based MP4 acquisition is established. See
 [Phase 6C](PHASE6C_TIKTOK_NATIVE.md), [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md) and
-[Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md).
+[Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md) and [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md).
 
 Use the same gated process as Instagram:
 

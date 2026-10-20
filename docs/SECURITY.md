@@ -71,6 +71,18 @@ Any future live call must be explicitly authorized and process-supervised; socke
 timeouts/cooperative checks are not a hard deadline for DNS. No bypass, fallback,
 header/cookie policy expansion, new CDN or dependency is introduced.
 
+The explicit Phase 6F public-page acquisition mode uses that same native transport,
+host/DNS/TLS/redirect policy, scoped cookiejar and Content-Length completeness checks.
+It accepts one publication, verifies the original ID before media admission, uses
+only its `playAddr`, and refuses explicit separate streams before acquisition.
+The existing 180-second supervisor and bounded termination/reap own its private
+workspace, including on interruption. The metadata-only entry point still forbids
+media; embed/benchmark/provider/Telegram do not opt into this mode. No retries,
+fallback, header changes or new destinations/credentials are introduced. Reports
+contain only fixed categories, bounded probe fields, safe CDN families and body
+counters; body counters do not measure full TLS/network traffic. Live MP4 validation
+requires separate authorization. See [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md).
+
 ## Experimental Instagram provider
 
 The first Reel provider uses only anonymous extraction: no supplied cookies, browser
