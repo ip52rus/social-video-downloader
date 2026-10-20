@@ -250,20 +250,28 @@ one reusable native engine, standard-video/silent-capable provider and a default
 Telegram handler restricted to configured test users in development/test. The native
 CLI/benchmark, original limits and working YouTube/Instagram paths are preserved.
 Controlled owner-authorized Telegram attempts subsequently started and stopped
-correctly but received embed metadata HTTP 429 before any media GET/upload. Real
-Telegram video delivery remains unverified. Phase 6E confirms equivalent CLI/provider
+correctly but received embed metadata HTTP 429 before any media GET/upload. Those
+attempts did not verify delivery. Phase 6E confirms equivalent CLI/provider
 HTTP and adds a separate public-page universal-state parser/session adapter.
 Its separately authorized metadata-only test obtained HTTP 200, a matching source
 ID and one admitted `playAddr` (1 request / 405,981 bytes); no media GET occurred.
 Phase 6F's explicit `--public-page` mode then passed one separately authorized native
 MP4 test: complete 571,013-byte H.264/AAC file, original ID, full decode, passthrough
 and cleanup in 5.506 s. It used one metadata request and one media GET (200), without
-Telegram upload. Phase 6G now prepares explicit public-page selection in the existing
+Telegram upload. Phase 6G adds explicit public-page selection in the existing
 TikTokProvider and verified caller-workspace export to the unchanged handler.
 No embed fallback, retry, network policy change or new handler is introduced. The
-next gate is one separately authorized controlled Telegram delivery after offline
-checks and exact-head CI. No live request, deployment or merge is part of this
-preparation; general reliability and a general 429 fix remain unproven. See
+offline checks and exact-head CI passed. The subsequent separately authorized
+Phase 6G Telegram test passed for one short public video: matching ID, complete
+571,013-byte MP4, full decode and passthrough, one confirmed video Message, owner
+confirmation of normal playback/orientation/sound and process/file cleanup.
+The operation used one metadata request, one media GET (200), one acquisition and
+one sendVideo attempt, without retry or fallback; handler/delivery took 5.432 s.
+This closes only the controlled single-case end-to-end gate. TikTok remains off by
+default, development/test-only and allowlisted. General reliability, all-publication
+support, the cause of earlier 429 and production readiness remain unproven. Next is
+separately authorized staged merge consideration for PRs #60–64; merge, deployment
+and further live runs have not been performed or authorized by that acceptance. See
 [Phase 6C](PHASE6C_TIKTOK_NATIVE.md), [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md) and
 [Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md), [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md)
 and [Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md).

@@ -4,7 +4,7 @@ Instagram's current narrow live acceptance is recorded in
 [Instagram live acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
 Earlier sections retain the evidence and open gates at each historical stage.
 
-## Phase 6G public-page Telegram preparation (offline)
+## Phase 6G public-page Telegram acceptance (offline and controlled LIVE)
 
 **226 focused PASS**, including 19 new provider/export/fault/CLI cases. Tests use
 synthetic real-parser HTTP, generated H.264/AAC and silent MP4, the real supervised
@@ -33,12 +33,30 @@ Full offline suite with inherited socket/DNS denial: **1696 passed, 1 skipped**
 scope/security review PASS. Publication CI is verified on the exact committed HEAD
 and reported in GitHub checks and the handoff; no live delivery acceptance is implied.
 
-This preparation makes no real TikTok/Telegram calls, starts no polling/Docker and
-performs no deployment. Separately authorized Phase 6F native evidence is one
+Offline preparation made no real TikTok/Telegram calls, started no polling/Docker
+and performed no deployment. Separately authorized Phase 6F native evidence is one
 571,013-byte H.264/AAC MP4, 576×1024, 12 s per CLI, one metadata request / 410,890
 bytes and one media request (200), 5.506 s with exact counters/decode/passthrough/
-cleanup PASS. Metadata HTTP status was not separately exposed. This proves one
-native download, not real Telegram delivery; that next live gate remains open.
+cleanup PASS. Metadata HTTP status was not separately exposed. That gate proved
+one native download; it did not by itself prove Telegram delivery.
+
+The subsequent owner-authorized Phase 6G test on
+`5896383b4123983da85ea2f1cebe46f48a119b9d` passed real Telegram delivery: one queued
+owner message, one public-page metadata request / 411,812 bytes, one media GET
+(200) / 571,013 bytes and one acquisition. Original ID and Content-Length passed;
+actual H.264/AAC streams, 576×1024, 12 s per engine, full FFmpeg decode and passthrough
+preparation passed. Metadata HTTP status was not separately exposed. Exactly one
+sendVideo returned a confirmed video Message in the correct chat; file lifetime
+covered upload. Native operation took 2.863 s, handler/delivery 5.432 s, exact counters
+and private/caller workspace cleanup passed. Polling/session/worker/FFmpeg stopped;
+containers remained exited. The owner confirmed normal playback, orientation and
+sound. No retries, embed fallback, merge or deployment occurred.
+
+**Phase 6G controlled LIVE PASS** closes that single-case end-to-end gate. It is not
+proof of broad publication support, general TikTok reliability, resolution of the
+earlier embed 429 cause or production readiness. Feature flag remains off by default
+with a development/test-only user allowlist. Further live runs, staged merge and
+deployment require separate authorization.
 See [Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md).
 
 ## Phase 6F public-page MP4 preparation (offline)
@@ -67,7 +85,7 @@ new stacked Draft PR to run unchanged jobs. Exact committed-head CI must pass be
 handoff; its result is recorded in GitHub checks and the handoff report.
 No real TikTok/Telegram request, media download, Docker operation or deployment
 occurred in preparation. Its subsequent owner-authorized native MP4 live gate passed
-as recorded above; real Telegram delivery still requires separate authorization.
+as recorded above; subsequent real Telegram acceptance is recorded in Phase 6G above.
 See [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md).
 
 ## Phase 6E public-page prototype (offline and separately authorized metadata-only)

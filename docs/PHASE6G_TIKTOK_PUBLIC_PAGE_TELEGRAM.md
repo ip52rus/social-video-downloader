@@ -22,9 +22,9 @@ blocking and quarantine semantics. Existing native limits, scoped cookies, CDN,
 DNS/IP/TLS/redirect/framing rules and default embed/benchmark remain unchanged.
 Public-page selection is explicit in the provider, with no embed fallback or retry.
 
-Real TikTok/Telegram calls, polling, Docker, deployment and merge are not authorized
-during preparation. The next gate requires separate owner authorization after
-offline verification and exact-head CI.
+Real TikTok/Telegram calls, polling, Docker, deployment and merge were not authorized
+during preparation. A subsequent separately authorized controlled live test passed,
+as recorded below. That authorization does not permit another run, merge or deployment.
 
 ## Current path and ownership
 
@@ -83,9 +83,39 @@ lint/format, diff-check and scope/security PASS. See TESTING for evidence and li
 Exact committed-head GitHub CI is required before handoff; only the CI
 PR base filter is extended to the parent branch, with unchanged jobs/permissions.
 
-The next gate is one separately owner-authorized local Telegram test on exact HEAD,
-with stopped Docker/other pollers, process-local development settings and owner-only
-allowlist. One supplied previously successful URL is processed once, without probes,
-retries or upload fallback. Require actual metadata/media verification, confirmed
-Telegram video Message, worker/session/workspace cleanup, and manual playback/audio
-confirmation. Native success and fake Telegram tests do not close that live gate.
+The original next gate required one separately authorized local Telegram test on
+exact HEAD, process-local development settings, owner-only access, verified media,
+confirmed video Message, cleanup and manual playback/audio confirmation. Offline
+tests alone did not close that gate; the following real test and owner confirmation did.
+
+## Controlled LIVE acceptance — PASS
+
+Tested HEAD: `5896383b4123983da85ea2f1cebe46f48a119b9d` (PR #64).
+One previously queued owner message was the sole test. The existing handler ran
+with development-only settings, owner-only allowlist and the cloud Telegram Bot API;
+no production activation or Docker start was performed.
+
+- Public-page metadata PASS: original source ID matched, one admitted `playAddr`,
+  no separate-audio flag. One metadata request read 411,812 body bytes. Metadata
+  HTTP status was not separately exposed by the native report.
+- One media GET returned HTTP 200; one acquisition produced a complete 571,013-byte
+  MP4 with confirmed Content-Length. Actual ffprobe streams: one H.264 video and
+  one AAC audio stream, 576×1024, duration 12 seconds as reported by the engine.
+  Full FFmpeg decode and Telegram preparation passed without conversion.
+- Exactly one sendVideo attempt returned a confirmed Telegram Message with video,
+  positive message ID and matching chat. The verified file existed throughout the
+  awaited upload. No download/upload retry or embed fallback occurred.
+- Native operation: 2.863 seconds; handler operation including delivery: 5.432 seconds.
+  `counts_exact=true`, `workspace_cleaned=true`; caller workspace also removed.
+- Polling stopped, Bot API session closed, worker/FFmpeg completed and media/partial
+  files were cleaned. Both Docker containers remained exited. Git and protected
+  environment files were preserved; an external IDE workspace change was not touched.
+- The owner confirmed receipt, normal playback, correct orientation and sound.
+
+This closes the controlled Phase 6G end-to-end gate for one short public video.
+The earlier embed HTTP 429 failures and Phase 6F native success remain historical
+evidence; this result does not establish why 429 occurred or guarantee future access.
+It does not establish broad reliability, support for all publications or production
+readiness. TikTok remains disabled by default, development/test-only and allowlisted.
+Next is separately authorized staged merge consideration for PRs #60–64; no merge,
+deployment, broader activation or further live run is authorized by this result.
