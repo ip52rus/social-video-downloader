@@ -125,11 +125,15 @@ def resolve_public_page(body: bytes, url: str) -> native.Resolved:
         raise native.Refusal("metadata_schema") from None
 
 
-class _PublicPageSession(native.Session):
+class _PublicPageMediaSession(native.Session):
+    """Explicit acquisition adapter; HTTP transport and destination policy are inherited."""
+
     def __init__(self, post_id, canonical, deadline, budget):
         super().__init__(post_id, canonical, min(deadline, monotonic() + native.SECONDS), budget)
         self.path = native._url(canonical).path
 
+
+class _PublicPageSession(_PublicPageMediaSession):
     def _admit(self, url, phase):
         if phase != "metadata":
             raise native.Refusal("metadata_only_prototype")

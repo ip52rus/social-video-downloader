@@ -593,9 +593,19 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
   before media admission, existing bounded transport and no media GET/fallback or
   handler/CLI change. 45 new focused PASS, full offline suite 1658 passed / 1 skipped;
   Ruff, diff/documentation and scope/security PASS. Evidence: [TESTING](TESTING.md).
-- [ ] Obtain separate authorization for one supervised metadata-only page experiment.
-  Availability and a solution to HTTP 429 remain unproven. See
-  [Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md); no live request in prototype preparation.
+- [x] Separately authorized Phase 6E metadata-only experiment on `4265328`: HTTP 200,
+  matching source ID, one admitted `playAddr`, 1 request / 405,981 bytes, 2.632 s,
+  exact counters and cleanup PASS. No media GET; MP4 availability remains untested.
+  See [Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md).
+- [x] Implement and verify Phase 6F offline: explicit one-publication `--public-page`
+  acquisition using the same transport, verifier and process supervisor. Preserve
+  metadata-only inspection and all embed/provider/Telegram paths. 20 new / 208 focused
+  PASS, full offline 1678 passed / 1 skipped, six supplemental fault injections,
+  Ruff and scope/security PASS. Exact-head publication CI is required before handoff. See
+  [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md).
+- [ ] Obtain separate authorization for one public-page MP4 live test, then verify
+  actual completeness, streams, full decode, preparation and cleanup. No automatic
+  fallback, bot activation, merge or general reliability claim follows from metadata.
 
 ## Phase 7 - Additional Social Platforms
 - [ ] Select candidate platforms based on user demand, feasibility, legal/platform restrictions, extraction reliability, and maintenance burden.

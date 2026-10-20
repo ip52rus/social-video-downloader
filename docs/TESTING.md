@@ -4,7 +4,35 @@ Instagram's current narrow live acceptance is recorded in
 [Instagram live acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
 Earlier sections retain the evidence and open gates at each historical stage.
 
-## Phase 6E public-page prototype (offline)
+## Phase 6F public-page MP4 preparation (offline)
+
+**20 new cases, 208 focused PASS** with synthetic real-parser HTTP and generated
+local MP4. The explicit `--public-page` mode verifies sound/silent files through
+the actual worker, ffprobe, full FFmpeg decode and passthrough preparation. Failure
+cases cover metadata 403/429, identity/schema/missing playAddr/forbidden CDN,
+separate streams before GET, media 403, incomplete Content-Length, size refusal,
+timeout/cancellation, exact counters and owned cleanup. Signed-query/header/cookie
+checks use actual outbound requests; reports omit source locators, HTML and IDs.
+Existing public-page metadata-only, native/embed/benchmark and Telegram cases pass.
+
+Six additional temporary offline fault injections pass: forbidden page-to-embed
+and media-to-external redirects before another connection, allowed same-domain
+cookie forwarding, metadata-only media denial and public worker 403/429 categories.
+AST comparison confirms 11 core functions/classes and eight network/resource
+constants unchanged, including Session, DNS/TLS pinning, framing, verifier and
+supervisor exchange. The public parser is unchanged. Provider, handler, CLI
+wrapper, dependencies, config example and MIT notice are byte-identical to base.
+
+Full suite with inherited external socket/DNS denial: **1678 passed, 1 skipped**
+(opt-in real YouTube smoke), 181.24 s. Ruff lint/format and diff/scope/security review
+PASS. CI's PR base filter adds only `feat/tiktok-public-page-prototype`, allowing the
+new stacked Draft PR to run unchanged jobs. Exact committed-head CI must pass before
+handoff; its result is recorded in GitHub checks and the handoff report.
+No real TikTok/Telegram request, media download, Docker operation or deployment
+occurred in preparation. The next live gate requires separate owner authorization.
+See [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md).
+
+## Phase 6E public-page prototype (offline and separately authorized metadata-only)
 
 Controlled Telegram attempts after Phase 6D received owner messages and stopped
 on embed metadata HTTP 429, before media GET/acquisition/upload. Polling/session/
@@ -31,10 +59,13 @@ external socket/DNS denial: **1658 passed, 1 skipped** (opt-in real YouTube test
 including all original native CLI/benchmark/Telegram regressions. Exact-head CI
 must also pass before handoff. No test worker or FFmpeg process may remain.
 
-This prototype has no new live entry point. Any future real metadata inspection
-requires separate approval and owned process supervision; cooperative session
-timeouts alone are not a hard DNS/process bound. MP4/CDN availability, codecs/audio
-and any improvement to 429 remain untested. See [Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md).
+The prototype initially had no live entry point. The subsequent separately
+authorized metadata-only call on `4265328` returned HTTP 200, valid universal JSON,
+matching ID and one admitted `playAddr`: one request / 405,981 bytes, no media
+request, 2.632 s supervised elapsed time, exact counters and cleanup PASS. This
+does not establish general improvement to 429 or real page-based MP4 availability.
+`inspect_public_page()` stays metadata-only; any new live call requires separate
+approval and owned process supervision. See [Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md).
 
 ## Phase 6D restricted TikTok integration (offline)
 

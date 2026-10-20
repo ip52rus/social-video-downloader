@@ -73,7 +73,7 @@ another connection. Original headers and per-operation scoped memory-only cookie
 remain unchanged; the jar is cleared on success/failure. Body/request caps and
 HTTP 403/429 fail-fast behavior are inherited, with no retries or error-body read.
 
-## Next separately authorized gate
+## Original metadata-only gate (completed separately)
 
 Recommendation: **GO for one supervised metadata-only public-page experiment**,
 not for fallback integration or claims of a 429 fix. Owner supplies one full public
@@ -96,3 +96,17 @@ config example, dependencies and MIT notice are byte-identical to PR #61. CI's
 pull-request base filter includes the parent feature branch for this separate
 stacked Draft PR; jobs and permissions are unchanged. Exact-head publication CI
 is checked before handoff. See [TESTING](TESTING.md).
+
+## Authorized metadata-only result and next gate
+
+The separate experiment on `4265328` returned HTTP 200, valid universal JSON,
+matching original source ID and one admitted `playAddr`, with no separate-audio
+flag. One metadata request read 405,981 bytes; no media request/acquisition occurred.
+Supervised elapsed time was 2.632 seconds, exact counters and process/workspace
+cleanup passed. This one response does not prove MP4 availability or a general
+solution to HTTP 429.
+
+[Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md) prepares a separate explicit supervised
+acquisition mode. `inspect_public_page()` retains its metadata-only restriction;
+provider/Telegram do not acquire a page fallback. A real MP4 test requires new
+owner authorization after offline checks and exact-head CI.

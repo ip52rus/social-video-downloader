@@ -115,6 +115,17 @@ automatic fallback. Live execution requires the existing owned process superviso
 the synchronous function alone is not a hard DNS/process deadline. See
 [Phase 6E decision and limits](PHASE6E_TIKTOK_PUBLIC_PAGE.md).
 
+Phase 6F's explicit `scripts/tiktok_native.py --public-page` mode accepts exactly
+one full publication through stdin, selects only verified public-page `playAddr`
+and reuses the native worker/supervisor, acquisition, verification and cleanup.
+The acquisition session changes only the metadata path; its transport and policy
+remain inherited. Metadata and media share one operation-local cookiejar. Explicit
+separate-audio metadata refuses before media GET; silent combined MP4 is permitted.
+The worker imports the packaged engine once to preserve shared exception identity.
+There is no endpoint fallback, provider registration, export or Telegram upload
+from this diagnostic mode. Existing `inspect_public_page()` still forbids media.
+See [Phase 6F decision and acceptance gate](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md).
+
 ### Historical Reel-only opt-in MVP design
 
 The original Reel-only stage reused `InstagramProvider`, `DownloadedMedia` and the

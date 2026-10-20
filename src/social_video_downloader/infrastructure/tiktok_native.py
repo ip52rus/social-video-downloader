@@ -522,38 +522,52 @@ def _series_limit(budget, deadline):
     return None
 
 
-def _execute(urls, workspace, deadline, expectations=None, keep_file=False):
+def _execute(urls, workspace, deadline, expectations=None, keep_file=False, public_page=False):
     benchmark = expectations is not None
+    detailed = benchmark or public_page
     budget, results, first_error, stop_reason = _budget(), [], None, None
     for index, url in enumerate(urls):
         if benchmark and (stop_reason := _series_limit(budget, deadline)):
             break
         error, path = None, None
         entry = {"case": index + 1, "success": False}
-        if benchmark:
+        if detailed:
             entry.update(metadata=False, source_identity=None, decoded=None, preparation=None)
         results.append(entry)
         session = None
         previous = budget.copy()
         try:
             post_id, canonical = publication(url)
-            session = Session(post_id, canonical, deadline, budget)
-            resolved = resolve(session.metadata(), post_id)
+            if public_page:
+                from social_video_downloader.infrastructure.tiktok_public_page import (
+                    _PublicPageMediaSession,
+                    resolve_public_page,
+                )
+
+                session = _PublicPageMediaSession(post_id, canonical, deadline, budget)
+                resolved = resolve_public_page(session.metadata(), canonical)
+            else:
+                session = Session(post_id, canonical, deadline, budget)
+                resolved = resolve(session.metadata(), post_id)
             entry.update(
                 metadata=True,
                 candidates=resolved.candidates,
                 candidate_source=resolved.source,
                 separate_audio=resolved.separate_audio,
             )
-            if benchmark:
+            if detailed:
                 entry["source_identity"] = True
+            if public_page and resolved.separate_audio:
+                raise Refusal("separate_streams_unsupported")
             path = workspace / f"case-{index + 1}.mp4"
             session.acquire(resolved, path)
-            if benchmark:
+            if detailed:
                 entry.update(bytes=path.stat().st_size, http_complete=True)
             if sum(p.stat().st_size for p in workspace.rglob("*") if p.is_file()) > WORKSPACE_BYTES:
                 raise Refusal("workspace_limit")
-            require_audio = expectations[index] if benchmark else index == 0
+            require_audio = (
+                False if public_page else expectations[index] if benchmark else index == 0
+            )
             entry.update(
                 verify(path, session, resolved.separate_audio, require_audio), success=True
             )
@@ -568,10 +582,10 @@ def _execute(urls, workspace, deadline, expectations=None, keep_file=False):
         finally:
             if session is not None:
                 entry.update(session.codecs, media_http=session.media_http)
-                if benchmark:
+                if detailed:
                     entry.update(session.observed)
                 session.jar.clear()
-            if benchmark and path is not None and not keep_file:
+            if detailed and path is not None and not keep_file:
                 try:
                     path.unlink(missing_ok=True)
                 except OSError:
@@ -580,9 +594,9 @@ def _execute(urls, workspace, deadline, expectations=None, keep_file=False):
         if error:
             entry["error"] = error
             first_error = first_error or error
-            if benchmark:
+            if detailed:
                 entry["success"] = False
-            if benchmark and error == "source_identity_mismatch":
+            if detailed and error == "source_identity_mismatch":
                 entry["source_identity"] = False
             if not benchmark or stop_reason:
                 break
@@ -608,6 +622,7 @@ def _worker_main():
                 request["deadline"],
                 request.get("expectations"),
                 request.get("keep_file", False),
+                request.get("public_page", False),
             )
         ),
         flush=True,
@@ -618,7 +633,8 @@ def _command(workspace):
     return [
         sys.executable,
         "-c",
-        "import runpy,sys; runpy.run_path(sys.argv[1])['_worker_main']()",
+        "from social_video_downloader.infrastructure import tiktok_native; "
+        "tiktok_native._worker_main()",
         str(Path(__file__).resolve()),
         str(workspace),
     ]
@@ -665,10 +681,14 @@ def _exchange(process, payload, deadline, output, cancelled=None):
         sleep(0.01)
 
 
-def run(urls, *, benchmark=False, output_dir=None, cancelled=None):
+def run(urls, *, benchmark=False, output_dir=None, cancelled=None, public_page=False):
     started = monotonic()
     expectations = None
     try:
+        if public_page and (
+            benchmark or output_dir is not None or not isinstance(urls, list) or len(urls) != 1
+        ):
+            raise Refusal("one_public_page_url_required")
         if not isinstance(urls, list) or not 0 < len(urls) <= (4 if benchmark else 2):
             raise Refusal("one_or_two_full_urls_required")
         if benchmark:
@@ -726,6 +746,7 @@ def run(urls, *, benchmark=False, output_dir=None, cancelled=None):
                 {
                     "urls": urls,
                     "deadline": started + SECONDS,
+                    **({"public_page": True} if public_page else {}),
                     **({"expectations": expectations} if benchmark else {}),
                     **({"expectations": expectations, "keep_file": True} if output_dir else {}),
                 }
@@ -867,12 +888,13 @@ def main():
 
     signal.signal(signal.SIGTERM, interrupt)
     try:
-        if sys.argv[1:] not in ([], ["--benchmark"]):
+        if sys.argv[1:] not in ([], ["--benchmark"], ["--public-page"]):
             raise Refusal("invalid_input")
         raw = sys.stdin.read(16385)
         result = run(
             json.loads(raw) if len(raw) <= 16384 else None,
             benchmark=sys.argv[1:] == ["--benchmark"],
+            **({"public_page": True} if sys.argv[1:] == ["--public-page"] else {}),
         )
     except (Exception, KeyboardInterrupt):
         result = {"success": False, "error": "invalid_input"}
