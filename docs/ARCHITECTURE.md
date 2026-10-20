@@ -137,6 +137,16 @@ errors map to fixed safe domain errors; planning still performs no HTTP. Embed C
 and benchmark retain their paths, without any public/embed fallback. See
 [Phase 6G decision and gates](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md).
 
+Phase 6H supersedes the historical TikTok test-user and production guards above.
+The default-off flag now gates public access, without changing provider/transport.
+The bot's single dispatcher handler reserves an active-user set entry synchronously
+before its first await. Capacity defaults to two per process (validated 1–8), one per
+user; excess work is rejected without a queue. Independent events/workspaces retain
+their slot through worker reap, awaited upload and cleanup. Failed cleanup retains
+the reservation and globally blocks new work; other already admitted operations keep
+their independent ownership. Instagram admission is unchanged. See
+[Phase 6H decision, limitations and acceptance](PHASE6H_TIKTOK_PUBLIC_MVP.md).
+
 ### Historical Reel-only opt-in MVP design
 
 The original Reel-only stage reused `InstagramProvider`, `DownloadedMedia` and the

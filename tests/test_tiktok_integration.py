@@ -127,10 +127,10 @@ async def test_real_native_worker_to_fake_telegram_keeps_file_until_response(
         return response(1)
 
     msg.answer_video.side_effect = upload
-    handler = t.TelegramTikTokHandler({7})
+    handler = t.TelegramTikTokHandler()
     await handler.handle(msg, A)
     msg.answer_video.assert_awaited_once()
-    assert all(not path.parent.exists() for path in paths) and not handler._active
+    assert all(not path.parent.exists() for path in paths) and not handler._active_users
     assert all(worker.returncode == 0 for worker in workers)
     assert len(msg.answer.await_args_list) == 1
 
@@ -186,21 +186,19 @@ async def test_handler_safe_errors_without_upload_or_private_diagnostics(monkeyp
 
     monkeypatch.setattr(n, "download_video", fail)
     msg = message()
-    await t.TelegramTikTokHandler({7}).handle(msg, A)
+    await t.TelegramTikTokHandler().handle(msg, A)
     msg.answer_video.assert_not_awaited()
     assert all(not path.parent.exists() for path in paths)
     text = " ".join(call.args[0] for call in msg.answer.await_args_list)
     assert all(secret not in text for secret in (A, MEDIA, "11111111", category))
 
 
-@pytest.mark.parametrize(
-    "allowed,user", [(frozenset(), 7), (frozenset({7}), 8), (frozenset({7}), None)]
-)
+@pytest.mark.parametrize("user", [None, True, 0, -1, "7"])
 @pytest.mark.asyncio
-async def test_allowlist_denies_before_provider(allowed, user):
+async def test_invalid_user_identity_denies_before_provider(user):
     provider = MagicMock()
     msg = message(user)
-    await t.TelegramTikTokHandler(allowed, provider=provider).handle(msg, A)
+    await t.TelegramTikTokHandler(provider=provider).handle(msg, A)
     provider.download_prepared.assert_not_called()
     msg.answer_video.assert_not_awaited()
 
@@ -219,7 +217,7 @@ async def test_allowlist_denies_before_provider(allowed, user):
 async def test_invalid_or_unsupported_url_no_download(url):
     provider = FixtureProvider()
     msg = message()
-    await t.TelegramTikTokHandler({7}, provider=provider).handle(msg, url)
+    await t.TelegramTikTokHandler(provider=provider).handle(msg, url)
     assert not provider.paths
     msg.answer_video.assert_not_awaited()
 
@@ -248,7 +246,7 @@ async def test_upload_failure_and_timeout_keep_file_until_await_finishes(monkeyp
     if kind == "timeout":
         monkeypatch.setattr(t, "SEND_SECONDS", 0.01)
     msg.answer_video.side_effect = upload
-    await t.TelegramTikTokHandler({7}, provider=provider).handle(msg, A)
+    await t.TelegramTikTokHandler(provider=provider).handle(msg, A)
     assert seen == [True] and all(not p.parent.exists() for p in provider.paths)
     msg.answer_video.assert_awaited_once()
     assert "Автоматического повтора" in msg.answer.await_args_list[-1].args[0]
@@ -270,7 +268,7 @@ async def test_cancellation_during_upload_does_not_delete_live_input():
             held.append(path.is_file())
 
     msg.answer_video.side_effect = upload
-    handler = t.TelegramTikTokHandler({7}, provider=provider)
+    handler = t.TelegramTikTokHandler(provider=provider)
     task = asyncio.create_task(handler.handle(msg, A))
     await asyncio.wait_for(started.wait(), 3)
     task.cancel()
@@ -278,7 +276,7 @@ async def test_cancellation_during_upload_does_not_delete_live_input():
         await task
     assert (
         held == [True]
-        and not handler._active
+        and not handler._active_users
         and all(not p.parent.exists() for p in provider.paths)
     )
 
@@ -315,7 +313,7 @@ async def test_repeated_cancel_owns_real_process_group_workspace_and_busy_slot(
         return directory
 
     monkeypatch.setattr(t, "TemporaryDirectory", track)
-    handler = t.TelegramTikTokHandler({7})
+    handler = t.TelegramTikTokHandler()
     task = asyncio.create_task(handler.handle(message(), A))
     try:
         async with asyncio.timeout(4):
@@ -323,18 +321,18 @@ async def test_repeated_cancel_owns_real_process_group_workspace_and_busy_slot(
                 await asyncio.sleep(0.01)
         second = message()
         await handler.handle(second, A)
-        assert len(workers) == 1 and "Уже обрабатываю" in second.answer.call_args.args[0]
+        assert len(workers) == 1 and "Бот занят" in second.answer.call_args.args[0]
         task.cancel()
         async with asyncio.timeout(4):
             while not cleaning.is_set():
                 await asyncio.sleep(0.01)
         task.cancel()
         await asyncio.sleep(0.02)
-        assert not task.done() and handler._active and directories[0].exists()
+        assert not task.done() and handler._active_users and directories[0].exists()
         release.set()
         with pytest.raises(asyncio.CancelledError):
             await asyncio.wait_for(task, 4)
-        assert not handler._active and all(not p.exists() for p in directories)
+        assert not handler._active_users and all(not p.exists() for p in directories)
         assert all(worker.returncode is not None for worker in workers)
         async with asyncio.timeout(3):
             while True:
@@ -395,11 +393,11 @@ async def test_unconfirmed_worker_cleanup_quarantines_and_blocks_handler(
         return directory
 
     monkeypatch.setattr(t, "TemporaryDirectory", track)
-    handler = t.TelegramTikTokHandler({7})
+    handler = t.TelegramTikTokHandler()
     msg = message()
     try:
         await asyncio.wait_for(handler.handle(msg, A), 8)
-        assert handler._blocked and directories[0].exists()
+        assert handler._blocked and handler._active_users == {7} and directories[0].exists()
         assert "приостановлена" in msg.answer.call_args.args[0]
         assert all("PRIVATE" not in call.args[0] for call in msg.answer.await_args_list)
         await handler.handle(message(), A)
@@ -426,32 +424,52 @@ def test_provider_classifies_unconfirmed_cleanup_without_details(monkeypatch, tm
 
 
 @pytest.mark.parametrize(
-    "flag,ids", [("yes", ""), ("true", "0"), ("true", "abc"), ("true", "7,,8"), ("true", "-1")]
+    "flag,capacity",
+    [
+        ("yes", "2"),
+        ("true", "0"),
+        ("true", "abc"),
+        ("true", "2.0"),
+        ("true", "-1"),
+        ("true", "9"),
+        ("true", "２"),
+        ("true", "2" * 5000),
+    ],
 )
-def test_invalid_tiktok_config_fails_closed(flag, ids):
+def test_invalid_tiktok_config_fails_closed(flag, capacity):
     with pytest.raises(ConfigurationError):
         Settings.from_env(
             {
                 "TELEGRAM_BOT_TOKEN": "fixture",
                 "TIKTOK_TELEGRAM_ENABLED": flag,
-                "TIKTOK_TEST_USER_IDS": ids,
+                "TIKTOK_MAX_CONCURRENT_OPERATIONS": capacity,
             }
         )
 
 
-def test_tiktok_flag_and_production_guard_and_ids_hidden():
-    assert not Settings("fixture").tiktok_telegram_enabled
+@pytest.mark.parametrize("capacity", [True, 0, -1, 9, 2.0, "2"])
+def test_direct_tiktok_settings_and_handler_reject_invalid_capacity(capacity):
     with pytest.raises(ConfigurationError):
-        Settings("fixture", app_env="production", tiktok_telegram_enabled=True)
+        Settings("fixture", tiktok_max_concurrent_operations=capacity)
+    with pytest.raises(ValueError):
+        t.TelegramTikTokHandler(max_concurrent=capacity)
+
+
+@pytest.mark.parametrize("capacity", [1, 2, 8])
+def test_public_tiktok_flag_production_and_capacity_wiring(capacity):
+    assert not Settings("fixture").tiktok_telegram_enabled
+    assert Settings("fixture").tiktok_max_concurrent_operations == 2
     enabled = Settings.from_env(
         {
             "TELEGRAM_BOT_TOKEN": "fixture",
+            "APP_ENV": "production",
             "TIKTOK_TELEGRAM_ENABLED": "true",
-            "TIKTOK_TEST_USER_IDS": "7, 8",
+            "TIKTOK_MAX_CONCURRENT_OPERATIONS": str(capacity),
         }
     )
-    assert enabled.tiktok_test_user_ids == frozenset({7, 8})
-    assert "tiktok_test_user_ids" not in repr(enabled)
+    with pytest.raises(ConfigurationError, match="Instagram"):
+        Settings("fixture", app_env="production", instagram_telegram_enabled=True)
+    assert not hasattr(enabled, "tiktok_test_user_ids")
     assert (
         create_dispatcher(Settings("fixture"), tiktok_videos=object()).workflow_data.get(
             "tiktok_videos"
@@ -460,6 +478,7 @@ def test_tiktok_flag_and_production_guard_and_ids_hidden():
     )
     first, second = create_dispatcher(enabled), create_dispatcher(enabled)
     assert first["tiktok_videos"] is not second["tiktok_videos"]
+    assert first["tiktok_videos"]._max_concurrent == capacity
 
 
 @pytest.mark.asyncio
@@ -471,7 +490,7 @@ async def test_flag_off_keeps_original_tiktok_response():
 
 
 @pytest.mark.asyncio
-async def test_dispatcher_routes_enabled_tiktok_to_restricted_handler():
+async def test_dispatcher_routes_enabled_public_tiktok():
     injected = SimpleNamespace(handle=AsyncMock())
     dispatcher = create_dispatcher(
         Settings("fixture", tiktok_telegram_enabled=True), tiktok_videos=injected

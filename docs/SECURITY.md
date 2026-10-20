@@ -93,6 +93,22 @@ existing quarantine/blocking and no-retry behavior. Transport, headers/cookie sc
 pinning/TLS, redirects, framing, budgets and supervisor are unchanged. Native live
 success is not real Telegram delivery. See [Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md).
 
+Phase 6H explicitly removes the historical TikTok-only user allowlist and production
+activation guard. The feature remains off by default; enabling it exposes supported
+public-video downloads to any Telegram user. Instagram restrictions are unchanged.
+There is no subscription gate. `TIKTOK_MAX_CONCURRENT_OPERATIONS` defaults to two
+and validates 1–8 per bot process, with one operation per user and immediate rejection
+at capacity. Admission check/reservation has no await, and no queue is introduced.
+User IDs exist only in transient admission state, without logging/persistence.
+Each operation has its own cancellation event, worker and workspace. A reservation
+is released only after owned worker completion and safe filesystem cleanup; unsafe
+cleanup quarantines files, retains that reservation and blocks new TikTok operations.
+Existing admitted requests retain independent ownership. Original native limits,
+exclusive export, network policy, 120-second upload bound and no-retry behavior stay
+unchanged. These are process-local controls, not distributed capacity management or
+proof of platform availability. Public live acceptance/deployment require separate
+authorization; see [Phase 6H](PHASE6H_TIKTOK_PUBLIC_MVP.md).
+
 ## Experimental Instagram provider
 
 The first Reel provider uses only anonymous extraction: no supplied cookies, browser

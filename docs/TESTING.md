@@ -4,6 +4,31 @@ Instagram's current narrow live acceptance is recorded in
 [Instagram live acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
 Earlier sections retain the evidence and open gates at each historical stage.
 
+## Phase 6H public TikTok MVP (offline)
+
+**356 focused PASS; full offline 1716 passed / 1 skipped**, 191.87 s. The skipped
+case is the opt-in real YouTube smoke. External socket/DNS operations were blocked
+by an inherited Python guard, including in native workers. Ruff lint/format,
+diff-check and compact scope/security review PASS. Exact committed-head PR CI is
+required before handoff; the PR checks record the final publication result.
+
+Seven new public-access/concurrency cases and updated configuration/lifecycle tests
+verify public access without user lists, disabled-by-default routing, TikTok allowed
+in production while Instagram remains guarded, validated process capacity, two real
+supervised workers using synthetic HTTP/generated MP4, third/same-user rejection,
+slot reuse, independent files and cancellation, retained quarantine and global blocking
+on cleanup failure. Existing native sound/silent, metadata/media 403/429, truncation,
+size, upload timeout/error/unconfirmed delivery, repeated process-group cancellation,
+CLI/benchmark, YouTube and Instagram regressions all pass. The tests verify actual
+worker reap and file ownership through upload; no live Telegram API is used.
+
+Only TikTok admission/configuration changes: public-page parser, provider, transport,
+network/framing/budget policy, preparation, dependencies, CI and MIT notice are
+unchanged. Compose only forwards default-off/default-two settings; no Docker command
+starts or changes a container. There is no public live acceptance or deployment in
+this task. Historical controlled LIVE evidence and 429/403 limits remain below.
+See [Phase 6H](PHASE6H_TIKTOK_PUBLIC_MVP.md).
+
 ## Phase 6G public-page Telegram acceptance (offline and controlled LIVE)
 
 **226 focused PASS**, including 19 new provider/export/fault/CLI cases. Tests use

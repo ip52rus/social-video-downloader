@@ -35,7 +35,7 @@ def create_dispatcher(
         dispatcher["tiktok_videos"] = (
             tiktok_videos
             if tiktok_videos is not None
-            else TelegramTikTokHandler(settings.tiktok_test_user_ids)
+            else TelegramTikTokHandler(max_concurrent=settings.tiktok_max_concurrent_operations)
         )
     if settings is not None and settings.instagram_telegram_enabled:
         from social_video_downloader.telegram_instagram import InstagramReelHandler

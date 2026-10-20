@@ -267,14 +267,20 @@ Phase 6G Telegram test passed for one short public video: matching ID, complete
 confirmation of normal playback/orientation/sound and process/file cleanup.
 The operation used one metadata request, one media GET (200), one acquisition and
 one sendVideo attempt, without retry or fallback; handler/delivery took 5.432 s.
-This closes only the controlled single-case end-to-end gate. TikTok remains off by
-default, development/test-only and allowlisted. General reliability, all-publication
-support, the cause of earlier 429 and production readiness remain unproven. Next is
-separately authorized staged merge consideration for PRs #60–64; merge, deployment
-and further live runs have not been performed or authorized by that acceptance. See
-[Phase 6C](PHASE6C_TIKTOK_NATIVE.md), [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md) and
-[Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md), [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md)
-and [Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md).
+This closes only the controlled single-case end-to-end gate. PRs #60–64 were then
+sequentially merged at main `fe59c1d`, with successful final CI (1696 passed / 1 skipped).
+Phase 6H now prepares public opt-in access: TikTok remains off by default, but when
+enabled admits any Telegram user and permits production configuration. Bounded local
+capacity defaults to two operations per bot process and one per user, retaining worker,
+upload and cleanup ownership. Instagram restrictions remain unchanged. Phase 6H
+offline verification passed (356 focused; full 1716 passed / 1 skipped, Ruff/diff/security);
+Exact-head Draft PR CI is required before handoff. Public live acceptance and deployment
+are separate, unperformed gates. General reliability, all-publication support, the cause of earlier
+429 and production readiness remain unproven. See
+[Phase 6C](PHASE6C_TIKTOK_NATIVE.md), [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md),
+[Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md), [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md),
+[Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md) and
+[Phase 6H](PHASE6H_TIKTOK_PUBLIC_MVP.md).
 
 Use the same gated process as Instagram:
 

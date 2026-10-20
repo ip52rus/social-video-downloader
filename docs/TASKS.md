@@ -621,9 +621,15 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
   media 1 request / 571,013 bytes, one acquisition, 5.432 s handler/delivery, exact
   counters and worker/session/private/caller workspace cleanup PASS. Bot stopped;
   containers remained exited, no retry, fallback, merge or deployment.
-- [ ] Obtain separate authorization for staged merge of PRs #60–64 after exact-head
-  checks. Keep TikTok off by default and restricted to development/test allowlisted
-  users; broader reliability, all-publication support and production readiness remain open.
+- [x] Owner-authorized sequential merge of PRs #60–64 completed at main `fe59c1d`;
+  exact final main CI passed (1696 passed / 1 skipped). No deployment followed.
+- [x] Phase 6H offline public MVP: remove TikTok test-user/production guards, retain
+  the default-off flag, add bounded process capacity (default two, one per user),
+  independent ownership/cancellation and fail-closed cleanup. 356 focused PASS, full
+  offline 1716 passed / 1 skipped, Ruff/diff/security PASS. Publication requires exact-
+  head Draft PR CI before handoff; see [Phase 6H](PHASE6H_TIKTOK_PUBLIC_MVP.md).
+- [ ] Separately authorize and perform public TikTok acceptance after review/CI.
+  General reliability, all-publication support and production readiness remain open.
 
 ## Phase 7 - Additional Social Platforms
 - [ ] Select candidate platforms based on user demand, feasibility, legal/platform restrictions, extraction reliability, and maintenance burden.
