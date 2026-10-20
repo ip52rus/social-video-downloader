@@ -4,6 +4,90 @@ Instagram's current narrow live acceptance is recorded in
 [Instagram live acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
 Earlier sections retain the evidence and open gates at each historical stage.
 
+## Phase 6C native TikTok (offline)
+
+Separate from discontinued PR #59, the native CLI uses the embed-state schema
+from inspected MIT tt-dlp sources, not its downloader/retry framework. All new
+tests deny external socket connections and use synthetic `HTTPResponse` wire
+data or generated local media. No TikTok/Telegram request, Docker or deployment.
+
+The focused set covers full URL admission, explicit source ID/missing or duplicate
+state, play/bitrate/download/urls layouts, split-audio evidence, strict video-host
+admission, forbidden redirects, mixed private/reserved DNS answers and exact pinned
+IPv4 plus original TLS SNI/hostname verification. Cookie tests exercise host-only,
+domain/path/secure scoping, cross-CDN non-forwarding and isolated operation jars.
+Real HTTP parser cases reject missing/duplicate length, truncated and chunked media;
+byte caps apply to returned bodies and partial files are removed. 403/429 do not
+retry or select another format. Identity mismatch stops before media GET/B.
+
+Two generated MP4 fixtures exercise both public worker cases through actual
+ffprobe, full FFmpeg decode and `prepare_telegram_video(..., allow_silent=True)`:
+audio in A and no audio stream in B, passthrough without conversion, followed by
+owned workspace removal. A missing audio stream fails A; explicit split-audio
+evidence cannot be silently treated as silence. Deadline with an exited leader/
+live descendant and interrupt cleanup are also covered, with emergency test cleanup.
+
+Offline evidence does not prove embed availability, anonymous-cookie sufficiency,
+CDN access, real audio behavior, Telegram delivery or production reliability.
+Results: **44 focused cases passed**; full suite with external sockets forbidden:
+**1514 passed, 1 skipped** (opt-in external YouTube test), including local
+FFmpeg/ffprobe. Ruff lint/format, diff, local documentation targets, MIT notice
+comparison and security/scope review pass. Exact-head GitHub CI is checked after
+publication. Only a separately authorized real A/B experiment can close the live gate.
+
+Photo-placeholder regression: the old key-presence check was reproduced failing on
+valid synthetic video with `imagePost=null`. Both photo keys and both source levels
+now accept only null/empty object/empty array placeholders, while still requiring
+valid video data and admitted candidates. Filled image lists, unknown/malformed or
+conflicting structures, identity mismatch, no extra HTTP requests and sanitized
+failure results are covered. Updated offline verification: **72 focused cases
+passed**, full suite **1542 passed, 1 skipped**, with an inherited Python audit
+hook denying socket connections/DNS and synthetic HTTP/local FFmpeg only. Ruff
+lint/format, diff and security/scope checks pass. Code outside `resolve()` is
+unchanged; exact-head CI is verified after publication.
+
+The first owner-authorized native live run was **BLOCKED** on A:
+`unsupported_photo`, one metadata request / 281,910 bytes, 1.376 s, no media request
+or acquisition, B not run, exact counters and successful cleanup. HTML was not
+retained; the actual photo-field values and media availability remain unknown.
+No TikTok/Telegram request or Docker operation was made for the offline fix.
+
+The next separately authorized A/B run on `85ab929` was **PARTIAL PASS**: A complete
+1,097,768-byte MP4, one video/audio stream, FFmpeg decode and Telegram passthrough
+PASS; B metadata PASS but media GET 403. Aggregate: 5.149 s, metadata 2 requests /
+566,367 bytes, media 2 requests / 1,097,768 bytes, 2 acquisitions, exact counters,
+cleanup PASS. Reported constant codec labels were not independent measurements.
+
+The targeted CDN diagnostic patch is offline only. Synthetic HTTP parser responses
+cover candidate source/deduplication, success/403 statuses, scoped cookie presence
+across redirects, missing measurements after send failure, safe per-case counters,
+no additional HTTP/retry, secret exclusion and owned worker/workspace cleanup.
+Generated local MP4s verify actual ffprobe codec reporting; isolated synthetic probe
+results cover non-default, missing, unknown and invalid codec names. Network policy,
+preparation and FFmpeg behavior are unchanged. Verification: **85 focused passed**;
+full suite **1555 passed, 1 skipped** with the inherited socket/DNS audit guard.
+Ruff lint/format and diff checks PASS. Differential offline review confirmed
+identical outbound HTTP/headers/cookie scope/redirects/counters and candidate
+selection before/after the patch. Exact-head CI is checked after publication.
+
+The authorized B-only run on `f3213d6` was **BLOCKED**: one candidate from `urls`,
+CDN family tiktokcdn-eu.com, query present, no cookies sent, media HTTP 403. Metadata
+1 request / 286,670 bytes; media 1 request / zero bytes; one acquisition; 1.788 s,
+exact counters and cleanup PASS. No file inspection or audio validation occurred.
+
+Reliability preparation adds only an explicit benchmark mode; no further live test.
+**103 focused cases PASS** with external sockets forbidden. Synthetic wire and
+generated local media cover continuation after 403, separate cookie jars, source
+provenance, exact case/aggregate counters, no repeated media GET, required/optional
+audio, shared metadata/media request/byte/deadline caps, partial-error file cleanup,
+cleanup-error stopping, input validation, public worker and normal CLI compatibility.
+Private markers are excluded from reports. Full offline suite: **1573 passed,
+1 skipped** (external YouTube opt-in), with inherited socket/DNS denial. Ruff
+lint/format and diff checks PASS. Differential scope review confirmed ordinary
+fail-fast output/request compatibility and unchanged resolver/transport/policies/
+limits/supervisor. Exact-head CI is verified after publication. No Docker/Telegram
+operation or real TikTok request is part of this preparation.
+
 ## Phase 4 functional acceptance (2026-10-15)
 
 Status: **ACCEPTED for the tested functional scope**, as confirmed by the user. This is

@@ -229,6 +229,27 @@ Order:
 Where Instagram exposes meaningful format or quality choices, map them into the shared download-options model.
 
 ## Phase 6 - TikTok Provider
+The previous yt-dlp harness remains in unmerged Draft PR #59 and is discontinued:
+the final series stopped on unrecognized metadata HTML before any media GET.
+Phase 6C prepares a separate native public-video CLI from main, using tt-dlp's
+embed-state approach under MIT attribution. Offline synthetic HTTP/local-media
+checks establish implementation boundaries only. The first authorized native run
+stopped on A's `unsupported_photo` before media GET; B was not run. A small offline
+patch now distinguishes empty photo placeholders from populated/unknown structures.
+The authorized retest obtained A's complete MP4 with actual video/audio streams,
+decode and passthrough; B resolved metadata but media returned HTTP 403. The reason
+is unknown. Safe diagnostics now report candidate origin, CDN family, query/cookie
+presence, actual statuses, counters and measured codec names without new requests.
+The authorized B-only diagnostic retest again returned media 403 (`urls`, EU CDN
+family, query present, no cookies sent); B remains unverified and the cause unknown.
+The next gate is a separately authorized reliability benchmark on up to four new
+independent publications, excluding A/B. Its explicit offline-prepared mode keeps
+the existing aggregate budgets, per-case sessions and audio expectations, and can
+continue after case-local errors without retries. No request is authorized by this
+preparation. A single success is not general platform GO; no provider/Telegram
+integration before the reliability decision.
+See [Phase 6C](PHASE6C_TIKTOK_NATIVE.md). No live request is part of preparation.
+
 Use the same gated process as Instagram:
 
 1. technical spike;

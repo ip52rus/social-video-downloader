@@ -36,6 +36,20 @@ runtime data while allowing `.env.example` to document required variables.
 ## Security gate
 Before each release inspect changed files, review the Git diff, search for credential-like strings, confirm ignored runtime files, review dependency changes, and verify logs do not expose secrets or unnecessary personal data.
 
+## Isolated native TikTok experiment
+
+Phase 6C admits only a verified embed identity and constrained video-CDN names,
+with public-IPv4 pinning, original TLS hostname verification and pre-connect
+redirect checks. One publication owns a memory-only, scope-checked cookiejar;
+browser/account cookies, persistent sessions, proxies and challenge solvers are
+excluded. Signed locators and HTML are never logged. Owned process/workspace,
+body-size and HTTP completeness controls are described in
+[Phase 6C](PHASE6C_TIKTOK_NATIVE.md). These are experiment boundaries, not a
+production sandbox or evidence of real platform reliability.
+Benchmark continuation is only to another explicitly approved publication with a
+fresh session, never a retry/fallback. All cases consume the original shared limits;
+case cleanup failure stops further work. No benchmark live call is implicit.
+
 ## Experimental Instagram provider
 
 The first Reel provider uses only anonymous extraction: no supplied cookies, browser

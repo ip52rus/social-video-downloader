@@ -530,6 +530,42 @@ Reel MVP verification: 32 new cases; focused 142 passed; full 1234 passed, 1 ski
 Ruff lint/format, diff, documentation and security/scope review PASS; no live requests.
 
 ## Phase 6 - TikTok Provider
+- [x] Inspect tt-dlp `08a1f42` sources/tests and MIT license; retain attribution.
+- [x] Prepare separate native embed resolver/acquisition CLI with explicit source
+  identity, constrained video-host/DNS/TLS/redirect policy, operation-local cookies,
+  bounded streaming, complete framing and owned worker/workspace cleanup. Keep
+  PR #59 and production providers/handlers/DownloadService unchanged.
+- [x] Verify offline with synthetic HTTP, local FFmpeg fixtures and socket denial;
+  44 focused cases and full suite 1514 passed / 1 external opt-in skipped.
+  Ruff lint/format, diff, MIT attribution and security/scope checks pass; exact-head
+  CI is checked after publication. See [TESTING](TESTING.md#phase-6c-native-tiktok-offline).
+- [x] First separately authorized native A/B run: A refused as `unsupported_photo`
+  after one metadata response; no media GET, B not run, cleanup confirmed. This
+  is not evidence of a real photo layout because HTML was not retained.
+- [x] Fix key-presence photo detection offline: permit null/empty object/array
+  placeholders only with independently valid video data; refuse populated image
+  data and unknown/conflicting structures. Offline verification: 72 focused cases,
+  full suite 1542 passed / 1 skipped, Ruff and scope review pass. See Phase 6C in TESTING.
+- [x] Separately authorized A/B retest on `85ab929`: A complete MP4 (1,097,768 bytes),
+  one video/audio stream, decode and passthrough PASS; B metadata PASS / media 403.
+  Two metadata and two media requests, 5.149 s, exact counters and cleanup PASS.
+  Fixed codec labels were not independent codec measurements; 403 cause is unknown.
+- [x] Add bounded safe CDN/source/request diagnostics and actual existing-probe
+  codec names offline, without changing network or preparation behavior.
+  Verification: 85 focused passed, full offline suite 1555 passed / 1 skipped,
+  Ruff and differential scope review PASS. See Phase 6C of TESTING.
+- [x] One separately authorized B-only diagnostic retest on `f3213d6`: metadata
+  PASS, one `urls` candidate / tiktokcdn-eu.com, query present, cookies not sent,
+  media HTTP 403 / zero bytes. 1.788 s, exact counters and cleanup PASS. Cause unknown.
+- [x] Compare media-source semantics with pinned tt-dlp/Cobalt and installed yt-dlp;
+  retain `video.urls` as an uncertain supported source, without network fallback.
+- [x] Prepare explicit offline benchmark mode: at most four independent owner-approved
+  videos, per-case audio expectation, continuation after case-local errors, shared
+  original budgets and cleanup. Ordinary fail-fast remains available. Focused: 103 PASS;
+  full offline suite 1573 passed / 1 skipped, Ruff and scope checks PASS. See TESTING.
+- [ ] Obtain separate authorization for one reliability benchmark on new publications,
+  excluding A/B. No real request is authorized by preparation. B's complete MP4 remains
+  unavailable; A's one success does not establish general reliability or provider GO.
 - [ ] Run a technical spike.
 - [ ] Assess real-world reliability and extraction stability.
 - [ ] Make an explicit Go/No-Go decision before implementation.
