@@ -4,8 +4,9 @@
 
 Phase 6G verified one real public-page download and owner-confirmed Telegram playback,
 orientation and sound. PRs #60–64 were merged; this stage changes only admission and
-configuration, not the verified downloader. Public acceptance and deployment remain
-separate gates. No real TikTok/Telegram requests are authorized for this implementation.
+configuration, not the verified downloader. Offline preparation made no real
+TikTok/Telegram requests. A subsequent separately authorized public acceptance passed,
+as recorded below; merge and deployment remain separate, unauthorized actions.
 
 `TIKTOK_TELEGRAM_ENABLED` remains false by default. When enabled, full supported public
 video URLs are available to any Telegram user, including in production configuration.
@@ -51,9 +52,57 @@ response and real process-group cancellation/reap remain covered, along with You
 Instagram, native CLI and benchmark tests. No native/provider/transport/HTTP policy,
 media preparation, dependency, CI workflow or MIT notice was changed.
 
-The reviewed branch is published as a Draft PR to main; exact committed-head CI is
-required before handoff (see PR checks for its outcome). No real TikTok/Telegram call,
-polling, Docker launch or deployment is performed. A future separately authorized
-public acceptance test is required; earlier single-case LIVE PASS and synthetic
-concurrency do not prove public reliability or production readiness. Previous embed
-HTTP 429 and CDN 403 remain unresolved history.
+The implementation was published in Draft PR #65 at
+`6665b90f6057e2b08034aa6866ee83528378fa1a`. CI #39469733288 passed on that exact
+HEAD: **1716 passed, 1 skipped**, Ruff lint/format PASS. Publication of the following
+documentation-only acceptance update requires successful CI on its own exact HEAD.
+
+## Owner-confirmed PUBLIC TIKTOK LIVE PASS
+
+One separately authorized local Telegram test used a second Telegram account without
+a personal allowlist. A full public video URL reached the existing dispatcher and
+public TikTok handler with the feature enabled and capacity two. Public-page metadata
+and original source ID passed, one media GET returned HTTP 200, and one acquisition
+produced a complete **565,847-byte MP4**. Actual verification reported one H.264 video
+stream and one AAC audio stream, 576×1024, duration 14 seconds; full FFmpeg decode
+and Telegram preparation passed without transcoding.
+
+One sendVideo attempt returned a confirmed video Message in the correct chat. The
+file existed through the awaited API response. The owner subsequently confirmed on
+the second account that playback, orientation and sound were correct. Metadata:
+**1 request / 409,411 bytes**; media: **1 request / 565,847 bytes**; one acquisition,
+exact counters. Native operation took 2.611 s; the controlled runner took 4.124 s.
+
+The owner explicitly approved taking the first TikTok link from the existing queue.
+The controlled poller read without an offset or queue acknowledgement/deletion and
+passed exactly one real update through the unchanged dispatcher/handler. Later queued
+events were not processed. Queue acknowledgement and replay prevention on a future
+restart were not validated by this test; no further polling/queue action is authorized.
+
+Polling stopped, the Bot API session closed, workers were reaped and private/caller
+workspaces and media files were removed. Git, protected environment files and other
+worktrees were preserved; both Docker containers remained exited. No retry, Embed
+fallback, additional download/upload, merge or deployment was performed.
+
+This closes **one public-user full-link Telegram scenario**, not a load test or proof
+of scalability, short-link support, general TikTok reliability or production readiness.
+Short links remain unsupported; earlier embed HTTP 429 and CDN 403 remain historical
+limitations, not demonstrated as universally resolved by this success. PR #65 remains
+Draft; final review/offline checks and exact-head CI prepare it for a separately
+owner-authorized merge. Deployment requires its own decision.
+
+## Final documentation-only preparation
+
+Final PR review against main `fe59c1d` passed: public/default-off access and separate
+Instagram restrictions, default two process slots/one per user, no-await admission,
+independent workspaces, cancellation/timeout ownership and fail-closed quarantine
+remain intact. Public-page provider/transport, budgets, other platform routes,
+dependencies and CI are unchanged. Only this document, TESTING, TASKS and ROADMAP
+are updated in the acceptance commit; no source/configuration change is included.
+
+The repeated full offline suite passed **1716 passed, 1 skipped** in 186.73 s with
+inherited external socket/DNS denial. Ruff lint/format, diff-check, privacy/security
+review and **30 local documentation links/anchors** passed. No new real platform
+request, polling, Docker operation or deployment was performed for this preparation.
+Exact documentation-commit CI must pass before merge handoff; its result is recorded
+in PR #65 checks. Merge still requires separate owner authorization.

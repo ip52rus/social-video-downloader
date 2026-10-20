@@ -628,8 +628,21 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
   independent ownership/cancellation and fail-closed cleanup. 356 focused PASS, full
   offline 1716 passed / 1 skipped, Ruff/diff/security PASS. Publication requires exact-
   head Draft PR CI before handoff; see [Phase 6H](PHASE6H_TIKTOK_PUBLIC_MVP.md).
-- [ ] Separately authorize and perform public TikTok acceptance after review/CI.
-  General reliability, all-publication support and production readiness remain open.
+- [x] Owner-authorized Phase 6H PUBLIC TIKTOK LIVE PASS on `6665b90`: one second-account
+  full-link request without personal allowlist; public-page metadata/source ID, one
+  complete 565,847-byte MP4 (HTTP 200), H.264/AAC, full decode/passthrough and one
+  confirmed sendVideo. Owner confirmed playback, orientation and sound. Polling/session,
+  worker and workspace cleanup PASS; Docker stayed exited, no retry/fallback/deployment.
+  The approved queued update was read without acknowledgement/deletion; restart replay
+  prevention was not tested. See
+  [Phase 6H evidence](PHASE6H_TIKTOK_PUBLIC_MVP.md#owner-confirmed-public-tiktok-live-pass).
+- [x] Final PR #65 docs-only preparation: LIVE evidence recorded without private data,
+  final diff/security review PASS, full network-blocked pytest 1716 passed / 1 skipped
+  (186.73 s), Ruff/diff PASS and 30 local links/anchors PASS. Exact documentation-head
+  CI is required before handoff and reported in PR checks; PR remains Draft.
+- [ ] Obtain separate merge authorization for Draft PR #65 after exact new-head CI.
+  Deployment is a separate gate. One public scenario does not prove scalability,
+  short-link support, all-publication support, general reliability or production readiness.
 
 ## Phase 7 - Additional Social Platforms
 - [ ] Select candidate platforms based on user demand, feasibility, legal/platform restrictions, extraction reliability, and maintenance burden.
