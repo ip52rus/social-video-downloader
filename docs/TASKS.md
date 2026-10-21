@@ -308,6 +308,21 @@ Analytics requirements for this phase:
 
 ## Phase 5 - Instagram Provider — in progress
 
+### Parent identity contract — offline implementation
+
+The existing URL originates from input, and the previous worker comparison did not
+detect a parent-only identity change. This focused change adds observed product PK
+and shortcode binding to the immutable inspection/plan and private worker pipe,
+then rechecks parent plus the entire ordered manifest before any media GET.
+Missing/conflicting parent evidence must refuse; URL-derived IDs are not evidence.
+Single-item downloading and selection buttons remain out of scope.
+Verification: 576 focused regressions PASS; the final parent-specific suite has
+67 PASS. Full inherited socket/DNS-blocked offline pytest: 1869 passed, 1 opt-in
+live test skipped (227.51 s). Ruff lint/format, diff-check, 44 local documentation
+links and security/privacy review PASS. Exact-head Draft PR CI is required before
+handoff and recorded in GitHub checks. No live calls or deployment are authorized;
+installed response formats are not a universal Instagram compatibility guarantee.
+
 Current narrow live acceptance is recorded below under Owner-confirmed Instagram live
 acceptance (2026-10-18) and in [TESTING.md](TESTING.md#instagram-live-acceptance-2026-10-18).
 Earlier stage records retain their original verification scope; Phase 5 is not complete.

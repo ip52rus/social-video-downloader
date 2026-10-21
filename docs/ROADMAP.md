@@ -113,6 +113,17 @@ capability source of truth without evidence.
 
 ## Phase 5 - Instagram Provider — in progress
 
+The parent-identity follow-up strengthens the existing whole-carousel contract:
+observed product PK is validated before upstream mapping, converted to shortcode
+and bound to the canonical requested publication; an optional response `code` must
+agree. Immutable inspection/selection and the private worker IPC retain that
+identity. The worker rechecks it and the complete ordered child manifest before
+any media GET. Missing/conflicting evidence refuses instead of using the input URL
+or upstream fallback ID. Single-item scope and Telegram selection buttons remain
+future work. This is offline verification only, not universal Instagram response
+compatibility or a new live/deployment acceptance. See
+[parent identity tests](TESTING.md#instagram-parent-identity-contract-offline).
+
 On 2026-10-16 the user initially authorized implementation after the previously conducted Gates
 1–3C, limited to anonymous public individual Reels. The cached Gate 3C report confirms
 metadata extraction/classification of one five-item `/p/` playlist only; the carousel is

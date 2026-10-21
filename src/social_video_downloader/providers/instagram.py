@@ -40,6 +40,7 @@ from social_video_downloader.infrastructure.filenames import safe_filename
 from social_video_downloader.infrastructure.instagram_metadata import (
     CarouselInstagramIE,
     ItemEvidence,
+    parent_identity_matches,
 )
 from social_video_downloader.infrastructure.workspace import temporary_workspace
 
@@ -369,6 +370,9 @@ class InstagramProvider:
         ):
             return CarouselInspection(canonical, None, issue=CarouselIssue.UNSUPPORTED_CONTENT)
         entries, count = raw.get("entries"), raw.get("_carousel_source_count")
+        parent = raw.get("_carousel_parent_identity")
+        if not parent_identity_matches(parent, canonical):
+            return CarouselInspection(canonical, count, issue=CarouselIssue.UNSTABLE_IDENTITIES)
         if not isinstance(entries, list) or type(count) is not int or len(entries) != count:
             return CarouselInspection(
                 canonical,
@@ -406,7 +410,7 @@ class InstagramProvider:
         ids = [item.item_id for item in items]
         if len(set(ids)) != len(ids):
             issue = CarouselIssue.UNSTABLE_IDENTITIES
-        return CarouselInspection(canonical, count, tuple(items), issue)
+        return CarouselInspection(canonical, count, tuple(items), issue, parent_identity=parent)
 
     def get_supported_modes(self, url: str) -> tuple[DownloadMode, ...]:
         if not self.can_handle(url):

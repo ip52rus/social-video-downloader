@@ -15,6 +15,7 @@ from yt_dlp.utils import DownloadError
 
 from social_video_downloader.domain.carousel import CarouselItemKind
 from social_video_downloader.domain.errors import DownloadFailedError, MediaProcessingError
+from social_video_downloader.infrastructure.instagram_metadata import parent_identity_matches
 from social_video_downloader.infrastructure.telegram_media import inspect_telegram_video
 from social_video_downloader.providers.instagram import InstagramProvider
 from social_video_downloader.services.instagram_acquisition import (
@@ -64,6 +65,9 @@ def _same_selection(plan, facts):
     # Formats/URLs may refresh, but no source position, identity or kind may change.
     return (
         facts.issue is None
+        and parent_identity_matches(plan.parent_identity, plan.publication_url)
+        and parent_identity_matches(facts.parent_identity, facts.publication_url)
+        and facts.parent_identity == plan.parent_identity
         and facts.publication_url == plan.publication_url
         and facts.total_entries == plan.total_entries
         and tuple((x.position, x.item_id, x.kind) for x in facts.items)

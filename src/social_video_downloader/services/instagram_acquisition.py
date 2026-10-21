@@ -15,6 +15,7 @@ from uuid import uuid4
 from social_video_downloader.domain.carousel import (
     CarouselItem,
     CarouselItemKind,
+    CarouselParentIdentity,
     CarouselPlanState,
     CarouselScope,
     CarouselSelectionPlan,
@@ -23,6 +24,7 @@ from social_video_downloader.domain.carousel import (
 )
 from social_video_downloader.domain.errors import DownloadFailedError, DownloadTimeoutError
 from social_video_downloader.domain.models import DownloadedMedia, MediaMetadata, Platform
+from social_video_downloader.infrastructure.instagram_metadata import parent_identity_matches
 from social_video_downloader.infrastructure.workspace import temporary_workspace
 from social_video_downloader.providers.instagram import InstagramProvider
 
@@ -51,31 +53,47 @@ class CarouselAcquisitionLimits:
             raise ValueError("Carousel deadline must be finite and positive.")
 
 
-def validate_plan(plan: CarouselSelectionPlan, limits: CarouselAcquisitionLimits) -> None:
-    """Reject forged/partial selections and reference intent before launching acquisition."""
+def _validate_plan_contract(plan: CarouselSelectionPlan) -> None:
+    """Structural/identity validation shared by IPC and the bounded acquisition entry."""
     if (
         plan.state is not CarouselPlanState.READY
         or plan.scope is not CarouselScope.PUBLICATION
         or plan.issue is not None
+        or not parent_identity_matches(plan.parent_identity, plan.publication_url)
         or InstagramProvider._media_url(plan.publication_url) != plan.publication_url
         or "/p/" not in plan.publication_url
         or type(plan.total_entries) is not int
         or plan.total_entries != len(plan.items)
         or [x.position for x in plan.items] != list(range(1, len(plan.items) + 1))
-        or any(not x.item_id or x.kind is CarouselItemKind.UNKNOWN for x in plan.items)
+        or any(
+            type(x.position) is not int
+            or type(x.item_id) is not str
+            or not x.item_id
+            or not isinstance(x.kind, CarouselItemKind)
+            or x.kind is CarouselItemKind.UNKNOWN
+            or type(x.admissible_format_count) is not int
+            for x in plan.items
+        )
         or len({x.item_id for x in plan.items}) != len(plan.items)
         or plan.selected_videos != tuple(x for x in plan.items if x.kind is CarouselItemKind.VIDEO)
         or not plan.selected_videos
         or any(x.admissible_format_count <= 0 for x in plan.selected_videos)
     ):
         raise DownloadFailedError("Carousel requires a complete READY publication plan.")
+
+
+def validate_plan(plan: CarouselSelectionPlan, limits: CarouselAcquisitionLimits) -> None:
+    """Check the complete contract AND caller-owned limits before acquisition."""
+    _validate_plan_contract(plan)
     if len(plan.selected_videos) > limits.max_videos:
         raise DownloadFailedError("Carousel video count exceeds the operation limit.")
 
 
 def plan_payload(plan: CarouselSelectionPlan) -> dict:
     # Local pipe only; never logged or written as a persistent snapshot.
+    _validate_plan_contract(plan)
     return {
+        "parent_identity": asdict(plan.parent_identity),
         "publication_url": plan.publication_url,
         "total_entries": plan.total_entries,
         "items": [asdict(item) for item in plan.items],
@@ -83,6 +101,36 @@ def plan_payload(plan: CarouselSelectionPlan) -> dict:
 
 
 def plan_from_payload(data: dict) -> CarouselSelectionPlan:
+    try:
+        return _plan_from_payload(data)
+    except (KeyError, TypeError, ValueError, AttributeError, DownloadFailedError):
+        raise DownloadFailedError("Invalid private carousel plan.") from None
+
+
+def _plan_from_payload(data: dict) -> CarouselSelectionPlan:
+    if type(data) is not dict or set(data) != {
+        "parent_identity",
+        "publication_url",
+        "total_entries",
+        "items",
+    }:
+        raise ValueError
+    identity = data["parent_identity"]
+    if type(identity) is not dict or set(identity) != {"pk", "shortcode"}:
+        raise ValueError
+    if type(data["total_entries"]) is not int or type(data["items"]) is not list:
+        raise ValueError
+    for x in data["items"]:
+        if (
+            type(x) is not dict
+            or set(x) != {"position", "item_id", "kind", "evidence", "admissible_format_count"}
+            or type(x["position"]) is not int
+            or type(x["item_id"]) is not str
+            or type(x["admissible_format_count"]) is not int
+            or not isinstance(x["evidence"], (list, tuple))
+            or any(type(signal) is not str for signal in x["evidence"])
+        ):
+            raise ValueError
     items = tuple(
         CarouselItem(
             x["position"],
@@ -93,14 +141,17 @@ def plan_from_payload(data: dict) -> CarouselSelectionPlan:
         )
         for x in data["items"]
     )
-    return CarouselSelectionPlan(
+    plan = CarouselSelectionPlan(
         data["publication_url"],
         data["total_entries"],
         items,
         tuple(x for x in items if x.kind is CarouselItemKind.VIDEO),
         CarouselScope.PUBLICATION,
         CarouselPlanState.READY,
+        parent_identity=CarouselParentIdentity(**identity),
     )
+    _validate_plan_contract(plan)
+    return plan
 
 
 async def _kill(process: asyncio.subprocess.Process) -> None:

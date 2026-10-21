@@ -12,6 +12,7 @@ from aiogram.types import Chat, Message, Video
 from social_video_downloader.domain.carousel import (
     CarouselItem,
     CarouselItemKind,
+    CarouselParentIdentity,
     CarouselPlanState,
     CarouselScope,
     CarouselSelectionPlan,
@@ -83,6 +84,7 @@ def acquired(tmp_path, media, kinds):
         tuple(items),
         CarouselScope.PUBLICATION,
         CarouselPlanState.READY,
+        parent_identity=CarouselParentIdentity("1386527023699267419445", "Synthetic_01"),
     )
     return DownloadedCarousel(
         URL, tuple(videos), sum(x.media.file_path.stat().st_size for x in videos)

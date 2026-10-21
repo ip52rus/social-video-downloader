@@ -43,11 +43,20 @@ class CarouselItem:
 
 
 @dataclass(frozen=True, slots=True)
+class CarouselParentIdentity:
+    """Observed product PK and its verified shortcode; never a URL-derived identity."""
+
+    pk: str = field(repr=False)
+    shortcode: str = field(repr=False)
+
+
+@dataclass(frozen=True, slots=True)
 class CarouselInspection:
     publication_url: str = field(repr=False)
     total_entries: int | None
     items: tuple[CarouselItem, ...] = ()
     issue: CarouselIssue | None = None
+    parent_identity: CarouselParentIdentity | None = field(default=None, repr=False, kw_only=True)
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,6 +70,7 @@ class CarouselSelectionPlan:
     scope: CarouselScope
     state: CarouselPlanState
     issue: CarouselIssue | None = None
+    parent_identity: CarouselParentIdentity | None = field(default=None, repr=False, kw_only=True)
 
 
 @dataclass(frozen=True, slots=True)
