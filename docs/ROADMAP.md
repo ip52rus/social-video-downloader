@@ -313,8 +313,25 @@ Live coverage is one `vm` link; `vt` remains offline-only, and broader mobile-li
 coverage/high-load stability are unverified. Earlier 429/403 are not universally
 resolved. Final docs-only review found no new defect; full network-blocked pytest
 again passed (1769 passed / 1 skipped, 219.88 s), with Ruff/diff/privacy/link checks.
-Next gates: exact documentation-head CI, then independent merge and deployment
-decisions. General TikTok reliability is not established. See
+PR #66 subsequently merged at main `389258cee9cf966be531ae5d6d60b192a59bcdb2`;
+post-merge [CI #39517532808](https://github.com/ip52rus/social-video-downloader/actions/runs/39517532808)
+passed. Separately authorized deployment prepared a new bot image with the old image
+retained for rollback, completed Cloud-to-Local Bot API migration, and started the
+existing bot with public TikTok enabled (capacity two) and Instagram still enabled.
+The Local API container and volume were preserved.
+
+Stage D **PUBLIC DEPLOYMENT ACCEPTED** covers three sequential owner-triggered cases:
+one TikTok short link, one Instagram Reel and one YouTube video. Each was delivered;
+the owner confirmed full playback, orientation and sound. Worker/file cleanup passed,
+with no restart/OOM/runtime errors observed. Both services were left running.
+Subsequent local configuration finalization persisted TikTok true/2 in the protected,
+ignored `.env`; Compose resolves those values without shell overrides. That step
+made no runtime/code change and did not restart or redeploy either container.
+
+Next gates are the documentation PR's exact-head CI and independent merge decision;
+broader mobile-link coverage, high-load and recovery validation remain open. Three
+deployed smoke cases do not establish general reliability; `vt` is still offline-only
+and historical 429/403 are not universally resolved. See
 [Phase 6C](PHASE6C_TIKTOK_NATIVE.md), [Phase 6D](PHASE6D_TIKTOK_TELEGRAM.md),
 [Phase 6E](PHASE6E_TIKTOK_PUBLIC_PAGE.md), [Phase 6F](PHASE6F_TIKTOK_PUBLIC_PAGE_MP4.md),
 [Phase 6G](PHASE6G_TIKTOK_PUBLIC_PAGE_TELEGRAM.md),

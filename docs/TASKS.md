@@ -663,10 +663,29 @@ Ruff lint/format, diff, documentation and security/scope review PASS; no live re
   full network-blocked pytest 1769 passed / 1 skipped (219.88 s), Ruff/diff/privacy
   and local links PASS. Only docs changed; exact documentation-head CI is required
   before handoff and recorded in GitHub checks.
-- [ ] Independently decide PR #66 merge and deployment after successful exact
-  documentation-head CI. The live gate covers one `vm` URL; `vt` remains
-  offline-only. Broader mobile-link coverage, high-load behavior and general TikTok
-  reliability remain unverified; historical HTTP 429/403 are not universally resolved.
+- [x] Independently merge PR #66 at main `389258cee9cf966be531ae5d6d60b192a59bcdb2`;
+  post-merge [CI #39517532808](https://github.com/ip52rus/social-video-downloader/actions/runs/39517532808)
+  SUCCESS. Prepare the new bot image and preserve the old image under the rollback
+  tag; see [deployment configuration](DEVELOPMENT.md#deployed-public-tiktok-configuration).
+- [x] Complete the separately authorized Cloud-to-Local Bot API transition: cloud
+  logout SUCCESS and internal Local API getMe PASS. Start only the updated bot;
+  preserve the Local API container and named volume. Public TikTok true/2,
+  Instagram enabled, APP_ENV=development, one polling instance; both services RUNNING.
+- [x] Stage D PUBLIC DEPLOYMENT ACCEPTED: one TikTok short link, one Instagram Reel
+  and one YouTube video delivered through the deployed bot. The owner confirmed
+  full playback, orientation and sound for each. Worker/workspace cleanup PASS;
+  no restart/OOM/runtime errors observed, rollback image retained. Detailed HTTP,
+  byte and latency counters were not measured in this smoke stage; see
+  [Stage D evidence](TESTING.md#public-deployment-stage-d-acceptance).
+- [x] Persist only TikTok true/2 in the existing local protected, Git-ignored `.env`;
+  preserve other values and mode 0600. Compose validation without shell overrides
+  confirms future standard recreation retains true/2. No restart, recreation or
+  new platform request was performed for this finalization; services remain running.
+
+Live short-link evidence covers `vm`; `vt` remains offline-only. Broader mobile-link
+coverage, high-load behavior and general TikTok reliability remain unverified;
+historical HTTP 429/403 are not universally resolved. This documentation branch
+requires exact-head CI and a separate merge decision; it does not redeploy the bot.
 
 ## Phase 7 - Additional Social Platforms
 - [ ] Select candidate platforms based on user demand, feasibility, legal/platform restrictions, extraction reliability, and maintenance burden.
