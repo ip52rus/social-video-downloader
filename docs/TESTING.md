@@ -4,6 +4,47 @@ Instagram's current narrow live acceptance is recorded in
 [Instagram live acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
 Earlier sections retain the evidence and open gates at each historical stage.
 
+## Public deployment Stage D acceptance
+
+After PR #66 merged, source main `389258cee9cf966be531ae5d6d60b192a59bcdb2`
+passed [post-merge CI #39517532808](https://github.com/ip52rus/social-video-downloader/actions/runs/39517532808).
+That quality workflow runs Ruff lint/format and the full pytest suite; prior full
+network-blocked offline evidence remains **1769 passed / 1 skipped**, recorded below.
+Deployment and these real Telegram tests were separately authorized after offline
+verification; they are not synthetic test results.
+
+| One sequential deployed case | Telegram delivery | Owner full playback / orientation / sound | Cleanup |
+|---|---|---|---|
+| TikTok `vm` short link | PASS | PASS / PASS / PASS | PASS |
+| Instagram public Reel | PASS | PASS / PASS / PASS | PASS |
+| YouTube short video, standard video/quality flow | PASS | PASS / PASS / PASS | PASS |
+
+The deployed public-page TikTok path retained its source/media verification and
+preparation gates. Delivery/playback was confirmed by the owner for all three cases;
+the YouTube successful delivery marker was also observed in existing logs. No raw
+Telegram responses or native diagnostic reports were captured for the TikTok and
+Instagram cases. Detailed HTTP counts/statuses, byte totals, codecs and operation
+latencies were not independently measured in this smoke stage and are not inferred
+from earlier tests. No additional test request or automatic retry was initiated.
+
+Read-only post-test checks found no active test worker/FFmpeg, temporary media or
+download workspace. Bot and Local Bot API remained RUNNING, with no restart, OOM or
+runtime error observed. Container/image identity, API volume mount and rollback image
+were preserved. Git and `.env` were unchanged during Stage D; an external IDE workspace
+file change was observed and left untouched.
+
+The subsequent configuration finalization changed only TikTok true/2 in the existing
+local Git-ignored `.env`, preserving all other content and mode 0600. Compose
+validation and private resolved-config comparison, with both TikTok shell variables
+removed, confirmed true/2, Instagram=true, APP_ENV=development and the existing Local
+API endpoint; all other resolved settings stayed unchanged. No restart, recreation,
+Telegram API call, download or additional live smoke was performed for finalization.
+See [operator configuration](DEVELOPMENT.md#deployed-public-tiktok-configuration).
+
+**PUBLIC DEPLOYMENT ACCEPTED** is scoped to these three scenarios. It does not prove
+high-load behavior, broad platform reliability, `vt` live support, recovery/rollback
+rehearsal or universal resolution of previous TikTok HTTP 429/403 failures.
+
 ## Phase 6I short TikTok share links (offline and controlled LIVE)
 
 Short-reference tests use synthetic HTTP parsed by the real HTTP parser, generated

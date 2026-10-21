@@ -127,6 +127,29 @@ other intermediate routes, query-bearing short links and HTML/JS navigation refu
 The 20-second sub-deadline is cooperative: blocked DNS is ultimately bounded by the
 existing hard 180-second process supervisor, not a separate DNS timer. Discovering a
 canonical URL does not prove MP4 availability; existing 403/429 outcomes remain
-possible. Final documentation/review preparation requires exact new-head CI before
-handoff. Merge and deployment remain separate owner decisions; neither is performed
-or authorized by the documentation preparation.
+possible. At the final PR preparation stage, exact new-head CI, merge and deployment
+were separate owner decisions; neither operation was authorized by that preparation.
+
+## Subsequent merge and public deployment
+
+PR #66 later merged at main `389258cee9cf966be531ae5d6d60b192a59bcdb2`, with
+[post-merge CI #39517532808 SUCCESS](https://github.com/ip52rus/social-video-downloader/actions/runs/39517532808).
+A separately authorized deployment preserved the previous image for rollback,
+prepared the new bot image, completed Cloud-to-Local Bot API migration and started
+the updated main bot with public TikTok true/2 and Instagram still enabled.
+
+Stage D PUBLIC DEPLOYMENT ACCEPTED records one additional deployed `vm` short-link
+scenario, followed by one Instagram Reel and one YouTube video. The owner confirmed
+delivery, complete playback, orientation and sound for each. Workers and temporary
+files were cleaned; both containers remained running without observed restart/OOM
+or runtime errors. Detailed Stage D HTTP/byte/latency metrics were not measured.
+This does not broaden evidence to `vt`, high load, all publications or universal
+resolution of the earlier HTTP 429/403 outcomes.
+
+Subsequent local configuration finalization persisted only TikTok true/2 in the
+protected, ignored `.env`, preserving other settings and permissions. Resolved
+Compose configuration was checked without TikTok shell overrides; no container
+restart/recreation or new live request was performed. This documentation PR does
+not change the deployed source or include local credentials. See
+[deployment configuration](DEVELOPMENT.md#deployed-public-tiktok-configuration)
+and [Stage D evidence](TESTING.md#public-deployment-stage-d-acceptance).

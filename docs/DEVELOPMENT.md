@@ -54,8 +54,9 @@ process; each user can hold only one operation through download, upload and clea
 There is no waiting queue. Do not increase native time/size budgets or HTTP retries.
 Cleanup failure blocks new TikTok requests and retains quarantine for operator
 inspection; do not force-delete workspaces while a worker may still own them.
-The Compose template forwards the flag/capacity with false/2 defaults; this is
-configuration preparation only, without running Docker or changing the real `.env`.
+The Compose template forwards the flag/capacity with false/2 defaults. The separately
+authorized deployed environment now persists true/2 as described below; repository
+defaults remain unchanged.
 Instagram's separate opt-in/production restriction is unchanged. Phase 6H passed
 one separately authorized full-link public-user live case. Phase 6I additionally
 admits HTTPS `vm.tiktok.com`/`vt.tiktok.com` share links with one alphanumeric token
@@ -63,9 +64,55 @@ and no query/fragment. Expansion starts only in the admitted supervised worker a
 shares the original operation budgets. A separately authorized test passed for one
 `vm` mobile share link, including Telegram delivery and owner playback/orientation/
 sound confirmation; `vt` remains offline-only. Broader mobile-link/high-load behavior
-and general reliability remain unverified; no deployment is implied. Diagnostic
+and general reliability remain unverified. Diagnostic
 embed/public-page CLI and benchmark retain their full-link interfaces. See
 [Phase 6I](PHASE6I_TIKTOK_SHORT_LINKS.md).
+
+### Deployed public TikTok configuration
+
+PR #66 merged at main `389258cee9cf966be531ae5d6d60b192a59bcdb2`, with successful
+[post-merge CI #39517532808](https://github.com/ip52rus/social-video-downloader/actions/runs/39517532808).
+The separately authorized deployment built bot image
+`sha256:9941db2d71db21635a1d2a90348de9360a829f714c31f7c2e9ce0eaf220e043a`
+from that source. The previous image
+`sha256:a4c2d2636f3660aa48b9c0e00d7134960eb78903f0e8a89af31fb92febd5663c`
+is retained under `youtubedownloader-bot:rollback-pre-tiktok-389258c`.
+Image retention is rollback preparation, not evidence of a tested rollback.
+
+Cloud logout succeeded, followed by a successful Local Bot API getMe from the private
+Compose network. The existing API container/image and
+`youtubedownloader_telegram-bot-api-data` volume were preserved. Updated bot polling
+uses `http://telegram-bot-api:8081`; both services were left running. Do not repeat
+the migration or modify the API volume as routine configuration maintenance.
+
+The existing protected local `.env` now contains only these two newly persisted
+non-secret settings; its other values and mode 0600 were preserved:
+
+```dotenv
+TIKTOK_TELEGRAM_ENABLED=true
+TIKTOK_MAX_CONCURRENT_OPERATIONS=2
+```
+
+The `.env` remains ignored and untracked; it is not supplied by this documentation PR.
+Do not copy credentials or a real `.env` into Git. The running bot already used true/2
+from deployment's process-local overrides; persisting them did not alter that process.
+Private Compose verification removed both variables from the command environment,
+then checked `docker compose -p youtubedownloader config --quiet` and resolved values:
+true/2, `INSTAGRAM_TELEGRAM_ENABLED=true`, `APP_ENV=development` and the same Local API
+endpoint. No other resolved configuration changed. Future standard Compose recreation
+from this project directory will retain true/2 without manual command-line overrides,
+provided those variables are not overridden by the shell or a different env file.
+Never print full resolved Compose configuration: it includes credentials.
+
+Stage D's three sequential live cases (TikTok short link, Instagram Reel and YouTube
+video) passed delivery plus owner-confirmed full playback, orientation and sound;
+worker/file cleanup passed, with no observed restart/OOM/runtime errors. See
+[acceptance and evidence limits](TESTING.md#public-deployment-stage-d-acceptance).
+Persistence and this docs update performed no restart/recreation/build, new platform
+or Telegram request, or deployment. Future operational changes require separate
+authorization; retaining a rollback image does not authorize starting it or clearing
+pending Telegram updates. Broad reliability, high load, `vt` live coverage and recovery
+remain unverified; historic TikTok HTTP 429/403 are not universally eliminated.
 
 ## Controlled main-bot Reel smoke
 
