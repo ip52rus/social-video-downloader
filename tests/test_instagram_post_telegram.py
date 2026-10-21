@@ -329,17 +329,17 @@ async def test_positive_single_post_consumes_same_snapshot_and_validates_local_m
         {**VIDEO, "pk": False},
         {**VIDEO, "video_versions": [{"url": "https://media.invalid/video.m3u8"}]},
         PHOTO,
-        {"pk": 100, "carousel_media": [{**VIDEO, "is_private": True}]},
-        {"pk": 100, "carousel_media": [{**VIDEO, "needs_auth": True}]},
-        {"pk": 100, "carousel_media": [{**VIDEO, "has_drm": True}]},
-        {"pk": 100, "carousel_media": [{"pk": 101, "media_type": 2}]},
+        {"pk": 1386527023699267419445, "carousel_media": [{**VIDEO, "is_private": True}]},
+        {"pk": 1386527023699267419445, "carousel_media": [{**VIDEO, "needs_auth": True}]},
+        {"pk": 1386527023699267419445, "carousel_media": [{**VIDEO, "has_drm": True}]},
+        {"pk": 1386527023699267419445, "carousel_media": [{"pk": 101, "media_type": 2}]},
         {
-            "pk": 100,
+            "pk": 1386527023699267419445,
             "carousel_media": [
                 {**VIDEO, "video_versions": [{"url": "https://media.invalid/video.m3u8"}]}
             ],
         },
-        {"pk": 100, "is_private": True, "carousel_media": [VIDEO]},
+        {"pk": 1386527023699267419445, "is_private": True, "carousel_media": [VIDEO]},
     ],
 )
 async def test_blocked_source_never_reextracts_acquires_or_sends(message, monkeypatch, product):
@@ -472,7 +472,7 @@ async def test_real_metadata_plan_selects_every_video_and_only_confirmed_photos_
     if mixed:
         items.insert(0, PHOTO)
     handler, runtime, processed, repeated = publication_runtime(
-        {"pk": 100, "carousel_media": items}
+        {"pk": 1386527023699267419445, "carousel_media": items}
     )
     expected = list(range(2 if mixed else 1, len(items) + 1))
     outputs = []

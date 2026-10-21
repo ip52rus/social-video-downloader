@@ -13,6 +13,7 @@ from social_video_downloader.domain.carousel import (
 from social_video_downloader.domain.errors import InvalidMediaURLError
 from social_video_downloader.domain.models import MediaMetadata
 from social_video_downloader.domain.urls import has_instagram_item_reference, normalize_media_url
+from social_video_downloader.infrastructure.instagram_metadata import parent_identity_matches
 from social_video_downloader.providers.instagram import InstagramProvider
 
 
@@ -65,6 +66,10 @@ class InstagramCarouselService:
     def _selection_plan(inspection: CarouselInspection) -> CarouselSelectionPlan:
         items = inspection.items
         issue = inspection.issue
+        if issue is None and not parent_identity_matches(
+            inspection.parent_identity, inspection.publication_url
+        ):
+            issue = CarouselIssue.UNSTABLE_IDENTITIES
         if issue is None:
             if any(item.kind is CarouselItemKind.UNKNOWN for item in items):
                 issue = CarouselIssue.UNKNOWN_ITEM
@@ -88,4 +93,5 @@ class InstagramCarouselService:
             CarouselScope.PUBLICATION,
             CarouselPlanState.READY if issue is None else CarouselPlanState.BLOCKED,
             issue,
+            parent_identity=inspection.parent_identity,
         )

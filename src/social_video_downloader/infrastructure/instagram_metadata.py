@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 
 from yt_dlp.extractor.instagram import InstagramIE, _pk_to_id
 
-from social_video_downloader.domain.carousel import CarouselItemKind
+from social_video_downloader.domain.carousel import CarouselItemKind, CarouselParentIdentity
 from social_video_downloader.domain.errors import MetadataExtractionError
 
 
@@ -33,6 +33,31 @@ def _identity(value):
         if (len(text) <= 64 and text.isascii() and text.isdecimal() and not text.startswith("0"))
         else None
     )
+
+
+def parent_identity_from_product(product):
+    """Capture only received product fields, before upstream can synthesize an ID."""
+    if not isinstance(product, Mapping) or (pk := _identity(product.get("pk"))) is None:
+        return None
+    shortcode = _pk_to_id(pk)
+    # Longer input IDs have special private-link suffix semantics in yt-dlp.
+    if len(shortcode) > 28 or (
+        "code" in product and (type(product["code"]) is not str or product["code"] != shortcode)
+    ):
+        return None
+    return CarouselParentIdentity(pk=pk, shortcode=shortcode)
+
+
+def parent_identity_matches(identity, publication_url):
+    """Revalidate an internal/IPC identity and bind it to an exact canonical post URL."""
+    if (
+        not isinstance(identity, CarouselParentIdentity)
+        or type(identity.pk) is not str
+        or type(identity.shortcode) is not str
+        or parent_identity_from_product({"pk": identity.pk, "code": identity.shortcode}) != identity
+    ):
+        return False
+    return publication_url == f"https://www.instagram.com/p/{identity.shortcode}/"
 
 
 def _unavailable(item):
@@ -151,13 +176,20 @@ class CarouselInstagramIE(InstagramIE):
         has_source = "carousel_media" in product
         source = product.get("carousel_media")
         source_count = len(source) if isinstance(source, list) else None
+        parent = parent_identity_from_product(product) if has_source else None
         # A guarded empty playlist is deliberately incomplete, so existing provider
         # facts report INVALID_METADATA without exposing or processing a partial set.
         invalid = {
             "_type": "playlist",
             "entries": [],
             "_carousel_source_count": source_count,
+            "_carousel_parent_identity": parent,
         }
+        requested = kwargs.get("video_id", args[0] if args else None)
+        if has_source and (
+            parent is None or (requested is not None and parent.shortcode != requested)
+        ):
+            return invalid
         if has_source and (
             not isinstance(source, list)
             or any(not isinstance(item, Mapping) or "carousel_media" in item for item in source)
@@ -175,6 +207,7 @@ class CarouselInstagramIE(InstagramIE):
                 "entries": [],
                 "_carousel_source_count": 0,
                 "_carousel_unavailable": unavailable,
+                "_carousel_parent_identity": parent,
             }
         result = super()._extract_product(product_info, *args, **kwargs)
         if unavailable:
@@ -196,4 +229,5 @@ class CarouselInstagramIE(InstagramIE):
             ):
                 return invalid
             result["_carousel_source_count"] = source_count
+            result["_carousel_parent_identity"] = parent
         return result

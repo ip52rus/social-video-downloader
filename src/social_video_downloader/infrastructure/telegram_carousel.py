@@ -25,6 +25,7 @@ from social_video_downloader.domain.carousel import (
 )
 from social_video_downloader.domain.errors import MediaProcessingError
 from social_video_downloader.domain.models import Platform
+from social_video_downloader.infrastructure.instagram_metadata import parent_identity_matches
 from social_video_downloader.infrastructure.workspace import temporary_workspace
 
 
@@ -113,6 +114,7 @@ def _validate_collection(collection, plan, limits):
         or plan.state is not CarouselPlanState.READY
         or plan.scope is not CarouselScope.PUBLICATION
         or plan.issue is not None
+        or not parent_identity_matches(plan.parent_identity, plan.publication_url)
         or not isinstance(plan.selected_videos, tuple)
         or not isinstance(plan.items, tuple)
         or not plan.selected_videos

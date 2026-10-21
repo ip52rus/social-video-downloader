@@ -1,7 +1,9 @@
 """Metadata-only carousel fixtures through the installed Instagram extractor."""
 
+import json
 from copy import deepcopy
 from dataclasses import FrozenInstanceError
+from types import SimpleNamespace
 
 import pytest
 import yt_dlp
@@ -145,8 +147,9 @@ def corrupt_upstream_collection(monkeypatch, change):
 
 
 class Runtime:
-    def __init__(self, items):
-        self.product = {"pk": 100, "carousel_media": deepcopy(items)}
+    def __init__(self, items, branch="graphql"):
+        self.branch = branch
+        self.product = {"pk": 6862381134413977756083341221, "carousel_media": deepcopy(items)}
         self.extractions = []
         self.options = []
         self.raw_override = None
@@ -171,7 +174,7 @@ class Runtime:
                     @property
                     def _can_impersonate(self):
                         # Only selects the fixture JSON branch; never changes transport.
-                        return True
+                        return owner.branch == "graphql"
 
                     def _download_json(self, url, *args, **kwargs):
                         if "/web/get_ruling_for_content/" in url:
@@ -186,7 +189,42 @@ class Runtime:
                         }
 
                     def _download_webpage_handle(self, *args, **kwargs):
-                        raise AssertionError("No metadata network request allowed")
+                        assert owner.branch == "webpage"
+                        result = {
+                            "__bbox": {
+                                "result": {
+                                    "data": {
+                                        "xig_polaris_media": {
+                                            "if_not_gated_logged_out": deepcopy(owner.product)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        sjs = {
+                            "require": [
+                                [
+                                    "ScheduledServerJS",
+                                    [],
+                                    None,
+                                    [
+                                        {
+                                            "__bbox": {
+                                                "require": [
+                                                    ["RelayPrefetchedStreamCache", [], [], [result]]
+                                                ]
+                                            }
+                                        }
+                                    ],
+                                ]
+                            ]
+                        }
+                        return (
+                            '<script type="application/json" data-sjs>'
+                            + json.dumps(sjs)
+                            + "</script>",
+                            SimpleNamespace(url=args[0]),
+                        )
 
                 super().add_info_extractor(FixtureIE(self))
 
@@ -343,7 +381,11 @@ def test_malformed_original_entries_cannot_be_silently_filtered(bad):
 def test_present_source_collection_cannot_become_a_single_video(source):
     runtime = Runtime([])
     # Parent video locators deliberately make upstream's single fallback admissible.
-    runtime.product = {**VIDEO, "carousel_media": deepcopy(source)}
+    runtime.product = {
+        **VIDEO,
+        "pk": 6862381134413977756083341221,
+        "carousel_media": deepcopy(source),
+    }
     service = runtime.service()
     result = service.inspect_publication(URL)
     assert not isinstance(result, MediaMetadata)
@@ -374,7 +416,7 @@ def test_installed_upstream_mapping_loses_invalid_source_shape(source):
 def test_source_collection_must_survive_mapping_completely(monkeypatch, change, entry_point):
     corrupt_upstream_collection(monkeypatch, change)
     runtime = Runtime([VIDEO, {**VIDEO, "pk": 103}])
-    runtime.product.update(VIDEO)
+    runtime.product.update({**VIDEO, "pk": 6862381134413977756083341221})
     service = runtime.service()
     result = getattr(service, entry_point)(URL)
     assert not isinstance(result, MediaMetadata)
@@ -670,8 +712,8 @@ def test_explicit_markers_and_incomplete_metadata_remain_distinct(item):
 def test_invalid_root_id_cannot_enter_unsafe_upstream_conversion(root_id):
     runtime = Runtime([VIDEO])
     runtime.product["pk"] = root_id
-    # The publication identity is the validated URL; child identities remain valid.
-    assert runtime.service().create_selection_plan(URL).state is CarouselPlanState.READY
+    # Input URL and stable children cannot replace missing independent parent evidence.
+    assert_blocked(runtime.service().create_selection_plan(URL), CarouselIssue.UNSTABLE_IDENTITIES)
 
 
 @pytest.mark.parametrize(

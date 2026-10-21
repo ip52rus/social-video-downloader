@@ -44,7 +44,7 @@ PHOTO = {
 
 def product(count, photos=()):
     return {
-        "pk": 100,
+        "pk": 6862381134413977756083341221,
         "carousel_media": [
             {**deepcopy(PHOTO if i in photos else VIDEO), "pk": 1000 + i}
             for i in range(1, count + 1)

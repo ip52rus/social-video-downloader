@@ -4,6 +4,56 @@ Instagram's current narrow live acceptance is recorded in
 [Instagram live acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
 Earlier sections retain the evidence and open gates at each historical stage.
 
+## Instagram parent identity contract (offline)
+
+Reason: the old selection compared child IDs, types, positions and count but could
+accept a parent-only identity change because the publication URL came from input.
+The adapter now captures raw product `pk` before yt-dlp mapping. Only a positive
+integer or canonical ASCII decimal string (no bool, zero, sign, leading zero,
+compound suffix or whitespace; at most 64 digits) is admitted. Its mapped shortcode
+must be at most 28 characters and match the requested canonical `/p/` identity.
+Present `code` must agree. The length bound excludes yt-dlp's special long/private
+request-ID semantics. Input-derived `media_id` and fallback result `id` are never
+response evidence. This boundary depends on installed yt-dlp `2026.8.19` internals;
+extractor upgrades must rerun these source-shape tests.
+
+Frozen inspection/selection carry a repr-hidden parent identity through private
+stdin JSON. Strict IPC validation rejects missing/forged identity and malformed
+plans; it never reconstructs identity from the URL. Both sides of acquisition
+retain caller limits. Fresh metadata must match parent and the full ordered
+manifest, including photos, before any media GET. Existing whole-publication-only
+selection, preparation, exclusive output publication, worker cancellation/reap,
+cleanup, upload confirmation and no-retry behavior are retained. Delivery also
+rejects a plan without verified parent binding.
+
+Deterministic tests exercise actual installed GraphQL and embedded-page JSON
+extraction with fake responses, positive integer/string PK, optional matching code,
+missing/malformed/mismatching parent, upstream input-ID fallback, mixed and
+video-only manifests, parent-only changes with unchanged children, child/order/
+type/count/unknown-element changes, private IPC, real child refusal/reap/cleanup,
+repr and structured-log privacy. Existing local MP4 acquisition/preparation,
+timeout/cancellation and fake Telegram tests remain regression evidence.
+Verification: **67 parent-specific checks PASS**, 576 focused carousel/post/transport
+regressions PASS; **full offline 1869 passed / 1 skipped**, 227.51 s. The focused
+run preceded the final structured-log canary test; the full run includes it and
+the shared contract validator. External Python sockets/DNS were blocked through
+inherited sitecustomize, including worker processes; new parent tests additionally
+deny socket/DNS calls. The opt-in real YouTube test remained skipped. Ruff lint
+and format, diff-check, 44 local documentation links/anchors and scope/privacy/
+security review PASS. Exact-head Draft PR CI is tracked in GitHub checks.
+
+No real Instagram/Telegram requests or media downloads were performed. Public
+`/p/` carousels whose metadata lack a usable PK will now be safely refused with the
+existing message that the whole carousel cannot be downloaded safely; no media is
+acquired or delivered. The frequency of this refusal is unknown without separately
+authorized live evidence. Reels and single-video posts retain their existing path.
+Item-selector URLs remain refused; ordinary `utm_source`, `psln`, `rpxt` share
+parameters remain accepted. No single-item download or new buttons are implemented.
+Before that future work, explicit selection validation, parent/full-manifest
+revalidation, source positions including photos, confirmed VIDEO/child identity,
+callback ownership/expiry/one-shot consumption and uncertain-upload no-retry gates
+still need implementation and offline verification.
+
 ## Phase 9A safe operational events (offline)
 
 A read-only Docker audit preceded implementation on source main `50537ca`: both
