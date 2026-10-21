@@ -15,6 +15,7 @@ from social_video_downloader.domain.errors import (
     MediaProcessingError,
 )
 from social_video_downloader.infrastructure.tiktok_native import FILE_BYTES
+from social_video_downloader.operation_logging import Operation
 from social_video_downloader.providers.tiktok import TikTokProvider
 
 SEND_SECONDS = 120
@@ -99,69 +100,80 @@ class TelegramTikTokHandler:
             await _notice(message, "Бот занят, попробуйте позже.")
             return
         self._active_users.add(user_id)
-        sending = False
-        directory = None
-        quarantine = False
-        cleanup_failed = False
-        try:
-            await _notice(message, "Ссылка TikTok распознана. Начинаю скачивание…")
-            directory = TemporaryDirectory(prefix="telegram-tiktok-")
-            cancelled = Event()
-            # Executor Future is shielded directly, rather than a cancellable
-            # to_thread Task whose thread could outlive workspace ownership.
-            future = asyncio.get_running_loop().run_in_executor(
-                None, self._prepare, url, Path(directory.name).resolve(), cancelled
-            )
+        with Operation("tiktok", "download_prepare") as operation:
+            sending = False
+            directory = None
+            quarantine = False
+            cleanup_failed = False
             try:
-                path, parameters = await _owned_worker(future, cancelled)
-                sending = True
-                async with asyncio.timeout(SEND_SECONDS):
-                    sent = await message.answer_video(
-                        FSInputFile(path),
-                        caption="TikTok video",
-                        supports_streaming=True,
-                        **parameters,
-                    )
-                if (
-                    not isinstance(sent, Message)
-                    or sent.video is None
-                    or sent.message_id <= 0
-                    or sent.chat.id != message.chat.id
-                ):
-                    raise MediaProcessingError("Unconfirmed Telegram response.")
-            finally:
-                cancelled.set()
-                if not future.done():
-                    await _owned_worker(future, cancelled)
-        except DownloadCleanupError:
-            quarantine = self._blocked = True
-            await _notice(
-                message, "Не удалось безопасно завершить операцию. Загрузка TikTok приостановлена."
-            )
-        except (DownloaderError, TelegramAPIError, TimeoutError, OSError):
-            await _notice(
-                message,
-                "Не удалось подтвердить отправку видео. Автоматического повтора не будет."
-                if sending
-                else "Не удалось скачать или подготовить TikTok-видео. Попробуй другую ссылку.",
-            )
-        except Exception:
-            await _notice(message, "Не удалось обработать TikTok-видео.")
-        finally:
-            if directory is not None:
-                if quarantine:
-                    directory._finalizer.detach()
-                else:
-                    try:
-                        directory.cleanup()
-                    except Exception:
-                        cleanup_failed = quarantine = self._blocked = True
-                        directory._finalizer.detach()
-            # Failed cleanup keeps its reservation, even if the notification is
-            # cancelled. Another admitted operation retains its own lifecycle.
-            if not quarantine:
-                self._active_users.remove(user_id)
-            if cleanup_failed:
-                await _notice(
-                    message, "Ошибка завершения операции. Загрузка TikTok приостановлена."
+                await _notice(message, "Ссылка TikTok распознана. Начинаю скачивание…")
+                directory = TemporaryDirectory(prefix="telegram-tiktok-")
+                cancelled = Event()
+                # Executor Future is shielded directly, rather than a cancellable
+                # to_thread Task whose thread could outlive workspace ownership.
+                future = asyncio.get_running_loop().run_in_executor(
+                    None, self._prepare, url, Path(directory.name).resolve(), cancelled
                 )
+                try:
+                    path, parameters = await _owned_worker(future, cancelled)
+                    operation.phase = "upload"
+                    sending = True
+                    async with asyncio.timeout(SEND_SECONDS):
+                        sent = await message.answer_video(
+                            FSInputFile(path),
+                            caption="TikTok video",
+                            supports_streaming=True,
+                            **parameters,
+                        )
+                    if (
+                        not isinstance(sent, Message)
+                        or sent.video is None
+                        or sent.message_id <= 0
+                        or sent.chat.id != message.chat.id
+                    ):
+                        raise MediaProcessingError("Unconfirmed Telegram response.")
+                finally:
+                    cancelled.set()
+                    if not future.done():
+                        await _owned_worker(future, cancelled)
+            except DownloadCleanupError as error:
+                operation.fail(error)
+                quarantine = self._blocked = True
+                await _notice(
+                    message,
+                    "Не удалось безопасно завершить операцию. Загрузка TikTok приостановлена.",
+                )
+            except (DownloaderError, TelegramAPIError, TimeoutError, OSError) as error:
+                operation.fail(error)
+                await _notice(
+                    message,
+                    "Не удалось подтвердить отправку видео. Автоматического повтора не будет."
+                    if sending
+                    else "Не удалось скачать или подготовить TikTok-видео. Попробуй другую ссылку.",
+                )
+            except Exception as error:
+                operation.fail(error)
+                await _notice(message, "Не удалось обработать TikTok-видео.")
+            except BaseException as error:
+                operation.fail(error)
+                raise
+            finally:
+                operation.phase = "cleanup"
+                if directory is not None:
+                    if quarantine:
+                        directory._finalizer.detach()
+                    else:
+                        try:
+                            directory.cleanup()
+                        except Exception as error:
+                            operation.fail(error)
+                            cleanup_failed = quarantine = self._blocked = True
+                            directory._finalizer.detach()
+                # Failed cleanup keeps its reservation, even if the notification is
+                # cancelled. Another admitted operation retains its own lifecycle.
+                if not quarantine:
+                    self._active_users.remove(user_id)
+                if cleanup_failed:
+                    await _notice(
+                        message, "Ошибка завершения операции. Загрузка TikTok приостановлена."
+                    )

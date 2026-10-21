@@ -715,6 +715,24 @@ Do not promise universal platform support or hard-code a long unsupported platfo
 
 Status: OPEN; not closed by Phase 4 functional acceptance.
 
+- [x] Phase 9A read-only baseline: inspect current main/worktrees and unchanged running
+  Docker services, restart/OOM, one-shot CPU/RAM/disk and logging-driver settings.
+  Record legacy sensitive log markers without exposing payloads; see
+  [baseline and safe events](DEVELOPMENT.md#phase-9a-operational-baseline-and-safe-events).
+- [x] Implement minimal fixed-field events for YouTube, Instagram Reel/posts and
+  TikTok, monotonic durations, safe typed failures and service/polling lifecycle.
+  Remove verbose YouTube probe/path/response/traceback logs and direct yt-dlp stderr;
+  suppress unstructured library output at the configured sink. Preserve existing
+  user messages, request counts/retries, admission, cancellation, cleanup/quarantine.
+- [x] Verify Phase 9A offline privacy, lifecycle, sink-failure and regression checks;
+  355 focused PASS, full 1802 passed / 1 skipped (224.16 s), Ruff/diff/privacy and
+  47 local links PASS; evidence in [TESTING](TESTING.md#phase-9a-safe-operational-events-offline).
+- [ ] Complete Phase 9A Draft PR exact-head CI/review and independent merge decision.
+  No rollout is authorized here; deployed logs remain on the old image.
+- [ ] Phase 9B: establish a deterministic event-loop blocking baseline for slow
+  YouTube metadata using a synthetic blocked provider plus concurrent ticker/callback.
+  Agree a bounded ownership/cancellation design before changing execution architecture.
+
 - [ ] Diagnose intermittent YouTube HTTP 403 and define/test a narrowly bounded recovery
   strategy with explicit attempt limits and no duplicate media delivery.
 - [ ] Remove synchronous metadata extraction/planning from the async event loop; verify

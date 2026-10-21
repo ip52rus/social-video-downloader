@@ -4,6 +4,36 @@ Instagram's current narrow live acceptance is recorded in
 [Instagram live acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
 Earlier sections retain the evidence and open gates at each historical stage.
 
+## Phase 9A safe operational events (offline)
+
+A read-only Docker audit preceded implementation on source main `50537ca`: both
+services running, restart=0, OOM=false, original images/Local API volume retained.
+CPU/RAM/disk and local logging-driver observations are snapshots, not load tests;
+see [baseline and contract](DEVELOPMENT.md#phase-9a-operational-baseline-and-safe-events).
+A private bounded scan confirmed old verbose upload/probe and aiogram identity
+markers without printing raw data. Existing deployed logs were left untouched.
+
+Deterministic tests cover fixed-field start/completion/failure, expected/unexpected
+exceptions, measured monotonic duration, invalid measurements, suppressed library
+identity/traceback records, safe polling conflict classification, quiet yt-dlp,
+startup/session closure, failing output sinks without duplicate download/upload,
+three-platform upload cancellation and TikTok quarantine retaining its reservation.
+Synthetic URLs and sensitive canaries are used; no real user data or media is kept.
+The broader focused regressions retain worker reap, cancellation, concurrent users,
+independent workspaces, cleanup, Telegram uncertainty and all original routes.
+
+Final verification: **355 focused PASS; full offline 1802 passed / 1 skipped**,
+224.16 s. Ruff lint/format, diff-check, 47 local links/anchors and privacy/scope/security
+review PASS. External Python socket/DNS denial is installed through inherited sitecustomize, including worker
+children; the real opt-in YouTube smoke remains skipped. Local generated-media
+FFmpeg tests are offline evidence, not a new platform/Telegram smoke. No downloader
+network policy, quality, API, retry, ownership, admission or user message is changed.
+Exact-head Draft PR quality CI is required before handoff and recorded in GitHub checks.
+No live call, polling, container/env mutation, merge or deployment is part of Phase 9A.
+The events do not establish inner HTTP statuses/counts, broad reliability, individual
+concurrent-request correlation, continuous liveness, event-loop responsiveness or
+stronger legacy YouTube thread-cancellation/upload-confirmation guarantees.
+
 ## Public deployment Stage D acceptance
 
 After PR #66 merged, source main `389258cee9cf966be531ae5d6d60b192a59bcdb2`

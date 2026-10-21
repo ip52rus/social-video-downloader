@@ -21,6 +21,7 @@ from social_video_downloader.infrastructure.telegram_carousel import (
     CarouselDeliveryLimits,
     TelegramCarouselDelivery,
 )
+from social_video_downloader.operation_logging import Operation
 from social_video_downloader.providers.instagram import InstagramProvider
 from social_video_downloader.services.instagram_acquisition import (
     CarouselAcquisitionLimits,
@@ -64,7 +65,7 @@ class InstagramPostHandler:
     def __init__(self, reel_handler):
         self._reel_handler = reel_handler
 
-    async def _send_single(self, message: Message, metadata, provider, guard) -> None:
+    async def _send_single(self, message: Message, metadata, provider, guard, operation) -> None:
         """Consume the positively inspected snapshot through the existing worker."""
         sending = False
         operation_deadline = guard.deadline
@@ -77,31 +78,40 @@ class InstagramPostHandler:
                 await message.answer("Одиночное видео Instagram распознано. Начинаю скачивание…")
             guard.check()
             with TemporaryDirectory(prefix="instagram-post-") as directory:
-                async with asyncio.timeout(_remaining(guard)):
-                    task = asyncio.get_running_loop().run_in_executor(
-                        None,
-                        partial(
-                            self._reel_handler._prepare,
-                            metadata.source_url,
-                            Path(directory).resolve(),
-                            guard,
-                            provider=provider,
-                        ),
-                    )
-                    prepared, parameters = await _owned_worker(task, guard.cancelled)
-                guard.check()
-                guard.deadline = operation_deadline
-                send_seconds = min(_SEND_SECONDS, _remaining(guard))
-                sending = True
-                async with asyncio.timeout(send_seconds):
-                    sent = await message.answer_video(
-                        FSInputFile(prepared),
-                        **parameters,
-                        supports_streaming=True,
-                    )
-                if not isinstance(sent, Message) or sent.video is None:
-                    raise MediaProcessingError("Unconfirmed Telegram video response.")
-        except (DownloaderError, TelegramAPIError, TimeoutError):
+                try:
+                    async with asyncio.timeout(_remaining(guard)):
+                        task = asyncio.get_running_loop().run_in_executor(
+                            None,
+                            partial(
+                                self._reel_handler._prepare,
+                                metadata.source_url,
+                                Path(directory).resolve(),
+                                guard,
+                                provider=provider,
+                            ),
+                        )
+                        prepared, parameters = await _owned_worker(task, guard.cancelled)
+                    guard.check()
+                    guard.deadline = operation_deadline
+                    send_seconds = min(_SEND_SECONDS, _remaining(guard))
+                    operation.phase = "upload"
+                    sending = True
+                    async with asyncio.timeout(send_seconds):
+                        sent = await message.answer_video(
+                            FSInputFile(prepared),
+                            **parameters,
+                            supports_streaming=True,
+                        )
+                    if not isinstance(sent, Message) or sent.video is None:
+                        raise MediaProcessingError("Unconfirmed Telegram video response.")
+                except BaseException as error:
+                    operation.fail(error)
+                    raise
+                finally:
+                    operation.phase = "cleanup"
+
+        except (DownloaderError, TelegramAPIError, TimeoutError) as error:
+            operation.fail(error)
             text = (
                 "Не удалось подтвердить отправку видео. Автоматического повтора не будет."
                 if sending
@@ -110,7 +120,7 @@ class InstagramPostHandler:
             with suppress(TelegramAPIError):
                 await message.answer(text)
 
-    async def _send_carousel(self, message, plan, guard):
+    async def _send_carousel(self, message, plan, guard, operation):
         interrupted_delivery = None
         with TemporaryDirectory(prefix="instagram-carousel-") as directory:
             workspace = Path(directory).resolve()
@@ -119,6 +129,7 @@ class InstagramPostHandler:
                     limits = replace(_ACQUISITION_LIMITS, max_seconds=_remaining(guard))
                     collection = await InstagramCarouselAcquisition(limits).acquire(plan, workspace)
                     guard.check()
+                    operation.phase = "prepare_upload"
                     try:
                         progress = await TelegramCarouselDelivery(
                             message.bot, _DELIVERY_LIMITS
@@ -130,12 +141,20 @@ class InstagramPostHandler:
                         raise
                     if not progress.complete:
                         raise MediaProcessingError("Unconfirmed complete carousel delivery.")
-            except TimeoutError:
+            except TimeoutError as error:
                 # The shared deadline may interrupt an upload. Retain the transport's
                 # uncertainty instead of describing this as a pre-delivery failure.
                 if interrupted_delivery is not None:
-                    raise CarouselDeliveryError("deadline", interrupted_delivery) from None
+                    failure = CarouselDeliveryError("deadline", interrupted_delivery)
+                    operation.fail(failure)
+                    raise failure from None
+                operation.fail(error)
                 raise
+            except BaseException as error:
+                operation.fail(error)
+                raise
+            finally:
+                operation.phase = "cleanup"
 
     async def handle(self, message: Message, raw_url: str, canonical: str) -> None:
         owner = self._reel_handler
@@ -143,73 +162,82 @@ class InstagramPostHandler:
             await message.answer("Уже обрабатываю Instagram-ссылку. Отправь следующую позже.")
             return
         owner._active = True
-        guard = _Guard(Event(), seconds=_ACQUISITION_LIMITS.max_seconds)
-        try:
-            # The service validates the RAW query and fragment before using canonical identity.
-            # The metadata extractor runs outside the event loop; cancellation waits for it.
-            provider = InstagramProvider(lambda options: guard.ydl(owner._ydl_factory, options))
-            service = InstagramCarouselService(provider)
-            async with asyncio.timeout(_remaining(guard)):
-                task = asyncio.get_running_loop().run_in_executor(
-                    None, service.inspect_publication, raw_url
-                )
-                plan = await _owned_worker(task, guard.cancelled)
-            guard.check()
-            if isinstance(plan, MediaMetadata):
-                await self._send_single(message, plan, provider, guard)
-                return
-            if plan.state is CarouselPlanState.BLOCKED:
-                if plan.issue in {
-                    CarouselIssue.ITEM_REFERENCE_UNSUPPORTED,
-                    CarouselIssue.AMBIGUOUS_REFERENCE,
-                }:
-                    await message.answer(
-                        "Нужна ссылка на публикацию целиком без выбора отдельных элементов "
-                        "и неизвестных параметров."
+        with Operation("instagram", "metadata") as operation:
+            guard = _Guard(Event(), seconds=_ACQUISITION_LIMITS.max_seconds)
+            try:
+                # The service validates the RAW query and fragment before using canonical identity.
+                # The metadata extractor runs outside the event loop; cancellation waits for it.
+                provider = InstagramProvider(lambda options: guard.ydl(owner._ydl_factory, options))
+                service = InstagramCarouselService(provider)
+                async with asyncio.timeout(_remaining(guard)):
+                    task = asyncio.get_running_loop().run_in_executor(
+                        None, service.inspect_publication, raw_url
                     )
-                elif plan.issue is CarouselIssue.NO_VIDEOS:
-                    await message.answer("В публикации нет доступных видео. Фото не скачиваются.")
+                    plan = await _owned_worker(task, guard.cancelled)
+                guard.check()
+                if isinstance(plan, MediaMetadata):
+                    operation.phase = "download_prepare"
+                    await self._send_single(message, plan, provider, guard, operation)
+                    return
+                if plan.state is CarouselPlanState.BLOCKED:
+                    operation.fail(category="refused")
+                    if plan.issue in {
+                        CarouselIssue.ITEM_REFERENCE_UNSUPPORTED,
+                        CarouselIssue.AMBIGUOUS_REFERENCE,
+                    }:
+                        await message.answer(
+                            "Нужна ссылка на публикацию целиком без выбора отдельных элементов "
+                            "и неизвестных параметров."
+                        )
+                    elif plan.issue is CarouselIssue.NO_VIDEOS:
+                        await message.answer(
+                            "В публикации нет доступных видео. Фото не скачиваются."
+                        )
+                    else:
+                        await message.answer(
+                            "Невозможно безопасно скачать всю карусель: один или несколько "
+                            "элементов недоступны или не распознаны."
+                        )
+                    return
+
+                if len(plan.selected_videos) > _ACQUISITION_LIMITS.max_videos:
+                    operation.fail(category="refused")
+                    await message.answer(
+                        f"В публикации {len(plan.selected_videos)} видео. Сейчас лимит — "
+                        f"{_ACQUISITION_LIMITS.max_videos}; пропускать остальные не будем."
+                    )
+                    return
+
+                guard.check()
+                async with asyncio.timeout(_remaining(guard)):
+                    await message.answer("Карусель распознана. Подготавливаю видео к отправке…")
+                guard.check()
+                operation.phase = "download"
+                await self._send_carousel(message, plan, guard, operation)
+            except CarouselDeliveryError as error:
+                operation.fail(error)
+                progress = error.progress
+                confirmed = len(progress.confirmed_positions)
+                if progress.uncertain_positions:
+                    text = (
+                        "Не удалось подтвердить отправку всей карусели. "
+                        "Часть видео могла быть доставлена; автоматического повтора не будет."
+                    )
+                elif confirmed:
+                    text = (
+                        f"Подтверждена отправка {confirmed} из {progress.total_videos} видео. "
+                        "Остальные не отправлены; автоматического повтора не будет."
+                    )
                 else:
+                    text = "Не удалось подготовить или отправить карусель. Автоповтора не будет."
+                with suppress(TelegramAPIError):
+                    await message.answer(text)
+            except (DownloaderError, TelegramAPIError, TimeoutError, OSError) as error:
+                operation.fail(error)
+                with suppress(TelegramAPIError):
                     await message.answer(
-                        "Невозможно безопасно скачать всю карусель: один или несколько "
-                        "элементов недоступны или не распознаны."
+                        "Не удалось скачать или подготовить публикацию в пределах лимитов. "
+                        "Неполные карусели намеренно не отправляются."
                     )
-                return
-
-            if len(plan.selected_videos) > _ACQUISITION_LIMITS.max_videos:
-                await message.answer(
-                    f"В публикации {len(plan.selected_videos)} видео. Сейчас лимит — "
-                    f"{_ACQUISITION_LIMITS.max_videos}; пропускать остальные не будем."
-                )
-                return
-
-            guard.check()
-            async with asyncio.timeout(_remaining(guard)):
-                await message.answer("Карусель распознана. Подготавливаю видео к отправке…")
-            guard.check()
-            await self._send_carousel(message, plan, guard)
-        except CarouselDeliveryError as error:
-            progress = error.progress
-            confirmed = len(progress.confirmed_positions)
-            if progress.uncertain_positions:
-                text = (
-                    "Не удалось подтвердить отправку всей карусели. "
-                    "Часть видео могла быть доставлена; автоматического повтора не будет."
-                )
-            elif confirmed:
-                text = (
-                    f"Подтверждена отправка {confirmed} из {progress.total_videos} видео. "
-                    "Остальные не отправлены; автоматического повтора не будет."
-                )
-            else:
-                text = "Не удалось подготовить или отправить карусель. Автоповтора не будет."
-            with suppress(TelegramAPIError):
-                await message.answer(text)
-        except (DownloaderError, TelegramAPIError, TimeoutError, OSError):
-            with suppress(TelegramAPIError):
-                await message.answer(
-                    "Не удалось скачать или подготовить публикацию в пределах лимитов. "
-                    "Неполные карусели намеренно не отправляются."
-                )
-        finally:
-            owner._active = False
+            finally:
+                owner._active = False

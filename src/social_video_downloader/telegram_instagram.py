@@ -29,6 +29,7 @@ from social_video_downloader.infrastructure.telegram_media import (
     prepare_telegram_video,
     telegram_video_upload_parameters,
 )
+from social_video_downloader.operation_logging import Operation
 from social_video_downloader.providers.instagram import InstagramProvider
 
 _MAX_BYTES = 25 * 1024**2
@@ -215,34 +216,44 @@ class InstagramReelHandler:
             await message.answer("Уже обрабатываю Reel. Дождись завершения и отправь ссылку позже.")
             return
         self._active = True
-        sending = False
-        try:
-            await message.answer("Ссылка Reel распознана. Начинаю скачивание…")
-            with TemporaryDirectory(prefix="instagram-reel-") as directory:
-                cancelled = Event()
-                guard = _Guard(cancelled)
-                # An executor Future is shielded directly. A separate to_thread Task
-                # could itself be cancelled during shutdown while its thread survives.
-                task = asyncio.get_running_loop().run_in_executor(
-                    None, self._prepare, url, Path(directory).resolve(), guard
+        with Operation("instagram", "download_prepare") as operation:
+            sending = False
+            try:
+                await message.answer("Ссылка Reel распознана. Начинаю скачивание…")
+                with TemporaryDirectory(prefix="instagram-reel-") as directory:
+                    try:
+                        cancelled = Event()
+                        guard = _Guard(cancelled)
+                        # An executor Future is shielded directly. A separate to_thread Task
+                        # could itself be cancelled during shutdown while its thread survives.
+                        task = asyncio.get_running_loop().run_in_executor(
+                            None, self._prepare, url, Path(directory).resolve(), guard
+                        )
+                        prepared, parameters = await _owned_worker(task, cancelled)
+                        operation.phase = "upload"
+                        sending = True
+                        async with asyncio.timeout(_SEND_SECONDS):
+                            sent = await message.answer_video(
+                                FSInputFile(prepared),
+                                **parameters,
+                                supports_streaming=True,
+                            )
+                        if not isinstance(sent, Message) or sent.video is None:
+                            raise MediaProcessingError("Unconfirmed Telegram video response.")
+                    except BaseException as error:
+                        operation.fail(error)
+                        raise
+                    finally:
+                        operation.phase = "cleanup"
+
+            except (DownloaderError, TelegramAPIError, TimeoutError) as error:
+                operation.fail(error)
+                text = (
+                    "Не удалось подтвердить отправку видео. Автоматического повтора не будет."
+                    if sending
+                    else "Не удалось скачать или подготовить Reel в пределах лимитов."
                 )
-                prepared, parameters = await _owned_worker(task, cancelled)
-                sending = True
-                async with asyncio.timeout(_SEND_SECONDS):
-                    sent = await message.answer_video(
-                        FSInputFile(prepared),
-                        **parameters,
-                        supports_streaming=True,
-                    )
-                if not isinstance(sent, Message) or sent.video is None:
-                    raise MediaProcessingError("Unconfirmed Telegram video response.")
-        except (DownloaderError, TelegramAPIError, TimeoutError):
-            text = (
-                "Не удалось подтвердить отправку видео. Автоматического повтора не будет."
-                if sending
-                else "Не удалось скачать или подготовить Reel в пределах лимитов."
-            )
-            with suppress(TelegramAPIError):
-                await message.answer(text)
-        finally:
-            self._active = False
+                with suppress(TelegramAPIError):
+                    await message.answer(text)
+            finally:
+                self._active = False

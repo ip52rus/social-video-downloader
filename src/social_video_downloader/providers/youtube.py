@@ -33,6 +33,15 @@ from social_video_downloader.infrastructure.filenames import safe_filename
 from social_video_downloader.infrastructure.workspace import temporary_workspace
 
 
+class _QuietLogger:
+    """Suppress yt-dlp's direct stderr output; domain errors remain authoritative."""
+
+    def debug(self, *_):
+        pass
+
+    info = warning = error = debug
+
+
 class YouTubeProvider:
     """Download individual YouTube videos in supported output modes."""
 
@@ -54,6 +63,7 @@ class YouTubeProvider:
         return {
             "noplaylist": True,
             "quiet": True,
+            "logger": _QuietLogger(),
             "no_warnings": True,
             "retries": 10,
             "fragment_retries": 10,

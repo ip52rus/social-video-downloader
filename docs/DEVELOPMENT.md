@@ -192,3 +192,110 @@ Do not rebuild/restart either running container, edit server environment or
 perform real external calls as part of the acceptance-documentation update. The two
 owner-confirmed cases do not authorize additional deployments, tests or limit changes.
 Broader publication/client/size coverage and production capacity remain unverified.
+
+
+## Phase 9A operational baseline and safe events
+
+### Decision and deployed baseline
+
+Use standard-library logging at the existing lifecycle boundaries. No external
+monitoring, metrics server, healthcheck, queue or worker pool is justified by the
+current evidence. The main process can be checked with read-only Docker inspect;
+one-shot stats/disk observations are not a load test or capacity guarantee.
+
+Audit against GitHub main `50537ca61c7084f107c6f3a75335170b3317323e` (the merge of
+PR #67) found the primary local checkout still at deployed source `389258c`; only
+five documentation files differ. It was left unchanged. Both existing containers
+were RUNNING, restart count 0, OOM=false. Bot image remained the prepared deployment
+image recorded above; Local API identity/mount and rollback image were preserved.
+The point-in-time sample was:
+
+| Observation | Bot | Local Bot API |
+|---|---|---|
+| CPU | 0.00% | 1.17% |
+| RAM | 506.3 MiB | 54.66 MiB |
+| Explicit container CPU/RAM cap | None | None |
+| Logging driver / explicit options | local / none | local / none |
+
+Docker reported 16 CPUs and about 7.75 GiB RAM; host free disk was about 78.6 GiB.
+Docker reported images 3.073 GB, writable containers 6.787 MB, volumes 64.35 kB and
+build cache 3.281 GB. These are snapshots, not reserved capacity or safe limits.
+Compose defines no logging options. Docker documents local-driver defaults of five
+20 MB files and compression, but retention/rotation was not experimentally tested:
+[Docker local logging driver](https://docs.docker.com/engine/logging/drivers/local/).
+No daemon or Compose logging configuration was changed.
+
+A bounded private scan of 500 existing log lines found one legacy upload/probe
+record, one legacy Telegram video-metadata record, five update-identity markers
+and seven bot-identity markers, with no traceback marker. These logs were not
+printed, copied into Git, deleted or rewritten. This branch does not sanitize
+historical logs or change the running image; deployment remains a separate decision.
+
+### Event contract and interpretation
+
+The configured Python sink emits JSON with exactly `platform`, `event`, `phase`,
+`category` and `elapsed_ms`. Platforms are youtube/instagram/tiktok; service denotes
+bot lifecycle or polling errors. Events are operation_started, operation_completed
+and operation_failed. Phases come from the fixed source allowlist: metadata,
+download, prepare, download_prepare, prepare_upload, upload, cleanup, notification,
+polling, session_close or unknown. Categories use trusted exception types, never
+exception text, class-name strings, causes, external JSON or HTTP payloads.
+
+Durations use monotonic time, in milliseconds, for the observed lifecycle including
+owned cleanup/error notices. Ancillary notification/polling failures without a
+measured start have null duration; invalid/unbounded measurements also become null.
+Docker timestamps can supply wall-clock ordering. LOG_LEVEL=INFO retains starts
+and successful completions; higher levels intentionally hide lower-level events.
+
+YouTube planning emits a separate metadata operation, excluding user choice time.
+Delivery then observes download, preparation, upload and workspace exit. A completed
+planning operation is not delivery. Existing best-effort probe failure is a separate
+prepare failure and does not block upload. A missing YouTube video response is
+reported as unconfirmed_upload without changing the old user flow or retry policy.
+Audio delivery retains its existing API-return checks; no stronger confirmation is
+implied. Reel/TikTok workers combine download and preparation, so their inner HTTP
+and FFmpeg stages are not guessed. Instagram post inspection is metadata; carousel
+preparation/upload is a combined prepare_upload phase. No user or operation IDs are
+recorded; concurrent operations cannot be individually correlated from these logs.
+
+Service operation_started/polling means entry into the existing polling call, not
+authentication, successful getUpdates, a heartbeat or event-loop responsiveness.
+The exact aiogram fetch-error template is converted to safe typed categories
+(including Telegram conflict, authorization, rate-limit and network errors).
+Other unstructured aiogram/library messages are dropped. Startup failures exit
+nonzero without an exception traceback. No new polling retry or network request is
+introduced. Configure_logging installs the owned safe root sink, replacing existing
+root handlers; embedders must not attach an unfiltered sink afterwards.
+
+No URL, media/user/chat/update identity, filename/path, token, header, cookie,
+ffprobe/yt-dlp JSON or traceback is serialized. The YouTube yt-dlp logger also
+suppresses its direct console output. Sink failure cannot trigger retries, change
+user messages or bypass cleanup; no stderr traceback is printed for a sink error.
+This is not a general scrubber for arbitrary subprocess/native stderr or Local API
+logs. No claim of complete historical-log confidentiality is made.
+
+### Lifecycle boundaries and next gate
+
+Existing TikTok admission (two per process, one per user), worker group supervision,
+180-second native cap, 120-second upload cap, exclusive export, cancellation/reap,
+quarantine and fail-closed blocking are unchanged. Reels keep their existing single
+slot, cooperative bounded executor and 180/120-second limits; posts retain their
+shared operation window and carousel transport limits. YouTube keeps existing
+choices, to_thread delivery/preparation and callbacks. No timeout, network policy,
+format/quality, downloader/API retry or upload confirmation behavior was changed.
+
+A failed/cancelled event reports the observed handler outcome, not independent
+proof of thread/process reap. In particular, the existing YouTube to_thread path
+has no owned-thread hard cancellation guarantee, and its synchronous metadata
+planning still runs on the event loop. Phase 9A does not repair these architectural
+debts. Phase 9B should first measure event-loop/callback responsiveness offline with
+a deliberately blocked synthetic metadata provider and a concurrent asyncio ticker,
+then decide the smallest bounded ownership/cancellation change with acceptance
+criteria before implementation. Native worker/cancellation diagnostics, HTTP counts,
+latency percentiles, availability, event-loop lag, load capacity and automated
+recovery remain unmeasured. Do not infer them from process state or smoke PASS.
+
+Verification and exact-head CI are recorded in
+[Phase 9A testing](TESTING.md#phase-9a-safe-operational-events-offline).
+No live request, container restart/recreation/build, env change or deployment is
+part of this stage. Inspect logs privately; never paste raw deployed logs into PRs.
