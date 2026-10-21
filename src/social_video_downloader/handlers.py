@@ -1,9 +1,6 @@
 """Telegram command and URL-intake handlers."""
 
 import asyncio
-import json
-import logging
-import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -34,6 +31,7 @@ from social_video_downloader.infrastructure.telegram_media import (
     prepare_telegram_video,
     telegram_video_upload_parameters,
 )
+from social_video_downloader.operation_logging import Operation, report_failure
 from social_video_downloader.services.choice_model import (
     ChoicePlan,
     ChoicePlanState,
@@ -55,7 +53,6 @@ from social_video_downloader.telegram_interactions import (
     parse_callback_data,
 )
 
-logger = logging.getLogger(__name__)
 download_service = DownloadService()
 pending_interaction_store = InMemoryPendingInteractionStore()
 
@@ -106,11 +103,7 @@ async def _notify_download_error(message: Message, error: DownloaderError) -> No
     try:
         await message.answer(_download_error_message(error))
     except TelegramAPIError as notification_error:
-        logger.warning(
-            "Download error notification failed: original_error=%s telegram_error=%s",
-            type(error).__name__,
-            type(notification_error).__name__,
-        )
+        report_failure("youtube", "notification", notification_error)
 
 
 async def handle_start(message: Message, instagram_reels=None, tiktok_videos=None) -> None:
@@ -169,13 +162,12 @@ async def handle_text(message: Message, instagram_reels=None, tiktok_videos=None
         return
 
     try:
-        plan = download_service.create_choice_plan(normalized_url)
+        with Operation("youtube", "metadata"):
+            plan = download_service.create_choice_plan(normalized_url)
     except DownloaderError as error:
-        logger.warning("Media planning failed: %s", type(error).__name__)
         await _notify_download_error(message, error)
         return
     except Exception:
-        logger.exception("Unexpected failure while planning media download")
         await message.answer("Произошла внутренняя ошибка. Попробуй ещё раз позже.")
         return
 
@@ -237,98 +229,81 @@ async def _download_and_deliver_media(
     options: DownloadOptions,
 ) -> None:
     """Download media with selected options and deliver it through the existing pipeline."""
-    try:
-        with TemporaryDirectory(prefix="social-video-downloader-") as temporary_directory:
-            downloaded = await asyncio.to_thread(
-                download_service.download,
-                url,
-                Path(temporary_directory),
-                options,
+    with Operation("youtube", "download") as operation:
+        try:
+            with TemporaryDirectory(prefix="social-video-downloader-") as temporary_directory:
+                try:
+                    downloaded = await asyncio.to_thread(
+                        download_service.download,
+                        url,
+                        Path(temporary_directory),
+                        options,
+                    )
+                    if not downloaded.file_path.is_file():
+                        raise MediaProcessingError("The downloader returned a missing output file.")
+
+                    operation.phase = "prepare"
+                    if options.mode is DownloadMode.AUDIO_ONLY:
+                        audio = await asyncio.to_thread(
+                            prepare_telegram_audio,
+                            downloaded.file_path,
+                            downloaded.metadata.duration_seconds,
+                        )
+                        audio_parameters = (
+                            {"duration": audio.duration} if audio.duration is not None else {}
+                        )
+                        operation.phase = "upload"
+                        await message.answer_audio(
+                            FSInputFile(audio.file_path),
+                            caption=downloaded.metadata.title[:1024],
+                            **audio_parameters,
+                        )
+                        return
+
+                    telegram_video = await asyncio.to_thread(
+                        prepare_telegram_video,
+                        downloaded.file_path,
+                    )
+                    upload_parameters: dict[str, int] = {}
+
+                    try:
+                        probe_data = await asyncio.to_thread(inspect_telegram_video, telegram_video)
+                        upload_parameters = telegram_video_upload_parameters(probe_data)
+                    except Exception as error:
+                        # Preserve the existing best-effort inspection behavior.
+                        report_failure("youtube", "prepare", error)
+
+                    operation.phase = "upload"
+                    sent_message = await message.answer_video(
+                        FSInputFile(telegram_video),
+                        caption=downloaded.metadata.title[:1024],
+                        supports_streaming=True,
+                        **upload_parameters,
+                    )
+
+                    if sent_message.video is None:
+                        operation.fail(category="unconfirmed_upload")
+                    operation.phase = "cleanup"
+                except BaseException as error:
+                    operation.fail(error)
+                    raise
+                finally:
+                    operation.phase = "cleanup"
+
+        except TelegramEntityTooLarge as error:
+            operation.fail(error)
+            await message.answer(
+                "Файл слишком большой для отправки через Telegram. Попробуй видео меньшего размера."
             )
-            if not downloaded.file_path.is_file():
-                raise MediaProcessingError("The downloader returned a missing output file.")
-
-            if options.mode is DownloadMode.AUDIO_ONLY:
-                audio = await asyncio.to_thread(
-                    prepare_telegram_audio,
-                    downloaded.file_path,
-                    downloaded.metadata.duration_seconds,
-                )
-                audio_parameters = (
-                    {"duration": audio.duration} if audio.duration is not None else {}
-                )
-                await message.answer_audio(
-                    FSInputFile(audio.file_path),
-                    caption=downloaded.metadata.title[:1024],
-                    **audio_parameters,
-                )
-                return
-
-            telegram_video = await asyncio.to_thread(
-                prepare_telegram_video,
-                downloaded.file_path,
-            )
-            upload_parameters: dict[str, int] = {}
-
-            try:
-                probe_data = await asyncio.to_thread(inspect_telegram_video, telegram_video)
-                upload_parameters = telegram_video_upload_parameters(probe_data)
-                logger.info(
-                    "Telegram upload input: python=%s handler_module=%s path=%s "
-                    "resolved_path=%s filename=%s file_size=%s upload_parameters=%s probe=%s",
-                    sys.executable,
-                    __file__,
-                    telegram_video,
-                    telegram_video.resolve(),
-                    telegram_video.name,
-                    telegram_video.stat().st_size,
-                    upload_parameters,
-                    json.dumps(probe_data, ensure_ascii=False, sort_keys=True),
-                )
-            except Exception:
-                # Diagnostics must not prevent a valid media file from being delivered.
-                logger.exception(
-                    "Could not inspect Telegram upload input; continuing with upload: path=%s",
-                    telegram_video,
-                )
-
-            sent_message = await message.answer_video(
-                FSInputFile(telegram_video),
-                caption=downloaded.metadata.title[:1024],
-                supports_streaming=True,
-                **upload_parameters,
-            )
-
-            video = sent_message.video
-            if video is not None:
-                logger.info(
-                    "Telegram video metadata: width=%s height=%s duration=%s "
-                    "file_name=%s mime_type=%s file_size=%s",
-                    video.width,
-                    video.height,
-                    video.duration,
-                    video.file_name,
-                    video.mime_type,
-                    video.file_size,
-                )
-            else:
-                logger.warning(
-                    "Telegram returned a sent message without video metadata for file %s",
-                    telegram_video.name,
-                )
-    except TelegramEntityTooLarge:
-        await message.answer(
-            "Файл слишком большой для отправки через Telegram. Попробуй видео меньшего размера."
-        )
-    except TelegramAPIError:
-        logger.exception("Telegram could not deliver the downloaded media file")
-        await message.answer("Не удалось отправить файл в Telegram. Попробуй ещё раз позже.")
-    except DownloaderError as error:
-        logger.warning("Media download failed: %s", type(error).__name__)
-        await _notify_download_error(message, error)
-    except Exception:
-        logger.exception("Unexpected failure while downloading or delivering media")
-        await message.answer("Произошла внутренняя ошибка. Попробуй ещё раз позже.")
+        except TelegramAPIError as error:
+            operation.fail(error)
+            await message.answer("Не удалось отправить файл в Telegram. Попробуй ещё раз позже.")
+        except DownloaderError as error:
+            operation.fail(error)
+            await _notify_download_error(message, error)
+        except Exception as error:
+            operation.fail(error)
+            await message.answer("Произошла внутренняя ошибка. Попробуй ещё раз позже.")
 
 
 async def _send_mode_choices(message: Message, url: str, plan: ChoicePlan) -> None:
@@ -407,7 +382,7 @@ async def _handle_mode_callback(
     try:
         await callback.answer()
     except TelegramAPIError as error:
-        logger.warning("Quality transition acknowledgement failed: %s", type(error).__name__)
+        report_failure("youtube", "notification", error)
     if callback.message is not None:
         try:
             await callback.message.edit_reply_markup(
@@ -419,7 +394,7 @@ async def _handle_mode_callback(
         except TelegramAPIError as error:
             # Keep the state: the edit may have reached Telegram despite a lost response.
             # An old mode button can safely retry this same nonterminal transition.
-            logger.warning("Quality keyboard edit failed: %s", type(error).__name__)
+            report_failure("youtube", "notification", error)
 
 
 async def _handle_quality_callback(
@@ -458,12 +433,12 @@ async def _consume_and_download(
     try:
         await callback.answer("Начинаю скачивание…")
     except TelegramAPIError as error:
-        logger.warning("Terminal callback acknowledgement failed: %s", type(error).__name__)
+        report_failure("youtube", "notification", error)
     if callback.message is not None:
         try:
             await callback.message.edit_reply_markup(reply_markup=None)
         except TelegramAPIError as error:
-            logger.warning("Terminal keyboard cleanup failed: %s", type(error).__name__)
+            report_failure("youtube", "notification", error)
         await _download_and_deliver_media(callback.message, interaction.url, options)
 
 

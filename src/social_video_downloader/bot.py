@@ -9,6 +9,7 @@ from aiogram.client.telegram import TelegramAPIServer
 from social_video_downloader.config import Settings
 from social_video_downloader.handlers import create_router
 from social_video_downloader.logging_config import configure_logging
+from social_video_downloader.operation_logging import Operation, report_failure
 
 
 def create_bot(settings: Settings) -> Bot:
@@ -51,14 +52,21 @@ async def run_bot(settings: Settings) -> None:
     """Start polling and close the bot session when polling stops."""
     bot = create_bot(settings)
     dispatcher = create_dispatcher(settings)
-    try:
-        await dispatcher.start_polling(bot)
-    finally:
-        await bot.session.close()
+    with Operation("service", "polling") as operation:
+        try:
+            with operation.at("polling"):
+                await dispatcher.start_polling(bot)
+        finally:
+            with operation.at("session_close"):
+                await bot.session.close()
 
 
 def main() -> None:
     """Load configuration, configure logs, and run the Telegram polling loop."""
-    settings = Settings.from_env()
-    configure_logging(settings)
-    asyncio.run(run_bot(settings))
+    try:
+        settings = Settings.from_env()
+        configure_logging(settings)
+        asyncio.run(run_bot(settings))
+    except Exception as error:
+        report_failure("service", "unknown", error)
+        raise SystemExit(1) from None

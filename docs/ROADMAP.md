@@ -384,6 +384,22 @@ Complete the operational and reliability work that is intentionally not part of 
 
 Status: OPEN. Phase 4 functional acceptance does not satisfy this reliability gate.
 
+Phase 9A adds minimal safe standard-library events after a read-only deployed
+baseline audit: fixed platform/event/phase/category, monotonic observed duration,
+service lifecycle and typed polling errors, without user identifiers, arbitrary
+exception strings or probe dumps. Existing downloader/network/lifecycle behavior
+is retained. Offline checks and separate exact-head Draft PR CI/review are required;
+no container or environment change/deployment is included. The running image's
+legacy verbose logs remain unchanged until a separately approved rollout.
+
+Next is Phase 9B's offline measurement of slow synchronous YouTube metadata blocking
+the event loop, with a concurrent ticker/callback and explicit bounded ownership/
+cancellation acceptance criteria before any architecture change. Phase 9A events
+are not a heartbeat, load test, per-user trace, availability metric, proof of worker
+reap or HTTP-request counter. Broader recovery/load/reliability gates remain open.
+See [operational contract](DEVELOPMENT.md#phase-9a-operational-baseline-and-safe-events)
+and [offline evidence](TESTING.md#phase-9a-safe-operational-events-offline).
+
 Include:
 
 - bot restart and recovery;

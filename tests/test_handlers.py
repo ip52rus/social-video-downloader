@@ -880,7 +880,11 @@ async def test_terminal_api_failures_preserve_exact_download_once(
     callback.message.edit_reply_markup.assert_awaited_once_with(reply_markup=None)
     second.answer.assert_awaited_once_with(handlers._STALE_CALLBACK_MESSAGE)
     service.create_choice_plan.assert_not_called()
-    assert error_type.__name__ in caplog.text
+    assert (
+        '"category": "telegram_network"'
+        if error_type is TelegramNetworkError
+        else '"category": "telegram_api"'
+    ) in caplog.text
     assert "sensitive diagnostic details" not in caplog.text
     assert all(record.exc_info is None for record in caplog.records)
 
@@ -1022,8 +1026,12 @@ async def test_metadata_error_notification_failure_is_safe(
         assert len(service.calls) == 1
 
     message.answer.assert_awaited_once_with(handlers._download_error_message(original))
-    assert "original_error=MetadataExtractionError" in caplog.text
-    assert "telegram_error=" + error_type.__name__ in caplog.text
+    assert '"category": "metadata_unavailable"' in caplog.text
+    assert (
+        '"category": "telegram_network"'
+        if error_type is TelegramNetworkError
+        else '"category": "telegram_api"'
+    ) in caplog.text
     assert "private source details" not in caplog.text
     assert "sensitive diagnostic details" not in caplog.text
     assert all(record.exc_info is None for record in caplog.records)
