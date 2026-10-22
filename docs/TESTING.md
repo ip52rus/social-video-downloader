@@ -1,8 +1,73 @@
 # Testing Strategy
 
-Instagram's current narrow live acceptance is recorded in
-[Instagram live acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
+Instagram's narrow live evidence includes
+[Item Selection LIVE acceptance 2026-10-22](#instagram-item-selection--live-acceptance-2026-10-22)
+and the earlier [Instagram acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
 Earlier sections retain the evidence and open gates at each historical stage.
+
+## Instagram Item Selection — LIVE acceptance 2026-10-22
+
+### Offline implementation and CI
+
+PR #70 is MERGED. Main at deployment was
+`49f333eb3daff1d43fa2471e185e7071e8d179db`; its
+[post-merge CI #39745923630](https://github.com/ip52rus/social-video-downloader/actions/runs/39745923630)
+completed SUCCESS. Implementation verification was 77 focused tests PASS and
+1946 passed / 1 skipped in the full offline suite, with Ruff and documentation
+checks PASS. These are deterministic/CI results, not the LIVE evidence below.
+
+### Separately authorized deployment
+
+The existing main Telegram bot was updated to image
+`sha256:0b969b218619564afabd8b517c2e6faca50d65308e688134543b91bf33b0d7c6`.
+The previous running image is retained as
+`youtubedownloader-bot:rollback-pre-instagram-items-49f333e`.
+Local Bot API, volumes and protected local `.env` were preserved. The old polling
+consumer exited before the replacement started; one main consumer was observed,
+with no restart/OOM. Rollback was not performed or rehearsed. Image availability
+is a recovery checkpoint, not proof of a tested rollback procedure.
+
+### Owner-confirmed LIVE scenarios
+
+On 2026-10-22 the owner manually tested one public Instagram carousel containing
+two videos through the main Telegram bot. Both submissions used `img_index=2`,
+which identifies the second original publication element, not the second video
+after filtering photos.
+
+| Scenario | Owner-confirmed result |
+|---|---|
+| A: “Только видео №2” | PASS: selected video delivered; playback, orientation and sound correct. |
+| B: new submission → “Все видео из карусели” | PASS: both videos delivered; playback, orientation and sound correct. |
+
+These are real user/Telegram confirmations, separate from synthetic tests and the
+earlier metadata-only gate. No per-case duration, byte size, HTTP request count or
+exact media-format measurement is attributed to these scenarios.
+
+### Read-only post-LIVE health
+
+Bot and Local Bot API were RUNNING, the expected image matched, and one main
+polling consumer was observed. No restart/OOM, orphan media workers or residual
+media files were found in the checked application workspaces. The checked log
+window contained no acquisition, preparation, upload or cleanup failures or
+critical process-failure evidence. `.env` and volumes were preserved; the rollback
+image remained available. The health check performed no API calls or changes.
+
+Since deployment, 5 Instagram operation starts and 5 completions were observed,
+including two `download` operations. All 11 checked records conformed to the safe
+structured schema. There are no correlation identifiers, so these aggregate events
+cannot all be reliably attributed to the owner's two tests.
+
+**Quarantine state: UNKNOWN.** The internal `_blocked` flag was not directly
+inspected. No blocking symptoms were observed, but this does not turn UNKNOWN into
+PASS. **Post-LIVE health verdict: INCOMPLETE**, solely because of this unverified flag.
+
+Acceptance is limited to two choices on one two-video publication. Mixed PHOTO
+Item Selection LIVE delivery, broader mobile/share-link/publication compatibility,
+failure recovery, rollback rehearsal and high-load reliability remain unverified.
+Foreign/expired/repeated callback and uncertain-upload safeguards retain their
+offline evidence; these LIVE cases do not independently validate all fault paths.
+Phase 5 and Phase 9 remain open. This documentation update performs no new LIVE
+test, deployment or runtime/configuration change.
 
 ## Instagram Item Selection (offline)
 
@@ -45,16 +110,16 @@ Verification: **77 targeted PASS; full offline 1946 passed / 1 skipped**, 258.35
 External Python socket/DNS access was denied through inherited sitecustomize,
 including worker processes; new tests additionally deny socket/DNS access. The
 real opt-in YouTube test remained skipped. Ruff lint/format, diff-check, 70 local
-documentation links/anchors and privacy/security/scope review PASS. Exact-head
-Draft PR quality CI must be verified before handoff and is tracked in GitHub checks.
+documentation links/anchors and privacy/security/scope review PASS. PR #70 subsequently
+merged and its post-merge CI succeeded as recorded in the LIVE acceptance section.
 
 The earlier separately authorized parent metadata-only LIVE gate passed on one
 2-VIDEO carousel with independent reinspection (6 metadata requests, no media GET).
-It did not validate Item Selection acquisition or Telegram delivery. This PR performs
-no live platform request, download, Telegram API call, Docker operation or deployment.
-Before deployment, separately authorize controlled Telegram tests for single-video
-selection, all-video selection, mixed PHOTO positioning and client playback; retain
-no-retry/cleanup gates. No broad compatibility or production-readiness claim is made.
+It did not validate Item Selection acquisition or Telegram delivery. The implementation
+PR itself performed no live platform request, download, Telegram API call, Docker
+operation or deployment. The later separately authorized rollout and two VIDEO-only
+LIVE choices are recorded above. Mixed PHOTO positioning/delivery and broader
+compatibility remain open; no broad production-readiness claim is made.
 
 ## Instagram parent identity contract (offline)
 
@@ -103,10 +168,11 @@ At the parent-contract stage item-selector URLs remained refused; ordinary
 `utm_source`, `psln`, `rpxt` share parameters remained accepted. That PR did not
 implement single-item download or new buttons; the later Item Selection stage is
 recorded above.
-Before that future work, explicit selection validation, parent/full-manifest
+At that earlier parent-only stage, explicit selection validation, parent/full-manifest
 revalidation, source positions including photos, confirmed VIDEO/child identity,
 callback ownership/expiry/one-shot consumption and uncertain-upload no-retry gates
-still need implementation and offline verification.
+still required implementation and offline verification; the later Item Selection
+implementation and acceptance are recorded above.
 
 ## Phase 9A safe operational events (offline)
 

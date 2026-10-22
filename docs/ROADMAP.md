@@ -113,8 +113,8 @@ capability source of truth without evidence.
 
 ## Phase 5 - Instagram Provider — in progress
 
-Item Selection is implemented offline for one unambiguous `img_index=N` on a public
-`/p/` carousel. Metadata/parent/full-manifest inspection precedes two choices: all
+Item Selection is implemented, merged in PR #70 and deployed for one unambiguous
+`img_index=N` on a public `/p/` carousel. Metadata/parent/full-manifest inspection precedes two choices: all
 videos in source order, or the VIDEO at original position N (photos count toward
 positions). A selected PHOTO offers only all videos; out-of-range/unknown intent
 refuses. Ordinary `/p/` remains automatic and Reels retain their path. Explicit
@@ -126,7 +126,16 @@ Cleanup uncertainty quarantines owned directories and blocks new Instagram work.
 No new network policy, dependency, retry, quality mode or polling is introduced.
 See [Item Selection evidence](TESTING.md#instagram-item-selection-offline) and
 [URL/interaction rules](DEVELOPMENT.md#instagram-item-selection).
-LIVE single-item acquisition/delivery and deployment remain separate unverified gates.
+Post-merge CI #39745923630 succeeded on `49f333eb3daff1d43fa2471e185e7071e8d179db`.
+On 2026-10-22 the owner confirmed both “Только видео №2” and “Все видео из карусели”
+in the existing main bot for one two-video publication: delivery, playback,
+orientation and sound PASS. See the separate
+[LIVE acceptance and deployment record](TESTING.md#instagram-item-selection--live-acceptance-2026-10-22).
+This is narrow functional acceptance, not general Instagram reliability. Phase 5
+remains in progress: mixed PHOTO Item Selection LIVE delivery, broader compatibility
+and failure recovery remain open. Post-LIVE health is INCOMPLETE solely because
+the internal quarantine/`_blocked` flag is UNKNOWN; no blocking symptoms were observed.
+The previous image is available for rollback, but rollback was not rehearsed.
 
 The parent-identity follow-up strengthens the existing whole-carousel contract:
 observed product PK is validated before upstream mapping, converted to shortcode
@@ -201,8 +210,10 @@ That earlier fix stripped ordinary queries/harmless fragments, retained known it
 rejection and left carousel policy unchanged. No restart, environment change or live request is
 part of that share-link implementation. Compose defaults false; APP_ENV=development
 and the production guard remain unchanged. Larger-carousel acquisition and broad
-reliability remain unverified; later narrow `/p/`/album acceptance is recorded below. Item-specific semantics remain
-blocked pending separate validation; the installed extractor ignores `img_index`.
+reliability remain unverified; later narrow `/p/`/album acceptance is recorded below.
+At that earlier share-link stage item-specific semantics remained blocked because
+the installed extractor ignores `img_index`; PR #70 now implements explicit validated
+selection above instead of trusting extractor item selection.
 No running-stack rebuild/restart is authorized by this stage.
 Merged PR #56 (`feat/instagram-post-carousel-telegram`) connects
 public `/p/` URLs to positively inspected post/provider single-video download or existing
@@ -415,9 +426,11 @@ Phase 9A adds minimal safe standard-library events after a read-only deployed
 baseline audit: fixed platform/event/phase/category, monotonic observed duration,
 service lifecycle and typed polling errors, without user identifiers, arbitrary
 exception strings or probe dumps. Existing downloader/network/lifecycle behavior
-is retained. Offline checks and separate exact-head Draft PR CI/review are required;
-no container or environment change/deployment is included. The running image's
-legacy verbose logs remain unchanged until a separately approved rollout.
+is retained. Its implementation stage required offline checks and separate exact-head
+CI/review and included no deployment. A later separately authorized Phase 9A rollout
+enabled these events; the Item Selection deployment and post-LIVE observation are
+recorded in the acceptance link above. Phase 9 remains OPEN; safe events and narrow
+functional acceptance do not establish broad operational reliability.
 
 Next is Phase 9B's offline measurement of slow synchronous YouTube metadata blocking
 the event loop, with a concurrent ticker/callback and explicit bounded ownership/
