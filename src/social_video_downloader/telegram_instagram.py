@@ -165,6 +165,8 @@ class InstagramReelHandler:
     def __init__(self, *, ydl_factory=None):
         self._ydl_factory = ydl_factory or yt_dlp.YoutubeDL
         self._active = False
+        self._blocked = False
+        self._post_handler = None
 
     def _prepare(self, url, workspace, guard, *, provider=None):
         if os.name != "posix":
@@ -203,13 +205,15 @@ class InstagramReelHandler:
                 # Import lazily: the /p/ handler reuses the Reel handler's bounded worker.
                 from social_video_downloader.telegram_instagram_posts import InstagramPostHandler
 
-                await InstagramPostHandler(self).handle(message, raw_url, canonical)
+                if self._post_handler is None:
+                    self._post_handler = InstagramPostHandler(self)
+                await self._post_handler.handle(message, raw_url, canonical)
                 return
             url = _reel_url(raw_url)
         except InvalidMediaURLError:
             await message.answer(
                 "Поддерживаются публичные Reels и публикации /p/. "
-                "Ссылки на отдельные элементы и другие страницы не поддерживаются."
+                "Для /p/ поддерживается выбор через img_index; другие селекторы не поддерживаются."
             )
             return
         if self._active:

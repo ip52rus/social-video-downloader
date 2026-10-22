@@ -164,9 +164,10 @@ playback. See [the limited acceptance](TESTING.md#instagram-live-acceptance-2026
 
 Accepted public `/p/` publication links pass through the conservative carousel
 selection policy. The merged PR #57 share-link fix aligns `/p/` with Reels: irrelevant
-query keys, bare share flags and ordinary fragments are stripped. Known item selectors
-are rejected case-insensitively after percent decoding in query keys and selector-shaped
-fragments, before extraction. Malformed references and the 32-field bound remain blocked.
+query keys, bare share flags and ordinary fragments are stripped. Other known item selectors remain rejected case-insensitively after percent decoding
+in query keys and selector-shaped fragments, before extraction. The Item Selection
+path below admits only one unambiguous `img_index`; malformed references and the
+32-field bound remain blocked.
 A single-video post must be positively confirmed by the source
 adapter and existing video validators; it consumes the same verified snapshot in the
 bounded single-file worker. BLOCKED never authorizes fallback or another extraction.
@@ -299,3 +300,30 @@ Verification and exact-head CI are recorded in
 [Phase 9A testing](TESTING.md#phase-9a-safe-operational-events-offline).
 No live request, container restart/recreation/build, env change or deployment is
 part of this stage. Inspect logs privately; never paste raw deployed logs into PRs.
+
+
+## Instagram Item Selection
+
+Public `/p/` with one valid `img_index=N` is inspected as an entire carousel before
+showing “Все видео из карусели” / “Только видео №N”. N is an original position,
+including photos; a selected PHOTO offers only the all-video action. Ordinary
+publication links still download all videos without a confirmation step. Reels do
+not acquire this new reference behavior. See [policy and evidence](TESTING.md#instagram-item-selection-offline).
+
+`CarouselScope.PUBLICATION` retains the existing all-video policy. SINGLE_VIDEO
+requires a requested original position and exactly its confirmed child; both carry
+parent identity and a complete manifest. The shared validator, IPC and delivery
+checks enforce scope, not arbitrary subsets. No quality/MP3 option is introduced.
+InstagramChoiceStore is a small separately typed process-local store, not YouTube
+pending state. It uses random opaque IDs, owner/chat/message binding, 15-minute TTL,
+128-entry capacity and locked one-shot removal. Buttons before message binding are
+refused safely. The same event-loop Instagram slot covers metadata inspection and,
+after a valid callback, acquisition through upload/cleanup, but not human choice
+waiting. Busy/failed-ack callbacks do not consume a choice. A consumed callback
+never retries, even if keyboard removal or upload confirmation fails.
+
+Existing conservative media limits remain (10 videos, 25 MiB/file, 100 MiB total).
+Oversized or incomplete publications refuse rather than silently truncate. Worker
+cleanup uncertainty preserves opt-in quarantine workspaces and keeps the Instagram
+handler blocked; investigate ownership/reap before any separately authorized manual
+cleanup or restart. No automatic recovery, data deletion or retry is performed.

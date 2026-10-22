@@ -14,6 +14,7 @@ class CarouselItemKind(StrEnum):
 
 class CarouselScope(StrEnum):
     PUBLICATION = "publication"
+    SINGLE_VIDEO = "single_video"
     ITEM_REFERENCE = "item_reference"
 
 
@@ -59,6 +60,23 @@ class CarouselInspection:
     parent_identity: CarouselParentIdentity | None = field(default=None, repr=False, kw_only=True)
 
 
+def selection_matches_scope(plan) -> bool:
+    """Only all videos, or one explicitly requested ORIGINAL position, are selections."""
+    if plan.scope is CarouselScope.PUBLICATION:
+        return plan.requested_position is None and plan.selected_videos == tuple(
+            x for x in plan.items if x.kind is CarouselItemKind.VIDEO
+        )
+    position = plan.requested_position
+    return (
+        plan.scope is CarouselScope.SINGLE_VIDEO
+        and type(position) is int
+        and 1 <= position <= len(plan.items)
+        and plan.items[position - 1].kind is CarouselItemKind.VIDEO
+        and plan.items[position - 1].position == position
+        and plan.selected_videos == (plan.items[position - 1],)
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class CarouselSelectionPlan:
     """READY validates a selection, not acquisition, streams or Telegram delivery."""
@@ -71,6 +89,7 @@ class CarouselSelectionPlan:
     state: CarouselPlanState
     issue: CarouselIssue | None = None
     parent_identity: CarouselParentIdentity | None = field(default=None, repr=False, kw_only=True)
+    requested_position: int | None = field(default=None, repr=False, kw_only=True)
 
 
 @dataclass(frozen=True, slots=True)

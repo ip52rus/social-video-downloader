@@ -19,14 +19,14 @@ from aiogram.types import FSInputFile, InputMediaVideo, Message
 from social_video_downloader.domain.carousel import (
     CarouselItemKind,
     CarouselPlanState,
-    CarouselScope,
     CarouselSelectionPlan,
     DownloadedCarousel,
+    selection_matches_scope,
 )
-from social_video_downloader.domain.errors import MediaProcessingError
+from social_video_downloader.domain.errors import DownloadCleanupError, MediaProcessingError
 from social_video_downloader.domain.models import Platform
 from social_video_downloader.infrastructure.instagram_metadata import parent_identity_matches
-from social_video_downloader.infrastructure.workspace import temporary_workspace
+from social_video_downloader.infrastructure.workspace import quarantinable_workspace
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,7 +112,7 @@ def _validate_collection(collection, plan, limits):
         not isinstance(collection, DownloadedCarousel)
         or not isinstance(plan, CarouselSelectionPlan)
         or plan.state is not CarouselPlanState.READY
-        or plan.scope is not CarouselScope.PUBLICATION
+        or not selection_matches_scope(plan)
         or plan.issue is not None
         or not parent_identity_matches(plan.parent_identity, plan.publication_url)
         or not isinstance(plan.selected_videos, tuple)
@@ -130,7 +130,6 @@ def _validate_collection(collection, plan, limits):
             or type(x.position) is not int
             for x in plan.items
         )
-        or plan.selected_videos != tuple(x for x in plan.items if x.kind is CarouselItemKind.VIDEO)
         or any(
             type(x.admissible_format_count) is not int or x.admissible_format_count <= 0
             for x in plan.selected_videos
@@ -234,7 +233,10 @@ async def _prepare(collection, workspace, private, limits):
             child = process if process is not None else await creation
             await _reap(child)
 
-        await _finish_cleanup(stop())
+        try:
+            await _finish_cleanup(stop())
+        except Exception:
+            raise DownloadCleanupError("Carousel preparation cleanup is unconfirmed.") from None
         raise
 
 
@@ -299,7 +301,7 @@ class TelegramCarouselDelivery:
             if workspace.is_symlink() or not workspace.is_dir():
                 raise MediaProcessingError("Carousel requires an approved regular workspace.")
             workspace = workspace.resolve(strict=True)
-            with temporary_workspace(base_dir=workspace) as private:
+            with quarantinable_workspace(base_dir=workspace) as private:
                 prepared = await _prepare(collection, workspace, private, self.limits)
                 if [x.position for x in prepared] != [x.position for x in collection.videos]:
                     raise MediaProcessingError("Prepared carousel order changed.")
@@ -360,6 +362,8 @@ class TelegramCarouselDelivery:
                     )
                     pending = ()
                 return progress
+        except DownloadCleanupError:
+            raise
         except asyncio.CancelledError:
             raise CarouselDeliveryCancelled(
                 CarouselDeliveryProgress(

@@ -308,6 +308,25 @@ Analytics requirements for this phase:
 
 ## Phase 5 - Instagram Provider — in progress
 
+### Item selection — offline implementation complete; live gates pending
+
+Reason: an explicit img_index is original publication intent, not permission to
+choose an arbitrary video subset. Reuse parent/full-manifest inspection, the same
+acquisition process and delivery transport with an explicit SINGLE_VIDEO scope.
+A small typed Instagram pending store retains server-side validated plans; reserve
+the shared Instagram slot before consuming a callback and release it only after
+owned work/cleanup. Do not retain that slot while waiting for user choice.
+No live download, Telegram delivery, merge or deployment is authorized here.
+Inspection found a cleanup-exception gap in the existing carousel lifecycle:
+failed reap could fall through automatic directory deletion and slot release.
+Close it locally with opt-in quarantine workspaces and an explicit cleanup error
+that retains the Instagram slot; do not expand downloader or network behavior.
+Verification: 77 targeted tests PASS; full inherited socket/DNS-blocked offline
+pytest 1946 passed / 1 opt-in live test skipped (258.35 s). Ruff lint/format,
+diff-check, 70 local documentation links and privacy/scope/security review PASS.
+Exact-head Draft PR quality CI must pass before handoff; see GitHub checks.
+Single-item acquisition/Telegram LIVE delivery and deployment are not verified.
+
 ### Parent identity contract — offline implementation
 
 The existing URL originates from input, and the previous worker comparison did not

@@ -10,22 +10,34 @@ from threading import Event
 from time import monotonic
 
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import FSInputFile, Message
+from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from social_video_downloader.domain.carousel import CarouselIssue, CarouselPlanState
-from social_video_downloader.domain.errors import DownloaderError, MediaProcessingError
+from social_video_downloader.domain.carousel import (
+    CarouselIssue,
+    CarouselItemKind,
+    CarouselPlanState,
+)
+from social_video_downloader.domain.errors import (
+    DownloadCleanupError,
+    DownloaderError,
+    InvalidMediaURLError,
+    MediaProcessingError,
+)
 from social_video_downloader.domain.models import MediaMetadata
+from social_video_downloader.domain.urls import instagram_item_position
 from social_video_downloader.infrastructure.telegram_carousel import (
     CarouselDeliveryCancelled,
     CarouselDeliveryError,
     CarouselDeliveryLimits,
     TelegramCarouselDelivery,
 )
+from social_video_downloader.infrastructure.workspace import quarantinable_workspace
 from social_video_downloader.operation_logging import Operation
 from social_video_downloader.providers.instagram import InstagramProvider
 from social_video_downloader.services.instagram_acquisition import (
     CarouselAcquisitionLimits,
     InstagramCarouselAcquisition,
+    validate_plan,
 )
 from social_video_downloader.services.instagram_carousel import InstagramCarouselService
 from social_video_downloader.telegram_instagram import (
@@ -33,6 +45,10 @@ from social_video_downloader.telegram_instagram import (
     _WORK_SECONDS,
     _Guard,
     _owned_worker,
+)
+from social_video_downloader.telegram_instagram_interactions import (
+    InstagramChoiceStore,
+    parse_instagram_callback,
 )
 
 # Conservative initial opt-in gate. Refuse an oversized publication; never truncate it.
@@ -64,6 +80,108 @@ class InstagramPostHandler:
 
     def __init__(self, reel_handler):
         self._reel_handler = reel_handler
+        self._choices = InstagramChoiceStore()
+
+    async def _offer_choice(self, message, plan, position):
+        validate_plan(plan, _ACQUISITION_LIMITS)
+        if position > len(plan.items):
+            await message.answer("Такого элемента в публикации нет. Проверь номер в ссылке.")
+            return
+        item = plan.items[position - 1]
+        plans = (plan,)
+        if item.kind is CarouselItemKind.VIDEO:
+            plans += (InstagramCarouselService.select_video(plan, position),)
+            text = f"Ты выбрал видео №{position} из Instagram-карусели. Что скачать?"
+        else:
+            text = (
+                f"Элемент №{position} — фотография. Фото пока не скачиваются. "
+                "Можно скачать все видео из этой публикации."
+            )
+        user_id = getattr(message.from_user, "id", None)
+        if type(user_id) is not int:
+            await message.answer("Не удалось определить владельца выбора.")
+            return
+        choice = self._choices.create(user_id, message.chat.id, plans)
+        if choice is None:
+            await message.answer("Бот занят, попробуйте позже.")
+            return
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text=label, callback_data=f"ig:v1:{choice.token}:{index}")]
+                for index, label in enumerate(
+                    ("Все видео из карусели", f"Только видео №{position}")[: len(plans)]
+                )
+            ]
+        )
+        try:
+            sent = await message.answer(text, reply_markup=keyboard)
+            if (
+                not isinstance(sent, Message)
+                or sent.chat.id != message.chat.id
+                or not self._choices.bind(choice.token, sent.message_id)
+            ):
+                self._choices.remove(choice.token)
+        except BaseException:
+            self._choices.remove(choice.token)
+            raise
+
+    async def handle_callback(self, callback):
+        parsed = parse_instagram_callback(callback.data)
+        message = callback.message
+        if parsed is None or not isinstance(message, Message):
+            with suppress(TelegramAPIError, TimeoutError):
+                await callback.answer("Выбор устарел. Отправь ссылку заново.")
+            return
+        token, index = parsed
+        args = (token, index, callback.from_user.id, message.chat.id, message.message_id)
+        if self._choices.resolve(*args) is None:
+            with suppress(TelegramAPIError, TimeoutError):
+                await callback.answer("Выбор устарел или принадлежит другому пользователю.")
+            return
+        owner = self._reel_handler
+        if owner._active:
+            with suppress(TelegramAPIError, TimeoutError):
+                await callback.answer("Бот занят, попробуйте позже.")
+            return  # The choice remains pending; never consume a busy request.
+        owner._active = True  # No await between admission check and reservation.
+        with Operation("instagram", "download") as operation:
+            try:
+                guard = _Guard(Event(), seconds=_ACQUISITION_LIMITS.max_seconds)
+                try:
+                    async with asyncio.timeout(10):
+                        await callback.answer("Начинаю скачивание…")
+                except (TelegramAPIError, TimeoutError) as error:
+                    operation.fail(error)
+                    return  # Keep the choice available if acknowledgement failed.
+                plan = self._choices.resolve(*args, consume=True)
+                if plan is None:
+                    operation.fail(category="refused")
+                    return
+                with suppress(TelegramAPIError, TimeoutError):
+                    async with asyncio.timeout(10):
+                        await message.edit_reply_markup(reply_markup=None)
+                await self._send_carousel(message, plan, guard, operation)
+            except DownloadCleanupError as error:
+                owner._blocked = True
+                operation.fail(error)
+                with suppress(TelegramAPIError):
+                    await message.answer("Instagram временно недоступен. Попробуй позже.")
+            except CarouselDeliveryError as error:
+                operation.fail(error)
+                with suppress(TelegramAPIError):
+                    await message.answer(
+                        "Не удалось подтвердить отправку видео. Автоматического повтора не будет."
+                    )
+            except (DownloaderError, TelegramAPIError, TimeoutError, OSError) as error:
+                operation.fail(error)
+                with suppress(TelegramAPIError):
+                    await message.answer(
+                        "Не удалось скачать или подготовить видео. "
+                        "Автоматического повтора не будет."
+                    )
+            finally:
+                if not owner._blocked:
+                    owner._active = False
 
     async def _send_single(self, message: Message, metadata, provider, guard, operation) -> None:
         """Consume the positively inspected snapshot through the existing worker."""
@@ -122,8 +240,8 @@ class InstagramPostHandler:
 
     async def _send_carousel(self, message, plan, guard, operation):
         interrupted_delivery = None
-        with TemporaryDirectory(prefix="instagram-carousel-") as directory:
-            workspace = Path(directory).resolve()
+        with quarantinable_workspace() as directory:
+            workspace = directory.resolve()
             try:
                 async with asyncio.timeout(_remaining(guard)):
                     limits = replace(_ACQUISITION_LIMITS, max_seconds=_remaining(guard))
@@ -157,6 +275,14 @@ class InstagramPostHandler:
                 operation.phase = "cleanup"
 
     async def handle(self, message: Message, raw_url: str, canonical: str) -> None:
+        try:
+            position = instagram_item_position(raw_url)
+        except InvalidMediaURLError:
+            await message.answer(
+                "Некорректный или неоднозначный номер элемента Instagram. "
+                "Нужна ссылка с одним img_index."
+            )
+            return
         owner = self._reel_handler
         if owner._active:
             await message.answer("Уже обрабатываю Instagram-ссылку. Отправь следующую позже.")
@@ -171,7 +297,11 @@ class InstagramPostHandler:
                 service = InstagramCarouselService(provider)
                 async with asyncio.timeout(_remaining(guard)):
                     task = asyncio.get_running_loop().run_in_executor(
-                        None, service.inspect_publication, raw_url
+                        None,
+                        service.inspect_publication
+                        if position is None
+                        else service.inspect_item_reference,
+                        raw_url,
                     )
                     plan = await _owned_worker(task, guard.cancelled)
                 guard.check()
@@ -200,6 +330,11 @@ class InstagramPostHandler:
                         )
                     return
 
+                if position is not None:
+                    async with asyncio.timeout(_remaining(guard)):
+                        await self._offer_choice(message, plan, position)
+                    return
+
                 if len(plan.selected_videos) > _ACQUISITION_LIMITS.max_videos:
                     operation.fail(category="refused")
                     await message.answer(
@@ -214,6 +349,11 @@ class InstagramPostHandler:
                 guard.check()
                 operation.phase = "download"
                 await self._send_carousel(message, plan, guard, operation)
+            except DownloadCleanupError as error:
+                owner._blocked = True
+                operation.fail(error)
+                with suppress(TelegramAPIError):
+                    await message.answer("Instagram временно недоступен. Попробуй позже.")
             except CarouselDeliveryError as error:
                 operation.fail(error)
                 progress = error.progress
@@ -240,4 +380,5 @@ class InstagramPostHandler:
                         "Неполные карусели намеренно не отправляются."
                     )
             finally:
-                owner._active = False
+                if not owner._blocked:
+                    owner._active = False

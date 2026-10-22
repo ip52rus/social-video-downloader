@@ -1,6 +1,7 @@
 """Telegram command and URL-intake handlers."""
 
 import asyncio
+from contextlib import suppress
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -111,13 +112,15 @@ async def handle_start(message: Message, instagram_reels=None, tiktok_videos=Non
     if tiktok_videos is not None and tiktok_videos.allows(message):
         instagram = ", публичный Instagram Reel или /p/" if instagram_reels is not None else ""
         await message.answer(f"Отправь ссылку на YouTube{instagram} или публичное TikTok-видео.")
+        if instagram_reels is not None:
+            await message.answer("Для /p/ с img_index можно выбрать все видео или указанное видео.")
     elif instagram_reels is None:
         await message.answer(_START_MESSAGE)
     else:
         await message.answer(
             "Отправь ссылку на YouTube, публичный Instagram Reel или /p/. "
             "Из каруселей скачиваются только видео, в исходном порядке; "
-            "ссылки на отдельные элементы пока не поддерживаются."
+            "для /p/ с img_index можно выбрать все видео или указанное видео."
         )
 
 
@@ -221,6 +224,16 @@ async def handle_choice_callback(callback: CallbackQuery) -> None:
         return
 
     await _handle_quality_callback(callback, lookup.interaction, parsed_callback.choice_index)
+
+
+async def handle_instagram_callback(callback: CallbackQuery, instagram_reels=None) -> None:
+    """A separate typed Instagram store; never route carousel plans into YouTube state."""
+    handler = getattr(instagram_reels, "_post_handler", None)
+    if handler is None:
+        with suppress(TelegramAPIError):
+            await callback.answer("Выбор устарел. Отправь ссылку заново.")
+        return
+    await handler.handle_callback(callback)
 
 
 async def _download_and_deliver_media(
@@ -502,5 +515,6 @@ def create_router() -> Router:
     router = Router(name="telegram-handlers")
     router.message.register(handle_start, CommandStart())
     router.message.register(handle_text, F.text)
+    router.callback_query.register(handle_instagram_callback, F.data.startswith("ig:"))
     router.callback_query.register(handle_choice_callback, F.data)
     return router

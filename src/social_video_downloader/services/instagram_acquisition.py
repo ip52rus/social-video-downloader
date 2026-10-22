@@ -21,11 +21,16 @@ from social_video_downloader.domain.carousel import (
     CarouselSelectionPlan,
     DownloadedCarousel,
     DownloadedCarouselVideo,
+    selection_matches_scope,
 )
-from social_video_downloader.domain.errors import DownloadFailedError, DownloadTimeoutError
+from social_video_downloader.domain.errors import (
+    DownloadCleanupError,
+    DownloadFailedError,
+    DownloadTimeoutError,
+)
 from social_video_downloader.domain.models import DownloadedMedia, MediaMetadata, Platform
 from social_video_downloader.infrastructure.instagram_metadata import parent_identity_matches
-from social_video_downloader.infrastructure.workspace import temporary_workspace
+from social_video_downloader.infrastructure.workspace import quarantinable_workspace
 from social_video_downloader.providers.instagram import InstagramProvider
 
 
@@ -57,7 +62,7 @@ def _validate_plan_contract(plan: CarouselSelectionPlan) -> None:
     """Structural/identity validation shared by IPC and the bounded acquisition entry."""
     if (
         plan.state is not CarouselPlanState.READY
-        or plan.scope is not CarouselScope.PUBLICATION
+        or not selection_matches_scope(plan)
         or plan.issue is not None
         or not parent_identity_matches(plan.parent_identity, plan.publication_url)
         or InstagramProvider._media_url(plan.publication_url) != plan.publication_url
@@ -75,7 +80,6 @@ def _validate_plan_contract(plan: CarouselSelectionPlan) -> None:
             for x in plan.items
         )
         or len({x.item_id for x in plan.items}) != len(plan.items)
-        or plan.selected_videos != tuple(x for x in plan.items if x.kind is CarouselItemKind.VIDEO)
         or not plan.selected_videos
         or any(x.admissible_format_count <= 0 for x in plan.selected_videos)
     ):
@@ -93,6 +97,11 @@ def plan_payload(plan: CarouselSelectionPlan) -> dict:
     # Local pipe only; never logged or written as a persistent snapshot.
     _validate_plan_contract(plan)
     return {
+        "scope": plan.scope.value,
+        "requested_position": plan.requested_position,
+        "selected_child_id": (
+            plan.selected_videos[0].item_id if plan.scope is CarouselScope.SINGLE_VIDEO else None
+        ),
         "parent_identity": asdict(plan.parent_identity),
         "publication_url": plan.publication_url,
         "total_entries": plan.total_entries,
@@ -113,6 +122,9 @@ def _plan_from_payload(data: dict) -> CarouselSelectionPlan:
         "publication_url",
         "total_entries",
         "items",
+        "scope",
+        "requested_position",
+        "selected_child_id",
     }:
         raise ValueError
     identity = data["parent_identity"]
@@ -141,14 +153,34 @@ def _plan_from_payload(data: dict) -> CarouselSelectionPlan:
         )
         for x in data["items"]
     )
+    scope = CarouselScope(data["scope"])
+    position = data["requested_position"]
+    if scope is CarouselScope.SINGLE_VIDEO:
+        if type(position) is not int or not 1 <= position <= len(items):
+            raise ValueError
+        selected = (items[position - 1],)
+        if (
+            type(data["selected_child_id"]) is not str
+            or data["selected_child_id"] != selected[0].item_id
+        ):
+            raise ValueError
+    elif (
+        scope is CarouselScope.PUBLICATION
+        and position is None
+        and data["selected_child_id"] is None
+    ):
+        selected = tuple(x for x in items if x.kind is CarouselItemKind.VIDEO)
+    else:
+        raise ValueError
     plan = CarouselSelectionPlan(
         data["publication_url"],
         data["total_entries"],
         items,
-        tuple(x for x in items if x.kind is CarouselItemKind.VIDEO),
-        CarouselScope.PUBLICATION,
+        selected,
+        scope,
         CarouselPlanState.READY,
         parent_identity=CarouselParentIdentity(**identity),
+        requested_position=position,
     )
     _validate_plan_contract(plan)
     return plan
@@ -179,7 +211,7 @@ class InstagramCarouselAcquisition:
         output_dir = output_dir.resolve(strict=True)
         published = []
         try:
-            with temporary_workspace(base_dir=output_dir) as workspace:
+            with quarantinable_workspace(base_dir=output_dir) as workspace:
                 payload = json.dumps(
                     {
                         "plan": plan_payload(plan),
@@ -273,12 +305,21 @@ class InstagramCarouselAcquisition:
                             await asyncio.shield(cleanup)
                         except asyncio.CancelledError:
                             cancelled = True
-                    cleanup.result()
+                        except Exception:
+                            break
+                    try:
+                        cleanup.result()
+                    except Exception:
+                        raise DownloadCleanupError(
+                            "Carousel worker cleanup is unconfirmed."
+                        ) from None
                     if cancelled:
                         raise asyncio.CancelledError from None
                     raise
             return collection
         except BaseException as exc:
+            if isinstance(exc, DownloadCleanupError):
+                raise
             for path in published:
                 path.unlink(missing_ok=True)
             if isinstance(exc, TimeoutError):
