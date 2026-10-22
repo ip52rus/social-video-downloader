@@ -236,6 +236,97 @@ that never finishes keeps its owning handler/workspace alive until process termi
 there is no timeout that deletes files while that thread is still running. This fixes
 cleanup ordering, not hard cancellation, broad reliability or uncertain-upload policy.
 
+## Phase 9B bounded YouTube metadata (offline)
+
+Initial Telegram YouTube inspection now uses an async service path. Process-wide
+admission is shared by application `DownloadService` instances and uses a nonblocking
+lock: one metadata operation, no queue, refusal before spawn when busy/quarantined.
+Cache hits use that same admission. Instagram/TikTok do not share this gate. The
+existing synchronous core API, choice model, callbacks, format selectors and media
+download/delivery pipeline remain available and unchanged in behavior, including
+PR #72's ownership of file threads before workspace cleanup.
+
+The admitted child runs only `extract_info(download=False, process=False)` in a new
+POSIX session. It receives a small environment allowlist (runtime path/locale, Python
+module path and bytecode/user-site controls), never Telegram credentials, HOME or
+proxy variables. Request URL/nonce and response metadata travel only through pipes,
+not argv/files/logs/callback data. Metadata retries and yt-dlp disk caching are disabled;
+media download settings are not changed. Installed Deno launching uses inherited
+process groups and `--no-code-cache`; offline tests simulate its lifecycle with Python.
+
+The wire contract binds schema and installed yt-dlp version, canonical provider URL,
+video identity, random operation nonce and original monotonic timestamp. Its typed
+JSON trees preserve dict/list/tuple and explicitly adapted `HTTPHeaderDict` values.
+Duplicate keys/header aliases, cycles, bytes/sets, unknown runtime classes, callable,
+`LazyList`, and deferred URL/playlist results are refused. No pickle, arbitrary class
+restoration, `default=str`, `sanitize_info` codec or IPC-error extraction fallback exists.
+Limits: request 8 KiB, response 2 MiB, depth 32, 100,000 nodes, decoded snapshot 8 MiB,
+and 64 MiB for cached graphs plus entry/key/dictionary overhead. These are not a hard
+RSS cap: upstream extraction/Deno, transient JSON/copies, allocator overhead and
+consumed snapshots in download threads need separate resource observation.
+
+Cache read/copy/pop/publication use a short `RLock`, never held across network or
+FFmpeg work. Planning uses a private snapshot copy rather than shared cache lookups;
+a concurrent download cannot make the planner perform a new synchronous extraction.
+Decode/validation/planning/publication run in one dedicated, admitted CPU executor,
+with cancellation-safe Future ownership and no accumulating jobs. TTL remains 180
+seconds from the original inspection timestamp, capacity 32, oldest-timestamp eviction
+and consume-on-download. RAM refusal preserves live entries instead of extra eviction.
+After expiry, the existing download thread freshly extracts and rechecks exact quality.
+
+The default 60-second decision deadline allocates 55 seconds to spawn/extraction/IPC
+and reserves cleanup time. TERM grants 0.5 seconds for child/Deno cleanup, then KILL
+targets the owned group. Publication requires direct-child reap, group absence proven
+by ESRCH (not merely successful `wait()` or signal delivery), and drained pipe EOF.
+EPERM remains present/unknown. Repeated cancellation cannot skip cleanup. Unknown
+spawn/group/pipe cleanup retains handles and quarantines metadata admission until an
+operator decision. A late OS spawn keeps an owner for one cleanup attempt; no automatic
+retry/unblock occurs. Safety draining of finite CPU work and indeterminate OS spawn
+can outlive the decision deadline; they are not abandoned to claim a hard timeout.
+
+Offline tests cover successful and cached planning; same/different users; admission;
+concurrent snapshot consumption; production worker extraction mode/environment;
+malformed/partial/oversized IPC and request; crash/no response; unsupported objects;
+spawn failure and cancellation before/during spawn; repeated cancellation; TERM/KILL
+and a real group descendant; transient EPERM; quarantine/late spawn; pipe draining;
+publication only after cleanup; fixed logging fields and no sensitive payload output.
+Test-owned groups, executor threads and late tasks are joined/reaped in finalizers,
+with loop errors checked for unhandled exceptions.
+
+The parity matrix uses 13 source-shaped fixture sets and the actual installed yt-dlp
+`process_ie_result`, selectors, native HTTP/DASH downloaders, local FFmpeg merger and
+ffprobe. Fake HTTP returns locally generated media. Original/restored ChoicePlan,
+Video/Audio/tiers, dimensions, exact IDs, M4A, playlist context, headers/protocol,
+selected formats and local output streams are compared. A valid cached download must
+not call parent extraction; expiry retains fresh extraction and exact-ID rejection.
+Local tiny media stand in for transport; their physical resolution is not evidence
+of real YouTube quality, playback or delivery. No LIVE or Telegram request is tested.
+
+Final verification on Python 3.13.12 / yt-dlp 2026.08.19: **377 focused passed**
+(85.99 s), including **94 new** codec, ownership, parity and responsiveness cases;
+**full offline 2064 passed / 1 skipped**, 338.42 s. External Python socket/DNS calls
+were denied through inherited sitecustomize, including children; the opt-in real
+YouTube case stayed skipped. Reap/group/pipe checks, executor joins, unhandled-loop
+error checks, Ruff lint/format, diff-check, local links/anchors and privacy/scope
+review passed. The parity matrix exercised 54 paired local downloads. The exact-head
+Draft PR CI result is recorded in GitHub checks, not assumed from local pytest.
+
+Three offline measurements per path used a two-second synthetic inspection and an
+independent existing callback handler with fake Telegram. Callback latency is lateness
+relative to its planned 50-ms wakeup. Heartbeat statistics below are the median of
+three per-operation maxima and their overall maximum, not a percentile of all ticks.
+
+| Measurement, ms | Legacy p50 / max | Subprocess p50 / max |
+| --- | --- | --- |
+| Callback lateness | 1960.74 / 1960.83 | 1.00 / 1.81 |
+| Heartbeat maximum lag | 2000.24 / 2000.28 | 7.79 / 62.37 |
+| Operation duration, p50 | 2010.77 | 2686.60 |
+
+The isolated path adds interpreter/IPC overhead while keeping the event loop available.
+Absolute timings vary with machine load; these are offline scheduling measurements,
+not real Telegram latency, a load test or a general availability guarantee.
+No merge, Docker operation, environment change or deployment is part of this stage.
+
 ## Public deployment Stage D acceptance
 
 After PR #66 merged, source main `389258cee9cf966be531ae5d6d60b192a59bcdb2`

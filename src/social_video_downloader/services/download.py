@@ -9,6 +9,9 @@ from social_video_downloader.domain.urls import detect_platform, normalize_media
 from social_video_downloader.providers.base import MediaProvider
 from social_video_downloader.providers.youtube import YouTubeProvider
 from social_video_downloader.services.choice_model import ChoicePlan, build_choice_plan
+from social_video_downloader.services.youtube_metadata import YouTubeMetadata
+
+_YOUTUBE_METADATA = YouTubeMetadata()
 
 
 class DownloadService:
@@ -17,6 +20,14 @@ class DownloadService:
     def __init__(self, providers: Iterable[MediaProvider] | None = None) -> None:
         selected_providers = providers if providers is not None else (YouTubeProvider(),)
         self._providers = {provider.platform: provider for provider in selected_providers}
+        self._youtube_metadata = _YOUTUBE_METADATA
+
+    async def create_choice_plan_async(self, url: str) -> ChoicePlan:
+        """Bound Telegram YouTube inspection without changing the synchronous core API."""
+        normalized_url, provider = self._provider_for_url(url)
+        if not isinstance(provider, YouTubeProvider):
+            raise UnsupportedPlatformError("Async metadata is available only for YouTube.")
+        return await self._youtube_metadata.plan(provider, normalized_url)
 
     def _provider_for_url(self, url: str) -> tuple[str, MediaProvider]:
         """Normalize a URL and return the configured provider for its platform."""

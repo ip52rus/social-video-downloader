@@ -792,15 +792,24 @@ Status: OPEN; not closed by Phase 4 functional acceptance.
   it finishes, including after repeated cancellation. Cleanup follows worker completion;
   cancellation never starts another stage or media send. See
   [offline cancellation verification](TESTING.md#youtube-cancellation-safety-offline).
-- [ ] Review/merge and separately authorize deployment of the cancellation-safety fix.
-  A permanently hung thread still retains its workspace; hard cancellation is not solved.
-- [ ] Phase 9B metadata subprocess: agree bounded admission, snapshot/IPC RAM budgets,
-  process-group termination/reap and unsupported-type refusals before implementation.
+- [x] Merge cancellation safety as [PR #72](https://github.com/ip52rus/social-video-downloader/pull/72);
+  post-merge main `01ffe0e` CI #39845155273 SUCCESS. This is source/CI evidence,
+  not a deployment. A permanently hung legacy download thread still owns its workspace.
+- [x] Phase 9B metadata subprocess: implement and locally verify one admitted POSIX
+  child, bounded private snapshot IPC, synchronized cache, off-loop planning and
+  process-group cleanup/quarantine. See
+  [metadata verification](TESTING.md#phase-9b-bounded-youtube-metadata-offline):
+  94 new / 377 focused PASS; full offline 2064 passed / 1 skipped, 338.42 s.
+- [ ] Review/merge the metadata PR, then separately authorize controlled LIVE compatibility
+  and deployment. No new code in this stage has been deployed to the running bot.
 
 - [ ] Diagnose intermittent YouTube HTTP 403 and define/test a narrowly bounded recovery
   strategy with explicit attempt limits and no duplicate media delivery.
-- [ ] Remove synchronous metadata extraction/planning from the async event loop; verify
-  callback responsiveness while metadata inspection is slow or fails.
+- [x] Verify removal of initial synchronous YouTube metadata/planning from Telegram's
+  event loop, including callback/heartbeat measurements during a synthetic two-second
+  inspection: fake callback lateness p50 1960.74 ms before / 1.00 ms after in three
+  measurements per path. This is offline scheduling evidence, not real Telegram
+  availability. Expired-cache extraction inside the existing download thread is retained.
 - [ ] Test additional Telegram clients, including iPhone, and record the exact clients tested.
 - [ ] Test temporary network/API and upload failures and recovery; record relevant
   Telegram errors and user-facing behavior without assuming live fault recovery from unit tests.

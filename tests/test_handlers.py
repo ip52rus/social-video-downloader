@@ -78,6 +78,9 @@ class FakeDownloadService:
             raise self.plan_error
         return self.plan
 
+    async def create_choice_plan_async(self, url: str) -> ChoicePlan:
+        return self.create_choice_plan(url)
+
     def download(
         self,
         url: str,

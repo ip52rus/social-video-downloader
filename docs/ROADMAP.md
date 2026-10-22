@@ -438,15 +438,39 @@ VOD formats; it did not establish a universal codec for arbitrary yt-dlp objects
 A separate narrow cancellation-safety change now drains existing file executor work
 before deleting its workspace, including repeated cancellation and late worker errors.
 Download, audio/video preparation and probe are covered; user choices, format/cache
-policy and Telegram delivery behavior are retained. Review/merge and a separately
-authorized deployment are still required. See
+policy and Telegram delivery behavior are retained. This was merged as PR #72 with
+successful post-merge CI on `01ffe0e`; deployment remains separately authorized. See
 [offline cancellation evidence](TESTING.md#youtube-cancellation-safety-offline).
-A permanently hung thread can retain the workspace indefinitely; forced termination
-and bounded metadata subprocess ownership remain future work. Phase 9A events
+A permanently hung download thread can retain the workspace indefinitely; metadata
+isolation does not solve hard cancellation of that legacy download path. Phase 9A events
 are not a heartbeat, load test, per-user trace, availability metric, proof of worker
 reap or HTTP-request counter. Broader recovery/load/reliability gates remain open.
 See [operational contract](DEVELOPMENT.md#phase-9a-operational-baseline-and-safe-events)
 and [offline evidence](TESTING.md#phase-9a-safe-operational-events-offline).
+
+Phase 9B implementation: move only YouTube metadata extraction into one
+admitted POSIX process group, with bounded private stdin/stdout and confirmed group
+cleanup before snapshot publication. Preserve the original snapshot timestamp,
+180-second/32-entry consume-on-download cache and exact choices; planning uses a
+private snapshot copy so concurrent download consumption cannot trigger a synchronous
+cache miss in the event loop. Decode/planning use a single admitted CPU executor too,
+independent of potentially hung legacy download threads; at most one finite CPU job
+is submitted, without a metadata backlog. Initial
+limits are 60 seconds including cleanup, 8 KiB request / 2 MiB response, depth 32,
+100,000 nodes, 8 MiB decoded per snapshot and 64 MiB cached decoded objects. RAM refusal
+must not evict additional live entries. Unknown cleanup quarantines only YouTube
+metadata admission. These bounds do not claim a hard RSS cap for upstream extraction
+or Deno, transient decoding memory or consumed snapshots owned by downloads.
+Metadata worker retries and disk caching are disabled; existing media-download settings
+remain unchanged. A 55-second spawn/extraction/IPC budget reserves five seconds of the
+60-second decision deadline for cleanup/validation. Cancellation drains finite CPU
+work; indeterminate OS spawn may finish later under a retained quarantined owner.
+No timeout abandons an owner or automatically clears quarantine. Offline verification
+passed: 94 new / 377 focused tests, full 2064 passed / 1 skipped. Initial callback
+blocking fell from about 1961 ms to 1 ms p50 with a two-second synthetic inspection.
+See [metadata evidence and limits](TESTING.md#phase-9b-bounded-youtube-metadata-offline).
+Exact-head CI is recorded in Draft PR checks; review/merge, LIVE compatibility and
+deployment remain separate gates. Phase 9 remains OPEN.
 
 Include:
 

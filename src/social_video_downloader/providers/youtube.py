@@ -1,9 +1,12 @@
 """YouTube media provider implemented with yt-dlp."""
 
+import sys
 from collections.abc import Mapping
+from copy import deepcopy
 from math import isfinite
 from pathlib import Path
 from re import fullmatch
+from threading import RLock
 from time import monotonic
 from typing import Any
 from urllib.parse import parse_qs, unquote_plus, urlsplit, urlunsplit
@@ -52,6 +55,7 @@ class YouTubeProvider:
         """Accept a factory override to make the provider testable without network access."""
         self._ydl_factory = ydl_factory
         self._inspection_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+        self._cache_lock = RLock()
 
     @property
     def platform(self) -> Platform:
@@ -126,48 +130,87 @@ class YouTubeProvider:
         return dict(info)
 
     def _cached_info(self, url: str) -> dict[str, Any] | None:
-        cached = self._inspection_cache.get(url)
-        if cached is None:
-            return None
-
-        cached_at, info = cached
-        if monotonic() - cached_at >= self._INSPECTION_CACHE_TTL_SECONDS:
-            self._inspection_cache.pop(url, None)
-            return None
-
-        return info
+        with self._cache_lock:
+            cached = self._inspection_cache.get(url)
+            if cached is None:
+                return None
+            cached_at, info = cached
+            if monotonic() - cached_at >= self._INSPECTION_CACHE_TTL_SECONDS:
+                self._inspection_cache.pop(url, None)
+                return None
+            return info
 
     def _take_cached_info(self, url: str) -> dict[str, Any] | None:
-        cached = self._inspection_cache.pop(url, None)
-        if cached is None:
-            return None
+        with self._cache_lock:
+            cached = self._inspection_cache.pop(url, None)
+            if cached is None:
+                return None
+            cached_at, info = cached
+            if monotonic() - cached_at >= self._INSPECTION_CACHE_TTL_SECONDS:
+                return None
+            return info
 
-        cached_at, info = cached
-        if monotonic() - cached_at >= self._INSPECTION_CACHE_TTL_SECONDS:
-            return None
+    def _planning_snapshot(self, url):
+        # Copy while still owned by the cache; a downloader takes exclusive ownership
+        # by popping the entry. Never hold this lock during network or media work.
+        from social_video_downloader.infrastructure.youtube_snapshot import memory_size
 
-        return info
+        with self._cache_lock:
+            info = self._cached_info(url)
+            if info is None:
+                return None
+            memory_size(info)
+            return self._inspection_cache[url][0], deepcopy(info)
+
+    def _store_info(self, url, info, created_at, *, bounded=False):
+        from social_video_downloader.infrastructure.youtube_snapshot import CACHE_BYTES, memory_size
+
+        with self._cache_lock:
+            now = monotonic()
+            expired = [
+                key
+                for key, (stamp, _) in self._inspection_cache.items()
+                if now - stamp >= self._INSPECTION_CACHE_TTL_SECONDS
+            ]
+            for key in expired:
+                self._inspection_cache.pop(key, None)
+            candidate = dict(self._inspection_cache)
+            if url not in candidate and len(candidate) >= self._INSPECTION_CACHE_MAX_ENTRIES:
+                oldest = min(candidate, key=lambda key: candidate[key][0])
+                candidate.pop(oldest)
+            candidate[url] = (created_at, info)
+            if bounded:
+                size = sys.getsizeof(candidate) + sum(
+                    sys.getsizeof(key)
+                    + sys.getsizeof(stamp)
+                    + sys.getsizeof(entry)
+                    + memory_size(item)
+                    for key, entry in candidate.items()
+                    for stamp, item in (entry,)
+                )
+                if size > CACHE_BYTES:
+                    raise MetadataExtractionError("YouTube metadata cache memory budget exceeded.")
+            self._inspection_cache = candidate
 
     def _remember_info(self, url: str, info: dict[str, Any]) -> None:
-        now = monotonic()
-        expired = [
-            key
-            for key, (created_at, _) in self._inspection_cache.items()
-            if now - created_at >= self._INSPECTION_CACHE_TTL_SECONDS
-        ]
-        for key in expired:
-            self._inspection_cache.pop(key, None)
+        self._store_info(url, info, monotonic())
 
-        if url not in self._inspection_cache and (
-            len(self._inspection_cache) >= self._INSPECTION_CACHE_MAX_ENTRIES
-        ):
-            oldest_url = min(
-                self._inspection_cache,
-                key=lambda key: self._inspection_cache[key][0],
-            )
-            self._inspection_cache.pop(oldest_url, None)
+    def _publish_snapshot(self, snapshot):
+        from social_video_downloader.infrastructure.youtube_snapshot import (
+            request,
+            response,
+            validate_response,
+        )
 
-        self._inspection_cache[url] = (now, info)
+        # Preserve the child's monotonic timestamp; IPC never extends the TTL.
+        req = request(snapshot.url, "cache-publication-check")
+        if req["video_id"] != snapshot.video_id:
+            raise MetadataExtractionError("YouTube metadata identity was refused.")
+        validate_response(
+            response(req, snapshot.info, snapshot.created_at),
+            req,
+        )
+        self._store_info(snapshot.url, snapshot.info, snapshot.created_at, bounded=True)
 
     def _inspect(self, url: str) -> tuple[str, dict[str, Any]]:
         normalized = self._normalize_youtube_url(url)
