@@ -308,7 +308,7 @@ Analytics requirements for this phase:
 
 ## Phase 5 - Instagram Provider — in progress
 
-### Item selection — offline implementation complete; live gates pending
+### Item selection — merged, deployed and narrowly LIVE accepted (2026-10-22)
 
 Reason: an explicit img_index is original publication intent, not permission to
 choose an arbitrary video subset. Reuse parent/full-manifest inspection, the same
@@ -316,16 +316,33 @@ acquisition process and delivery transport with an explicit SINGLE_VIDEO scope.
 A small typed Instagram pending store retains server-side validated plans; reserve
 the shared Instagram slot before consuming a callback and release it only after
 owned work/cleanup. Do not retain that slot while waiting for user choice.
-No live download, Telegram delivery, merge or deployment is authorized here.
+The implementation stage was offline-only; the later separately authorized
+deployment and owner LIVE acceptance are recorded below.
 Inspection found a cleanup-exception gap in the existing carousel lifecycle:
 failed reap could fall through automatic directory deletion and slot release.
-Close it locally with opt-in quarantine workspaces and an explicit cleanup error
-that retains the Instagram slot; do not expand downloader or network behavior.
+The implementation closed it with opt-in quarantine workspaces and an explicit
+cleanup error that retains the Instagram slot, without expanding downloader or network behavior.
 Verification: 77 targeted tests PASS; full inherited socket/DNS-blocked offline
 pytest 1946 passed / 1 opt-in live test skipped (258.35 s). Ruff lint/format,
 diff-check, 70 local documentation links and privacy/scope/security review PASS.
-Exact-head Draft PR quality CI must pass before handoff; see GitHub checks.
-Single-item acquisition/Telegram LIVE delivery and deployment are not verified.
+PR #70 is merged at `49f333eb3daff1d43fa2471e185e7071e8d179db`;
+post-merge CI #39745923630 SUCCESS. These offline results are separate from the
+later deployment, owner-confirmed LIVE cases and read-only health evidence in
+[Item Selection LIVE acceptance](TESTING.md#instagram-item-selection--live-acceptance-2026-10-22).
+
+- [x] Implement verified PUBLICATION / SINGLE_VIDEO scopes and bounded one-shot callbacks; complete offline checks.
+- [x] Merge PR #70 and verify successful post-merge CI on the merge HEAD.
+- [x] Deploy to the existing main bot; preserve Local Bot API, volumes, `.env` and the previous image for rollback.
+- [x] Record owner LIVE PASS for `img_index=2` → “Только видео №2” on one two-video carousel: selected video delivered, playback/orientation/sound confirmed.
+- [x] Record owner LIVE PASS for a new submission of the same reference → “Все видео из карусели”: both videos delivered, playback/orientation/sound confirmed.
+- [x] Record read-only post-LIVE health evidence: running containers, one poller, no restart/OOM, orphan media workers, residual media files or observed operation errors; rollback image available.
+- [ ] Validate mixed PHOTO source positions with separately authorized LIVE acquisition/delivery; prior mixed metadata and offline checks are not this gate.
+- [ ] Assess broader Instagram publication compatibility and extraction stability.
+- [ ] Validate failure recovery and rehearse rollback; retained image availability is not a rollback rehearsal.
+- [ ] Confirm internal quarantine/`_blocked` state through a separately approved safe method. Current value is UNKNOWN; health verdict remains INCOMPLETE, with no observed blocking symptoms.
+
+This closes only two user scenarios on one publication, not Phase 5 or Phase 9
+reliability. No per-test sizes, HTTP counts, exact media formats or timings are claimed.
 
 ### Parent identity contract — offline implementation
 
@@ -342,8 +359,9 @@ links and security/privacy review PASS. Exact-head Draft PR CI is required befor
 handoff and recorded in GitHub checks. No live calls or deployment are authorized;
 installed response formats are not a universal Instagram compatibility guarantee.
 
-Current narrow live acceptance is recorded below under Owner-confirmed Instagram live
-acceptance (2026-10-18) and in [TESTING.md](TESTING.md#instagram-live-acceptance-2026-10-18).
+Current narrow live evidence includes
+[Item Selection acceptance (2026-10-22)](TESTING.md#instagram-item-selection--live-acceptance-2026-10-22)
+and the earlier [Instagram acceptance (2026-10-18)](TESTING.md#instagram-live-acceptance-2026-10-18).
 Earlier stage records retain their original verification scope; Phase 5 is not complete.
 
 - [x] Record explicit user GO for narrow anonymous public Reel implementation (2026-10-16).
@@ -368,7 +386,7 @@ Earlier stage records retain their original verification scope; Phase 5 is not c
 - [x] Correct corroborated integer media_type=1 PHOTO classification with deterministic tests; preserve conflict guards and report numeric evidence.
 - [x] Independently review and merge the focused PHOTO classification fix (PR #48).
 - [x] Validate corrected mixed-carousel selection live on one publication: 20 items, 17 VIDEO, PHOTO at 8/9/18, zero UNKNOWN, READY; unique IDs/order PASS, three direct MP4 candidates per VIDEO, one extraction/three metadata HTTP requests, zero acquisition.
-- [ ] Validate reliable item-reference semantics separately; keep `img_index` and ambiguous references blocked meanwhile.
+- [x] Support one unambiguous positive canonical `img_index=N` through the verified Item Selection flow (PR #70); other selectors and malformed/ambiguous references remain rejected.
 - [x] Implement bounded ordered multi-video acquisition with fresh plan revalidation, actual stream checks, resource budgets and all-or-nothing cleanup; deterministic tests only. Photos are NEVER acquired.
 - [x] Independently review and merge bounded acquisition (PR #49).
 - [x] Validate one separately authorized bounded three-video silent carousel acquisition: 3/3 files, original order, MP4/H.264 720x960, 1,961,198 bytes total, ffprobe PASS; no conversion or Telegram calls. Larger collections remain unverified.
@@ -382,18 +400,18 @@ GO; full Gates 1–3B evidence was unavailable here. Gate 3C demonstrates metada
 five-element `/p/` playlist, which remains excluded from single-file download.
 Those early gates acquired no carousel media; the later three-video smoke is recorded below.
 PR 1 tests do not substitute for real Instagram or Telegram validation. Meaningful
-Instagram quality choices, DASH/HLS assembly, live Telegram routing, Stories, private
-content and authentication remain outside the implemented scope. Single-video `/p/`
-support is implemented offline; carousel inspection is implemented separately, while
-bounded acquisition has deterministic coverage and one real three-video PASS; larger
-collections and Telegram delivery remain unfinished.
+Instagram quality choices, DASH/HLS assembly, Stories, private content and
+authentication remain outside the implemented scope. Single-video `/p/`, carousel
+delivery and Item Selection have the narrow later acceptance records linked above;
+larger collections and broader compatibility/recovery remain unverified.
 The first real provider smoke failed during inspection (13 formats, none admitted),
 with zero acquisition attempts. The incomplete-metadata rejection is reproduced and
 fixed in PR #45. Its repeat real smoke passed: 13 formats, 3 admitted, 10 rejected for
 manifest/fragment markers; MP4 H.264/AAC, 720x1280, 11.282041 seconds, 1,317,210 bytes.
 The initial run's other ten rejection reasons were unverified; the later run's diagnosis
-does not retroactively establish them. No real single-video `/p/` acquisition or Instagram
-Telegram delivery is claimed. The newer carousel metadata-only experiment is recorded
+does not retroactively establish them. That early provider smoke did not establish
+single-video `/p/` acquisition or Instagram Telegram delivery; later acceptance is
+recorded separately. The newer carousel metadata-only experiment is recorded
 separately in TESTING.md. The later 20-entry source diagnostic justifies the PHOTO
 adjustment for that observed shape. The final corrected live mixed-selection gate passed
 for the same publication; the separate three-video acquisition smoke below does not
