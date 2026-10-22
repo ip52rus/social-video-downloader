@@ -432,9 +432,17 @@ enabled these events; the Item Selection deployment and post-LIVE observation ar
 recorded in the acceptance link above. Phase 9 remains OPEN; safe events and narrow
 functional acceptance do not establish broad operational reliability.
 
-Next is Phase 9B's offline measurement of slow synchronous YouTube metadata blocking
-the event loop, with a concurrent ticker/callback and explicit bounded ownership/
-cancellation acceptance criteria before any architecture change. Phase 9A events
+Phase 9B's offline baseline confirmed slow synchronous YouTube metadata blocks the
+event loop. The subsequent offline snapshot gate passed for investigated ordinary
+VOD formats; it did not establish a universal codec for arbitrary yt-dlp objects.
+A separate narrow cancellation-safety change now drains existing file executor work
+before deleting its workspace, including repeated cancellation and late worker errors.
+Download, audio/video preparation and probe are covered; user choices, format/cache
+policy and Telegram delivery behavior are retained. Review/merge and a separately
+authorized deployment are still required. See
+[offline cancellation evidence](TESTING.md#youtube-cancellation-safety-offline).
+A permanently hung thread can retain the workspace indefinitely; forced termination
+and bounded metadata subprocess ownership remain future work. Phase 9A events
 are not a heartbeat, load test, per-user trace, availability metric, proof of worker
 reap or HTTP-request counter. Broader recovery/load/reliability gates remain open.
 See [operational contract](DEVELOPMENT.md#phase-9a-operational-baseline-and-safe-events)

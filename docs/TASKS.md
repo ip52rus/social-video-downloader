@@ -784,9 +784,18 @@ Status: OPEN; not closed by Phase 4 functional acceptance.
   separately authorized rollout. Structured events were observed in the 2026-10-22
   [read-only post-LIVE check](TESTING.md#instagram-item-selection--live-acceptance-2026-10-22);
   broader reliability and Phase 9B remain open.
-- [ ] Phase 9B: establish a deterministic event-loop blocking baseline for slow
-  YouTube metadata using a synthetic blocked provider plus concurrent ticker/callback.
-  Agree a bounded ownership/cancellation design before changing execution architecture.
+- [x] Phase 9B offline baseline confirmed synchronous YouTube metadata blocks the
+  event loop; the subsequent snapshot feasibility gate passed for the investigated
+  VOD formats. Neither gate changed production code or deployed a metadata worker.
+- [x] Fix the separately reproduced YouTube cancellation/workspace race: retain
+  ownership of download, audio/video preparation and video-probe executor work until
+  it finishes, including after repeated cancellation. Cleanup follows worker completion;
+  cancellation never starts another stage or media send. See
+  [offline cancellation verification](TESTING.md#youtube-cancellation-safety-offline).
+- [ ] Review/merge and separately authorize deployment of the cancellation-safety fix.
+  A permanently hung thread still retains its workspace; hard cancellation is not solved.
+- [ ] Phase 9B metadata subprocess: agree bounded admission, snapshot/IPC RAM budgets,
+  process-group termination/reap and unsupported-type refusals before implementation.
 
 - [ ] Diagnose intermittent YouTube HTTP 403 and define/test a narrowly bounded recovery
   strategy with explicit attempt limits and no duplicate media delivery.
