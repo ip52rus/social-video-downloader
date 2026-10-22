@@ -1,6 +1,6 @@
 """URL normalization and platform detection."""
 
-from re import findall, search
+from re import findall, fullmatch, search
 from urllib.parse import parse_qsl, unquote, urlsplit, urlunsplit
 
 from social_video_downloader.domain.errors import (
@@ -117,3 +117,43 @@ def detect_platform(url: str) -> Platform:
             return platform
 
     raise UnsupportedPlatformError(f"No supported provider matches hostname '{hostname}'.")
+
+
+def instagram_item_position(raw: str) -> int | None:
+    """One unambiguous img_index; never silently discard malformed reference intent."""
+    normalize_media_url(raw)
+    if len(raw) > 4096:
+        raise InvalidMediaURLError("Instagram reference is too large.")
+    # Retain the legacy fragment/malformed/query-field guards used by Reel admission.
+    has_reference = has_instagram_item_reference(raw)
+    parts = urlsplit(raw.strip())
+    try:
+        unquote(parts.fragment, errors="strict")
+        query = parse_qsl(parts.query, keep_blank_values=True, max_num_fields=32, errors="strict")
+    except (ValueError, UnicodeError):
+        raise InvalidMediaURLError("Malformed Instagram reference.") from None
+    keys = {"img_index", "media_id", "item_id", "carousel_index", "index", "slide"}
+    selected = []
+    for key, value in query:
+        decoded = key
+        while (next_key := unquote(decoded)) != decoded:
+            decoded = next_key
+        if decoded.casefold() not in keys and search(
+            r"^(?:img_index|media_id|item_id|carousel_index|index|slide)[^a-zA-Z0-9_]",
+            decoded.casefold(),
+        ):
+            raise InvalidMediaURLError("Malformed Instagram selector.")
+        if decoded.casefold() not in keys:
+            continue
+        if key.casefold() != "img_index" or decoded != key:
+            raise InvalidMediaURLError("Unsupported or ambiguous Instagram selector.")
+        if not fullmatch(r"[1-9][0-9]{0,8}", value):
+            raise InvalidMediaURLError("Instagram position must be a positive integer.")
+        selected.append(int(value))
+    # Check fragments independently: a query selector cannot legitimise a fragment selector.
+    fragment_url = parts._replace(query="").geturl()
+    if has_instagram_item_reference(fragment_url) or len(selected) > 1:
+        raise InvalidMediaURLError("Ambiguous Instagram selector.")
+    if has_reference and not selected:
+        raise InvalidMediaURLError("Unsupported Instagram selector.")
+    return selected[0] if selected else None

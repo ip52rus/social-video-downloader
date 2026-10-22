@@ -554,7 +554,7 @@ Local generated fixtures verify preparation, not real Telegram delivery or playb
 ### Explicit offline carousel Telegram transport
 
 `TelegramCarouselDelivery(sender, limits=None).deliver(collection, *, plan, workspace,
-chat_id)` consumes acquired videos and the original READY whole-publication plan. It
+chat_id)` consumes acquired videos and the original READY selection plan. It
 compares all selected positions/IDs and requires complete, unique ordered inputs; PHOTO
 entries are never given to preparation. No extractor, acquisition or sender is constructed.
 The injected sender implements the installed aiogram `send_video`/`send_media_group` API.
@@ -686,3 +686,30 @@ and was separately deployed only to bot. On 2026-10-18 the owner confirmed full-
 single-post delivery/playback and all three carousel videos in one ordered, playable,
 silent album. See [the evidence limits](TESTING.md#instagram-live-acceptance-2026-10-18).
 This documentation update changes no runtime behavior, resources or configuration.
+
+
+## Instagram Item Selection — offline follow-up
+
+The newer Item Selection path extends the earlier whole-publication-only stages.
+PUBLICATION still means all confirmed videos; SINGLE_VIDEO requires exactly one
+explicit original position and child ID. Both retain the full source manifest,
+canonical publication and independently verified parent identity. Scope and selected
+child travel through the existing private stdin IPC; the same isolated worker
+refreshes parent/full manifest before any media GET. Delivery validates the same
+scope and exact source positions/IDs and uses one send_video for SINGLE_VIDEO.
+
+An instance-owned InstagramChoiceStore is separate from YouTube ChoicePlan state:
+opaque random IDs, user/chat/prompt binding, bounded capacity, TTL and one-shot
+consume. The shared Reel/post slot is reserved before callback acknowledgement and
+consume and covers work through cleanup, but not human choice waiting. A failed
+acknowledgement or busy admission retains the choice. Unknown/foreign/early/stale
+callbacks cannot download; keyboard edit failure cannot revive a consumed choice.
+
+The inspection path and callback each have their own bounded operation window;
+callback acknowledgement and keyboard removal consume its existing 300-second
+window. No worker/network limit is expanded. Cleanup uncertainty is an explicit
+exception to normal deletion: quarantinable workspaces preserve potentially owned
+files and the handler retains its Instagram slot. Normal success, safe cancellation
+and ordinary failures retain their existing cleanup, confirmation and no-retry
+behavior. No downloader transport or network policy is duplicated or extended.
+See [Item Selection policy and evidence](TESTING.md#instagram-item-selection-offline).

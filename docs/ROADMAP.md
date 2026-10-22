@@ -113,14 +113,30 @@ capability source of truth without evidence.
 
 ## Phase 5 - Instagram Provider — in progress
 
+Item Selection is implemented offline for one unambiguous `img_index=N` on a public
+`/p/` carousel. Metadata/parent/full-manifest inspection precedes two choices: all
+videos in source order, or the VIDEO at original position N (photos count toward
+positions). A selected PHOTO offers only all videos; out-of-range/unknown intent
+refuses. Ordinary `/p/` remains automatic and Reels retain their path. Explicit
+PUBLICATION (whole publication) and SINGLE_VIDEO scopes share the existing worker,
+private IPC, full fresh manifest/parent check, preparation and Telegram confirmation.
+Opaque choices bind user/chat/message, expire after 15 minutes, consume once and
+retain a busy/failed-ack choice. No Instagram slot is held while waiting for choice.
+Cleanup uncertainty quarantines owned directories and blocks new Instagram work.
+No new network policy, dependency, retry, quality mode or polling is introduced.
+See [Item Selection evidence](TESTING.md#instagram-item-selection-offline) and
+[URL/interaction rules](DEVELOPMENT.md#instagram-item-selection).
+LIVE single-item acquisition/delivery and deployment remain separate unverified gates.
+
 The parent-identity follow-up strengthens the existing whole-carousel contract:
 observed product PK is validated before upstream mapping, converted to shortcode
 and bound to the canonical requested publication; an optional response `code` must
 agree. Immutable inspection/selection and the private worker IPC retain that
 identity. The worker rechecks it and the complete ordered child manifest before
 any media GET. Missing/conflicting evidence refuses instead of using the input URL
-or upstream fallback ID. Single-item scope and Telegram selection buttons remain
-future work. This is offline verification only, not universal Instagram response
+or upstream fallback ID. At that stage single-item scope and selection buttons
+remained future work; the later Item Selection stage is recorded above. This is
+offline contract verification only, not universal Instagram response
 compatibility or a new live/deployment acceptance. See
 [parent identity tests](TESTING.md#instagram-parent-identity-contract-offline).
 

@@ -4,6 +4,58 @@ Instagram's current narrow live acceptance is recorded in
 [Instagram live acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
 Earlier sections retain the evidence and open gates at each historical stage.
 
+## Instagram Item Selection (offline)
+
+`/p/` with one canonical positive decimal `img_index=N` offers all carousel videos
+or only the confirmed VIDEO at original source position N. Photos retain positions;
+a PHOTO selection offers only all available videos. An ordinary `/p/` still starts
+whole-publication processing automatically. Reels retain their existing admission.
+Selectors other than `img_index`, duplicates/conflicts, fragment selectors, malformed
+encoding, zero/sign/whitespace/fraction/leading zeros, nested escaping, more than
+32 query fields, more than 4096 URL characters and positions over 9 digits refuse.
+Single percent-encoded keys/values are accepted unambiguously; `utm_source`, `psln`,
+`rpxt` and benign share parameters are preserved as admissible input then stripped.
+
+PUBLICATION selects every VIDEO; SINGLE_VIDEO has exactly one explicit original
+position/child. Both retain the canonical URL, verified parent and entire ordered
+manifest. Strict private IPC carries scope/position/child ID; fresh metadata must
+match parent and every source position/ID/kind before any media GET. Arbitrary
+subsets, missing/unknown identity and neighbouring-item fallback are refused.
+The same acquisition/FFmpeg/delivery components, limits and confirmation barriers
+are reused, including silent MP4 and no automatic retry after uncertain upload.
+
+Typed Instagram pending choices are separate from YouTube ChoicePlan state. At
+most 128 choices are held for 15 minutes. Opaque random callbacks bind user, chat
+and prompt message; early/unbound, foreign, expired, replayed and post-restart
+callbacks cannot download. Shared Instagram admission precedes acknowledgement
+and consume; busy or failed-ack choices remain pending. Waiting for a user holds no
+slot. Keyboard edit failure cannot re-enable a consumed choice. Cancellation waits
+for owned worker cleanup/reap. A failed cleanup/reap propagates DownloadCleanupError,
+quarantines directories without finalizer deletion, and retains the Instagram slot
+until separate operator investigation; no paths or identities are logged.
+
+Synthetic tests cover URL rejection, source positions with intervening photos,
+metadata/identity changes, forged plans/IPC, exactly one selected media acquisition,
+all-video regressions, foreign/stale/duplicate/concurrent/early callbacks, busy Reel
+admission, acknowledgement/edit failures, bounded pending state, cancellation,
+timeout, real child reap and cleanup failure. Full offline pipelines use local
+H.264/AAC and silent MP4, the actual supervised worker/preparation and fake Telegram
+confirmation for both actions; identities/callbacks must not appear in events.
+Verification: **77 targeted PASS; full offline 1946 passed / 1 skipped**, 258.35 s.
+External Python socket/DNS access was denied through inherited sitecustomize,
+including worker processes; new tests additionally deny socket/DNS access. The
+real opt-in YouTube test remained skipped. Ruff lint/format, diff-check, 70 local
+documentation links/anchors and privacy/security/scope review PASS. Exact-head
+Draft PR quality CI must be verified before handoff and is tracked in GitHub checks.
+
+The earlier separately authorized parent metadata-only LIVE gate passed on one
+2-VIDEO carousel with independent reinspection (6 metadata requests, no media GET).
+It did not validate Item Selection acquisition or Telegram delivery. This PR performs
+no live platform request, download, Telegram API call, Docker operation or deployment.
+Before deployment, separately authorize controlled Telegram tests for single-video
+selection, all-video selection, mixed PHOTO positioning and client playback; retain
+no-retry/cleanup gates. No broad compatibility or production-readiness claim is made.
+
 ## Instagram parent identity contract (offline)
 
 Reason: the old selection compared child IDs, types, positions and count but could
@@ -47,8 +99,10 @@ No real Instagram/Telegram requests or media downloads were performed. Public
 existing message that the whole carousel cannot be downloaded safely; no media is
 acquired or delivered. The frequency of this refusal is unknown without separately
 authorized live evidence. Reels and single-video posts retain their existing path.
-Item-selector URLs remain refused; ordinary `utm_source`, `psln`, `rpxt` share
-parameters remain accepted. No single-item download or new buttons are implemented.
+At the parent-contract stage item-selector URLs remained refused; ordinary
+`utm_source`, `psln`, `rpxt` share parameters remained accepted. That PR did not
+implement single-item download or new buttons; the later Item Selection stage is
+recorded above.
 Before that future work, explicit selection validation, parent/full-manifest
 revalidation, source positions including photos, confirmed VIDEO/child identity,
 callback ownership/expiry/one-shot consumption and uncertain-upload no-retry gates

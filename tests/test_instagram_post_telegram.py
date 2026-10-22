@@ -154,7 +154,7 @@ async def test_unsafe_post_reference_never_extracts_or_sends(message, monkeypatc
     prepare.assert_not_called()
     assert message.answer_video.await_count == 0
     assert not message.bot.mock_calls
-    assert "ссылка на публикацию целиком" in message.answer.call_args.args[0]
+    assert "Некорректный или неоднозначный" in message.answer.call_args.args[0]
     assert not handler._active
 
 

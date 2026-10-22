@@ -134,3 +134,20 @@ are runtime data, not fixtures or logs; raw yt-dlp messages are suppressed. Acqu
 uses an isolated temporary workspace, a fixed internal filename and generated safe output
 names. No titles or source IDs are interpolated into output paths; symlinks and extra
 outputs are rejected. This provider is not registered in the default bot yet.
+
+
+## Instagram Item Selection
+
+Only an unambiguous `img_index` is admitted for a public carousel. Full parent and
+ordered manifest identity are retained for both all-video and one-original-position
+scopes and freshly revalidated before media acquisition. No arbitrary subset or
+fallback item is permitted. Opaque bounded process-local choices bind user, chat
+and Telegram prompt message, have a 15-minute TTL and consume atomically once.
+Callbacks contain no publication/media/account identifiers or locators. Admission
+reserves the shared Instagram slot before acknowledgement/consume; failed ack/busy
+requests retain their choice, while early/foreign/expired/replayed callbacks cannot
+start media work. Existing fixed event fields remain the only logging contract.
+If worker reap or owned cleanup is unconfirmed, opt-in quarantine keeps files and
+the Instagram slot until operator investigation. Quarantine is not permission to
+force-delete files or retry uncertain uploads. No transport, cookie, authentication,
+proxy, allowlist or dependency changes are introduced by this feature.

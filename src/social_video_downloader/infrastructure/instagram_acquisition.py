@@ -13,7 +13,6 @@ from time import monotonic
 
 from yt_dlp.utils import DownloadError
 
-from social_video_downloader.domain.carousel import CarouselItemKind
 from social_video_downloader.domain.errors import DownloadFailedError, MediaProcessingError
 from social_video_downloader.infrastructure.instagram_metadata import parent_identity_matches
 from social_video_downloader.infrastructure.telegram_media import inspect_telegram_video
@@ -73,7 +72,7 @@ def _same_selection(plan, facts):
         and tuple((x.position, x.item_id, x.kind) for x in facts.items)
         == tuple((x.position, x.item_id, x.kind) for x in plan.items)
         and all(
-            x.admissible_format_count > 0 for x in facts.items if x.kind is CarouselItemKind.VIDEO
+            facts.items[x.position - 1].admissible_format_count > 0 for x in plan.selected_videos
         )
     )
 
