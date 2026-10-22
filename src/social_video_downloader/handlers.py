@@ -1,7 +1,10 @@
 """Telegram command and URL-intake handlers."""
 
 import asyncio
+from collections.abc import Callable
 from contextlib import suppress
+from contextvars import copy_context
+from functools import partial
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -236,6 +239,28 @@ async def handle_instagram_callback(callback: CallbackQuery, instagram_reels=Non
     await handler.handle_callback(callback)
 
 
+async def _run_workspace_thread[**P, T](
+    function: Callable[P, T], /, *args: P.args, **kwargs: P.kwargs
+) -> T:
+    """Drain file work before propagating cancellation and releasing its workspace."""
+    # Match to_thread's executor/context semantics, but retain a Future rather than
+    # a Task that asyncio shutdown could cancel independently of the owning handler.
+    worker = asyncio.get_running_loop().run_in_executor(
+        None, partial(copy_context().run, function, *args, **kwargs)
+    )
+    try:
+        return await asyncio.shield(worker)
+    except asyncio.CancelledError:
+        # shield alone only protects the worker, not the owner's cleanup ordering.
+        # Further cancel() calls must not let the owner leave this drain early.
+        while not worker.done():
+            with suppress(asyncio.CancelledError, Exception):
+                await asyncio.shield(worker)
+        if not worker.cancelled():
+            worker.exception()  # Retrieve a late failure; cancellation stays authoritative.
+        raise
+
+
 async def _download_and_deliver_media(
     message: Message,
     url: str,
@@ -246,7 +271,7 @@ async def _download_and_deliver_media(
         try:
             with TemporaryDirectory(prefix="social-video-downloader-") as temporary_directory:
                 try:
-                    downloaded = await asyncio.to_thread(
+                    downloaded = await _run_workspace_thread(
                         download_service.download,
                         url,
                         Path(temporary_directory),
@@ -257,7 +282,7 @@ async def _download_and_deliver_media(
 
                     operation.phase = "prepare"
                     if options.mode is DownloadMode.AUDIO_ONLY:
-                        audio = await asyncio.to_thread(
+                        audio = await _run_workspace_thread(
                             prepare_telegram_audio,
                             downloaded.file_path,
                             downloaded.metadata.duration_seconds,
@@ -273,14 +298,16 @@ async def _download_and_deliver_media(
                         )
                         return
 
-                    telegram_video = await asyncio.to_thread(
+                    telegram_video = await _run_workspace_thread(
                         prepare_telegram_video,
                         downloaded.file_path,
                     )
                     upload_parameters: dict[str, int] = {}
 
                     try:
-                        probe_data = await asyncio.to_thread(inspect_telegram_video, telegram_video)
+                        probe_data = await _run_workspace_thread(
+                            inspect_telegram_video, telegram_video
+                        )
                         upload_parameters = telegram_video_upload_parameters(probe_data)
                     except Exception as error:
                         # Preserve the existing best-effort inspection behavior.

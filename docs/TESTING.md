@@ -204,6 +204,38 @@ The events do not establish inner HTTP statuses/counts, broad reliability, indiv
 concurrent-request correlation, continuous liveness, event-loop responsiveness or
 stronger legacy YouTube thread-cancellation/upload-confirmation guarantees.
 
+## YouTube cancellation safety (offline)
+
+The offline snapshot feasibility gate separately reproduced a workspace race in the
+legacy YouTube Telegram path: cancelling the coroutine awaiting `to_thread()` could
+delete its `TemporaryDirectory` while its download thread still wrote files.
+
+The narrow fix uses the existing default executor with copied context, retaining a
+Future rather than a separate cancellable asyncio Task. The handler shields that
+Future and, on cancellation, drains it before propagating cancellation and leaving
+the workspace. Repeated cancellation cannot bypass the drain. Late worker exceptions
+are retrieved without replacing cancellation or starting another download/media send.
+The same local helper covers download, audio preparation, video preparation and probe.
+Uncancelled errors retain existing user responses and best-effort probing behavior.
+
+`tests/test_youtube_cancellation.py` uses synthetic files, fake Telegram and real
+threads held by `threading.Event`. It verifies workspace retention until release,
+worker completion before cleanup, repeated cancellation, success/late failure at each
+stage, independent event-loop progress, successful Audio/Video delivery, context and
+keyword propagation, and shutdown-style Task cancellation. Every test releases its
+worker in a finalizer and joins the test executor; loop exception notifications are
+checked for unhandled failures. No real platform or Telegram request is needed.
+
+Verification: **24 new lifecycle tests; 283 focused PASS; full offline 1970 passed /
+1 skipped**, 252.45 s. Python socket/DNS denial was inherited by child processes and
+checked in an independent child; the opt-in real YouTube test remained skipped.
+Ruff lint/format, diff-check, 53 local documentation links/anchors and scope/privacy
+review PASS. Exact-head Draft PR CI is required and recorded in GitHub checks.
+This change is not deployed and does not implement the metadata subprocess. A thread
+that never finishes keeps its owning handler/workspace alive until process termination;
+there is no timeout that deletes files while that thread is still running. This fixes
+cleanup ordering, not hard cancellation, broad reliability or uncertain-upload policy.
+
 ## Public deployment Stage D acceptance
 
 After PR #66 merged, source main `389258cee9cf966be531ae5d6d60b192a59bcdb2`
