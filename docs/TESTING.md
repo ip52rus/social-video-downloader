@@ -231,7 +231,9 @@ Verification: **24 new lifecycle tests; 283 focused PASS; full offline 1970 pass
 checked in an independent child; the opt-in real YouTube test remained skipped.
 Ruff lint/format, diff-check, 53 local documentation links/anchors and scope/privacy
 review PASS. Exact-head Draft PR CI is required and recorded in GitHub checks.
-This change is not deployed and does not implement the metadata subprocess. A thread
+At this offline implementation stage the change was not deployed and did not implement
+the metadata subprocess. PR #72 was later included in the separately authorized
+[Phase 9B rollout](#phase-9b-review-deployment-and-live-acceptance-2026-10-23). A thread
 that never finishes keeps its owning handler/workspace alive until process termination;
 there is no timeout that deletes files while that thread is still running. This fixes
 cleanup ordering, not hard cancellation, broad reliability or uncertain-upload policy.
@@ -325,7 +327,111 @@ three per-operation maxima and their overall maximum, not a percentile of all ti
 The isolated path adds interpreter/IPC overhead while keeping the event loop available.
 Absolute timings vary with machine load; these are offline scheduling measurements,
 not real Telegram latency, a load test or a general availability guarantee.
-No merge, Docker operation, environment change or deployment is part of this stage.
+No merge, Docker operation, environment change or deployment was part of this offline
+implementation stage. Later evidence is recorded separately below.
+
+## Phase 9B review, deployment and LIVE acceptance 2026-10-23
+
+This record separates existing offline/CI evidence, independent static review,
+controlled deployment and owner observations. This documentation synchronization
+performed no new runtime checks, platform requests, downloads or timing experiments.
+
+### Implementation, independent review and CI
+
+[PR #73](https://github.com/ip52rus/social-video-downloader/pull/73) implemented the
+bounded YouTube metadata path. Source HEAD was
+`827cfbefcc12c3535fbab2aed47b85218495caab`; the existing offline result was
+**2064 passed / 1 skipped**, with focused/parity/latency evidence recorded above.
+[Exact-head CI #39857426360](https://github.com/ip52rus/social-video-downloader/actions/runs/39857426360)
+completed SUCCESS at that SHA. Independent read-only review concluded
+**PHASE 9B INDEPENDENT REVIEW — READY FOR MERGE** with no confirmed
+BLOCKER/HIGH/MEDIUM defects or required corrections. It inspected code, diff, tests
+and CI; it performed no new dynamic measurements.
+
+The PR merged as `04a07ba85883b992a9e9f06c36e586326e410e29`, including PR #72.
+[Post-merge CI #39928312040](https://github.com/ip52rus/social-video-downloader/actions/runs/39928312040)
+completed SUCCESS on that exact merge SHA. CI, offline tests and static review are
+separate evidence categories; none establishes LIVE Telegram responsiveness.
+
+### Controlled deployment
+
+The separately authorized update of the existing Docker `bot` service on 2026-10-23
+concluded **PHASE 9B DEPLOYMENT — TECHNICAL PASS**. The deployment report confirmed:
+
+- A successful bot-only build and one controlled container replacement; the old
+  polling consumer ended before the new one started.
+- Source identity matched hashes of 48 files. The new container was RUNNING with
+  restart count 0, OOM false and startup/polling events; no new startup error or
+  polling conflict was observed in the checked window.
+- Local Bot API container/image/configuration/mounts and the named volume were
+  preserved. Feature flags, endpoint, credentials and runtime configuration were
+  retained, as were `.env`, `.idea/workspace.xml`, other worktrees and the preservation archive.
+
+New image: `sha256:2931d1e016405c237c4fab1b844f1a68bf977d2fc3f34cf2057bd9a5268437f4`.
+Previous image: `sha256:0b969b218619564afabd8b517c2e6faca50d65308e688134543b91bf33b0d7c6`.
+Rollback tag: `youtubedownloader-bot:rollback-pre-phase9b-04a07ba-20261023t091719z`.
+The rollback image/procedure were prepared, but rollback was **not performed or
+rehearsed**. No real YouTube/Instagram/TikTok requests or Telegram delivery tests
+were performed as deployment smoke checks. Ordinary existing-bot polling was not
+an additional manual API test. TECHNICAL PASS is not LIVE acceptance or proof of
+general operational reliability. See [deployed baseline](DEVELOPMENT.md#phase-9b-deployed-baseline-2026-10-23).
+
+### One owner-controlled LIVE attempt
+
+The owner separately authorized one bounded two-account scenario in the existing
+bot on 2026-10-23. User A sent one previously checked ordinary public YouTube VOD
+link and received the expected “🎬 Видео” / “🎵 Аудио” choice menu. No final download
+option was clicked. User B clicked one old “🎬 Видео” button created before deployment
+and received the expected Telegram popup:
+
+> Выбор больше недоступен. Отправь ссылку ещё раз.
+
+No separate chat message appeared, as expected for `callback.answer()`; that absence
+is not an error. Neither action was sent by the diagnostic tooling. No media download
+was intentionally started by these user actions; this is not an independently
+correlated audit of every background operation in the public bot.
+
+The read-only monitor reported these metadata lifecycle boundaries (UTC):
+
+| Metadata operation boundary | Timestamp |
+| --- | --- |
+| Start | 2026-10-23T14:15:37.451577313Z |
+| Completed | 2026-10-23T14:15:42.625436467Z |
+
+Their difference is **5.174 seconds**, rounded, for the **whole metadata operation**.
+It does not isolate HTTP extraction or IPC and is not a general YouTube duration.
+There is no exact button-click time or server-side callback timestamp. The owner
+could not determine whether B's answer appeared before or after metadata completion.
+Therefore callback/metadata overlap is **not proven** and callback latency is
+**not measured**. The popup and menu alone do not establish concurrent responsiveness.
+
+| Gate | Result and evidence limit |
+| --- | --- |
+| Implementation / merge | COMPLETED / MERGED |
+| Independent review | PASSED; static review, no new dynamic measurement |
+| Exact-head / post-merge CI | SUCCESS / SUCCESS |
+| Controlled deployment | TECHNICAL PASS; runtime checks only |
+| LIVE FUNCTIONAL SMOKE | PASS; real metadata/menu and expected stale-choice popup |
+| LIVE CONCURRENCY RESPONSIVENESS | INCONCLUSIVE; overlap and latency not established |
+| General production reliability / load / recovery | NOT VERIFIED; Phase 9 OPEN |
+
+There is no basis for a LIVE concurrency PASS or FAIL: blocking was not confirmed,
+and response before metadata completion was not confirmed. **NO RETRY**: one manual
+attempt, no repeated LIVE test, and no further attempt authorized by this record.
+Offline synthetic latency measurements remain offline evidence, not LIVE measurements.
+
+### Remaining gates and preservation limits
+
+Phase 9 remains OPEN for general reliability, load, recovery and unverified cases.
+The next candidate direction is Phase 8 unified Telegram UX, only after a separate
+owner decision; this record does not authorize implementation or further LIVE tests.
+
+Four historical worktrees remain physically damaged. The owner chose neither
+restoration nor deletion and accepted residual UNKNOWN for historical unstaged,
+untracked and ignored data. A verified preservation archive was reported outside
+temporary storage. The incident is not fully resolved; active worktrees in temporary
+storage remain a risk. Neither those worktrees nor the archive were changed by this
+documentation stage. Private paths and forensic payloads are intentionally omitted.
 
 ## Public deployment Stage D acceptance
 
