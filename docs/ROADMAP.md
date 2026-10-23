@@ -416,6 +416,8 @@ Include:
 - final interaction-flow review.
 
 Goal: the bot should feel like one coherent service rather than several provider integrations.
+This is the next candidate direction after the Phase 9B documentation handoff, only
+after a separate owner decision; no Phase 8 implementation is authorized by that handoff.
 
 ## Phase 9 - Production Reliability
 Complete the operational and reliability work that is intentionally not part of the functional MVP gate.
@@ -439,7 +441,8 @@ A separate narrow cancellation-safety change now drains existing file executor w
 before deleting its workspace, including repeated cancellation and late worker errors.
 Download, audio/video preparation and probe are covered; user choices, format/cache
 policy and Telegram delivery behavior are retained. This was merged as PR #72 with
-successful post-merge CI on `01ffe0e`; deployment remains separately authorized. See
+successful post-merge CI on `01ffe0e`; it is included in the later separately
+authorized Phase 9B deployment recorded below. See
 [offline cancellation evidence](TESTING.md#youtube-cancellation-safety-offline).
 A permanently hung download thread can retain the workspace indefinitely; metadata
 isolation does not solve hard cancellation of that legacy download path. Phase 9A events
@@ -469,8 +472,20 @@ No timeout abandons an owner or automatically clears quarantine. Offline verific
 passed: 94 new / 377 focused tests, full 2064 passed / 1 skipped. Initial callback
 blocking fell from about 1961 ms to 1 ms p50 with a two-second synthetic inspection.
 See [metadata evidence and limits](TESTING.md#phase-9b-bounded-youtube-metadata-offline).
-Exact-head CI is recorded in Draft PR checks; review/merge, LIVE compatibility and
-deployment remain separate gates. Phase 9 remains OPEN.
+[PR #73](https://github.com/ip52rus/social-video-downloader/pull/73) is merged as
+`04a07ba85883b992a9e9f06c36e586326e410e29`. Independent static review passed without
+confirmed BLOCKER/HIGH/MEDIUM findings or new dynamic measurements; exact-head and
+post-merge CI succeeded. Separately authorized bot-only deployment on 2026-10-23
+received TECHNICAL PASS; rollback was prepared, not executed or rehearsed.
+
+One subsequent two-account LIVE attempt received **LIVE FUNCTIONAL SMOKE — PASS**
+for real metadata/format choices and the expected stale-choice callback notification.
+**LIVE CONCURRENCY RESPONSIVENESS — INCONCLUSIVE**: callback/metadata overlap was
+not proven and callback latency was not measured. No final download choice or retry
+was made. The observed 5.174 s covers the whole metadata operation, not extraction
+alone or callback latency. Offline isolation evidence and static review do not replace
+LIVE concurrency evidence. General reliability, load and recovery remain NOT VERIFIED;
+Phase 9 remains OPEN. See the separate [review, CI, deployment and LIVE record](TESTING.md#phase-9b-review-deployment-and-live-acceptance-2026-10-23).
 
 Include:
 

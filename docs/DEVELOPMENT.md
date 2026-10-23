@@ -327,3 +327,34 @@ Oversized or incomplete publications refuse rather than silently truncate. Worke
 cleanup uncertainty preserves opt-in quarantine workspaces and keeps the Instagram
 handler blocked; investigate ownership/reap before any separately authorized manual
 cleanup or restart. No automatic recovery, data deletion or retry is performed.
+
+
+## Phase 9B deployed baseline 2026-10-23
+
+This is the later deployed baseline; the Phase 9A audit and earlier deployment
+records above retain their historical meaning. The separately authorized bot-only
+rollout of main `04a07ba85883b992a9e9f06c36e586326e410e29` (PR #73, including PR #72)
+concluded **PHASE 9B DEPLOYMENT — TECHNICAL PASS** on 2026-10-23.
+
+| Deployment checkpoint | Value |
+| --- | --- |
+| Bot image | `sha256:2931d1e016405c237c4fab1b844f1a68bf977d2fc3f34cf2057bd9a5268437f4` |
+| Previous bot image | `sha256:0b969b218619564afabd8b517c2e6faca50d65308e688134543b91bf33b0d7c6` |
+| Rollback tag | `youtubedownloader-bot:rollback-pre-phase9b-04a07ba-20261023t091719z` |
+
+The deployment report confirmed one bot replacement, previous poller shutdown before
+new startup, source identity by 48 file hashes, RUNNING state, restart 0 / OOM false
+and startup/polling events without observed new startup/conflict errors. Local Bot API
+container/image/config/mounts, named volume, feature flags, endpoint, credentials and
+runtime configuration were preserved. `.env`, `.idea/workspace.xml`, other worktrees
+and the preservation archive were unchanged. These are deployment-time observations,
+not new checks performed by this documentation update or proof of current availability.
+Rollback was prepared but **not executed or rehearsed**. Deployment included no
+platform downloads or Telegram delivery tests.
+
+A separately authorized one-attempt two-account test later produced **LIVE FUNCTIONAL
+SMOKE — PASS** and **LIVE CONCURRENCY RESPONSIVENESS — INCONCLUSIVE**. Callback overlap
+was not proven and latency was not measured; no final download choice or retry was
+made. See the [review, CI, deployment and LIVE record](TESTING.md#phase-9b-review-deployment-and-live-acceptance-2026-10-23).
+General reliability/load/recovery remain unverified and Phase 9 OPEN. Phase 8 is a
+candidate next direction only after a separate owner decision, not an automatic step.

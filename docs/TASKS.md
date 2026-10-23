@@ -750,6 +750,10 @@ requires exact-head CI and a separate merge decision; it does not redeploy the b
 Do not promise universal platform support or hard-code a long unsupported platform list into product claims.
 
 ## Phase 8 - Unified Product UX
+
+Next candidate direction after the Phase 9B documentation handoff; implementation
+requires a separate owner decision. Phase 9 reliability gates remain OPEN.
+
 - [ ] Review the complete multi-provider Telegram UI.
 - [ ] Standardize inline keyboards.
 - [ ] Present modes and quality options consistently across providers.
@@ -783,7 +787,7 @@ Status: OPEN; not closed by Phase 4 functional acceptance.
   The safe operational events were subsequently deployed to the existing main bot in a
   separately authorized rollout. Structured events were observed in the 2026-10-22
   [read-only post-LIVE check](TESTING.md#instagram-item-selection--live-acceptance-2026-10-22);
-  broader reliability and Phase 9B remain open.
+  broader reliability and Phase 9B operational acceptance remain open.
 - [x] Phase 9B offline baseline confirmed synchronous YouTube metadata blocks the
   event loop; the subsequent snapshot feasibility gate passed for the investigated
   VOD formats. Neither gate changed production code or deployed a metadata worker.
@@ -794,14 +798,30 @@ Status: OPEN; not closed by Phase 4 functional acceptance.
   [offline cancellation verification](TESTING.md#youtube-cancellation-safety-offline).
 - [x] Merge cancellation safety as [PR #72](https://github.com/ip52rus/social-video-downloader/pull/72);
   post-merge main `01ffe0e` CI #39845155273 SUCCESS. This is source/CI evidence,
-  not a deployment. A permanently hung legacy download thread still owns its workspace.
+  not deployment evidence by itself; PR #72 is included in the later Phase 9B rollout
+  recorded below. A permanently hung legacy download thread still owns its workspace.
 - [x] Phase 9B metadata subprocess: implement and locally verify one admitted POSIX
   child, bounded private snapshot IPC, synchronized cache, off-loop planning and
   process-group cleanup/quarantine. See
   [metadata verification](TESTING.md#phase-9b-bounded-youtube-metadata-offline):
   94 new / 377 focused PASS; full offline 2064 passed / 1 skipped, 338.42 s.
-- [ ] Review/merge the metadata PR, then separately authorize controlled LIVE compatibility
-  and deployment. No new code in this stage has been deployed to the running bot.
+- [x] Complete independent read-only review of [PR #73](https://github.com/ip52rus/social-video-downloader/pull/73):
+  READY FOR MERGE, no confirmed BLOCKER/HIGH/MEDIUM findings or required corrections;
+  code/diff/tests/CI review without new dynamic measurements. Exact source-head CI
+  #39857426360 SUCCESS; merged main `04a07ba`, post-merge CI #39928312040 SUCCESS.
+- [x] Complete separately authorized bot-only deployment on 2026-10-23: TECHNICAL PASS.
+  One replacement, one polling consumer, RUNNING, restart 0 / OOM false; Local Bot API,
+  volume and configuration preserved. Rollback prepared, not executed or rehearsed.
+- [x] Record one owner-controlled two-account LIVE functional smoke on 2026-10-23:
+  PASS for YouTube metadata/format choices and the expected stale-button notification.
+  No final download option was selected; no media was intentionally started by these
+  user actions. No retry. See [review, deployment and LIVE evidence](TESTING.md#phase-9b-review-deployment-and-live-acceptance-2026-10-23).
+- [ ] Establish LIVE concurrency responsiveness: INCONCLUSIVE in that one attempt.
+  Callback/metadata overlap was not proven and callback latency was not measured;
+  metadata operation duration of 5.174 s is not callback latency. No repeat authorized.
+- [ ] Verify general production reliability, load and recovery independently of this
+  narrow smoke; Phase 9 remains OPEN. Historical worktree data UNKNOWN and temporary
+  storage risk remain accepted/preserved, not resolved; see the acceptance record.
 
 - [ ] Diagnose intermittent YouTube HTTP 403 and define/test a narrowly bounded recovery
   strategy with explicit attempt limits and no duplicate media delivery.
