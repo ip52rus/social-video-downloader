@@ -24,6 +24,7 @@ from social_video_downloader.domain.errors import (
     DownloadFailedError,
     InvalidMediaURLError,
     MediaProcessingError,
+    MetadataBusyError,
     MetadataExtractionError,
     UnsupportedPlatformError,
 )
@@ -91,6 +92,8 @@ _BLOCKED_CHOICE_MESSAGE = "Для этой ссылки нет безопасн�
 
 def _download_error_message(error: DownloaderError) -> str:
     """Translate expected domain failures into safe, actionable user messages."""
+    if isinstance(error, MetadataBusyError):
+        return "Сейчас обработка YouTube занята или временно недоступна. Попробуй чуть позже."
     if isinstance(error, MetadataExtractionError):
         return "Не удалось получить данные видео. Возможно, оно удалено, закрыто или недоступно."
     if isinstance(error, MediaProcessingError):
@@ -169,7 +172,7 @@ async def handle_text(message: Message, instagram_reels=None, tiktok_videos=None
 
     try:
         with Operation("youtube", "metadata"):
-            plan = download_service.create_choice_plan(normalized_url)
+            plan = await download_service.create_choice_plan_async(normalized_url)
     except DownloaderError as error:
         await _notify_download_error(message, error)
         return

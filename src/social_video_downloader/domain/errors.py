@@ -17,6 +17,10 @@ class MetadataExtractionError(DownloaderError):
     """Raised when media metadata cannot be extracted."""
 
 
+class MetadataBusyError(DownloaderError):
+    """YouTube metadata admission is occupied or quarantined."""
+
+
 class DownloadFailedError(DownloaderError):
     """Raised when downloading media fails."""
 
@@ -27,6 +31,14 @@ class DownloadTimeoutError(DownloadFailedError):
 
 class DownloadCleanupError(DownloadFailedError):
     """Owned native resources could not be safely released; quarantine workspace."""
+
+
+class MetadataTimeoutError(MetadataExtractionError, TimeoutError):
+    """The bounded YouTube metadata deadline expired."""
+
+
+class MetadataCleanupError(MetadataExtractionError, DownloadCleanupError):
+    """YouTube metadata ownership is unconfirmed; keep admission quarantined."""
 
 
 class MediaProcessingError(DownloadFailedError):
