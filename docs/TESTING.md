@@ -204,6 +204,53 @@ The events do not establish inner HTTP statuses/counts, broad reliability, indiv
 concurrent-request correlation, continuous liveness, event-loop responsiveness or
 stronger legacy YouTube thread-cancellation/upload-confirmation guarantees.
 
+## Phase 8 E1a internationalization foundation
+
+The E1a layer is intentionally inactive: no middleware is installed in bot.py and no
+current handler, message, keyboard, callback data, provider, media pipeline or runtime
+configuration is changed. EN/RU/ES catalogs contain infrastructure-only test strings.
+
+Use aiogram 3.31.0 I18n/gettext with locked Babel 2.18.0. Safe normalization bounds
+input to 64 ASCII tag characters and selects a supported Babel-parsed base language.
+Missing/malformed/unsupported values and unsupported extensions use English. This is
+not a universal BCP 47 parser or a guarantee about a particular Telegram client.
+ContextVar middleware is prepared for future activation. Pending dataclasses have a
+keyword-only, validated locale (default en), retained through bind/transition/consume;
+existing callers and positional arguments retain their behavior.
+
+New tests cover real Babel parsing/error categories; sender selection for messages
+and callbacks (not callback.message.from_user); concurrent RU/EN/ES, context restoration
+after exceptions/cancellation; GNU gettext/plurals; English source fallback; named
+placeholder parity, malformed/fuzzy catalogs and deterministic .po-to-.mo compilation.
+The pinned-locale tests use actual stores, expiry, owner/chat/message validation and
+restart simulation, but are explicitly foundation/prototype tests: current handlers
+still use their existing untranslated copy and do not populate the user's locale.
+The pre-existing E0 YouTube pre-binding risk is not changed by E1a.
+
+Packaging tests build a wheel with the locked existing Hatchling backend, install it
+with uv --offline --no-index --no-deps into an owned temporary target, and import
+outside the checkout. Both .po and .mo resources must exist for all three locales.
+The import path is verified to belong to that target, not the editable source package.
+Catalog compilation runs only as an explicit developer action, never on user requests.
+The existing Docker copy/install path is statically compatible; no Docker build or
+runtime/deployment validation is performed by this stage.
+
+Local verification on Python 3.13.12: **136 new foundation/packaging cases** included
+in **full offline 2200 passed / 1 skipped**, 442.13 s. The opt-in LIVE YouTube case
+remained skipped. The final narrow compiler/packaging run passed **11 tests**; it
+includes refusal of mismatched placeholders, fuzzy/malformed catalogs and read-only
+failure when .mo is missing. A focused run exposed the brace-placeholder validation
+gap before correction; the final full suite passed with the explicit validator.
+Inherited Python socket/DNS denial was verified in a child process, including the
+wheel probe. Only synthetic media and fake Telegram were used; owned temporary test
+and install targets were removed. Ruff lint/format, diff, 65 local links/anchors,
+locked-dependency and privacy/scope reviews passed. No existing locked version was
+upgraded. Hatchling 1.32.4 is a locked dev dependency for offline wheel verification,
+not a new build system. Tests use the existing uv project tool for offline installation.
+Exact-head CI must be checked on the separate Draft PR; local tests do not establish deployment,
+LIVE language selection or translated Telegram delivery. E1b–E5 remain outside scope.
+See [architecture and commands](INTERNATIONALIZATION.md).
+
 ## YouTube cancellation safety (offline)
 
 The offline snapshot feasibility gate separately reproduced a workspace race in the

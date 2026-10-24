@@ -2,12 +2,13 @@
 
 import secrets
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from threading import Lock
 
 from social_video_downloader.services.choice_model import ChoicePlan
+from social_video_downloader.telegram_i18n import DEFAULT_LOCALE, validate_locale
 
 DEFAULT_INTERACTION_TTL = timedelta(minutes=15)
 TELEGRAM_CALLBACK_DATA_LIMIT = 64
@@ -84,11 +85,13 @@ class PendingInteraction:
     plan: ChoicePlan
     created_at: datetime
     expires_at: datetime
+    locale: str = field(default=DEFAULT_LOCALE, kw_only=True)
     consumed: bool = False
     active_step: PendingInteractionStep | None = None
     selected_mode_index: int | None = None
 
     def __post_init__(self) -> None:
+        validate_locale(self.locale)
         if not self.interaction_id:
             raise ValueError("interaction_id must not be empty.")
         if not self.url.strip():
@@ -209,6 +212,7 @@ class InMemoryPendingInteractionStore:
         plan: ChoicePlan,
         message_id: int | None = None,
         active_step: PendingInteractionStep | None = None,
+        locale: str = DEFAULT_LOCALE,
     ) -> PendingInteraction:
         """Create and store a pending interaction."""
         now = self._clock()
@@ -225,6 +229,7 @@ class InMemoryPendingInteractionStore:
                 created_at=now,
                 expires_at=now + self._ttl,
                 active_step=active_step,
+                locale=locale,
             )
             self._interactions[interaction_id] = interaction
             return interaction
