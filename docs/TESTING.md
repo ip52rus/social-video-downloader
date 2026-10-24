@@ -290,6 +290,52 @@ Exact-head CI must be checked on the separate Draft PR. No LIVE Telegram/platfor
 Docker build or deployment is claimed. YouTube pre-binding and mode-to-quality prompt
 text synchronization remain unchanged for E3/E2. Phase 9 reliability remains OPEN.
 
+## Phase 8 E3 pre-binding and status cards
+
+Base: E2 merge b7462f8; post-merge CI #40110968231 SUCCESS, verified on that SHA.
+E3 local evidence is offline only. No Docker, polling, platform API or media LIVE
+request was made; the deployed E2 application is not updated by this change.
+
+58 new cases in `test_youtube_status_cards.py` use the real dispatcher and store
+with synthetic Bot API responses. They cover unbound/missing/wrong message IDs,
+one-time binding, invalid IDs, early callbacks before binding and while the first
+keyboard edit awaits its response, failed and ambiguously applied send/edit,
+repeated cancellation on both publication awaits, expiry during send, independent
+same/different-user cards and one-shot terminal callbacks despite lost edit responses.
+EN/RU/ES and pinned callback locale are checked at actual transport boundaries.
+Existing E1b/E2 tests now assert the explicit extra publication edit and exact
+message binding, retaining quality IDs, ownership, stale and duplicate protections.
+
+Focused command scope: status cards, pending interactions, handlers, dispatcher
+localization, i18n foundation, wheel/catalog packaging, metadata/snapshot/parity and
+PR #72 cancellation: **702 passed** (the initial UI/packaging subset: 583 passed).
+Full offline suite: **2551 passed, 1 skipped** (the opt-in LIVE YouTube case).
+The inherited socket/DNS denial guard was verified before pytest and propagated
+to child processes; tests used owned temporary directories outside worktree files.
+Ruff lint/format, deterministic PO/MO compilation, diff, links and privacy/scope
+checks PASS: 122 Python files formatted, 88 relative links/anchors valid, and no
+private paths/credentials in the added content. Exact-head CI is verified after the Draft
+PR is opened; independent review, merge and deployment are separate decisions.
+
+No new await is added inside download/prepare/upload or workspace cleanup. The
+existing worker-drain/cancellation tests remain authoritative for PR #72 ordering.
+The added send/edit await boundaries have explicit cancellation and ambiguity tests.
+The retained 15-minute TTL starts at creation before the initial send, not binding.
+
+A successful interactive request sends one noninteractive receipt, then one
+prompt/keyboard edit. Mode-to-quality remains acknowledgement + one edit; terminal
+consume remains acknowledgement + one edit, now a durable request receipt without
+buttons. Direct download still sends its single initial status. No automatic API
+or media retry, terminal outcome edit, progress percentage or ETA is introduced.
+
+Limits: a failed/ambiguous UI edit can leave the previous text or buttons visible;
+store validation still prevents reuse after consume. Initial receipt copy explains
+what to do when buttons do not appear. UI transport success does not prove delivery,
+and the accepted-request text does not claim a worker is still running. E4 owns
+outcome cards and comprehensive obsolete-message cleanup. Delayed competing edits
+and real Telegram/client behavior are not a new LIVE guarantee; E3 does not implement
+a serialized UI transport or recovery service. Phase 9 reliability remains OPEN.
+
 ## Phase 8 E2 YouTube choice UX
 
 E2 replaces only the nonterminal mode-to-quality editReplyMarkup with editMessageText,

@@ -1,4 +1,4 @@
-# Telegram internationalization (Phase 8 E1a / E1b / E2)
+# Telegram internationalization (Phase 8 E1a / E1b / E2 / E3)
 
 ## Scope and decision
 
@@ -8,7 +8,8 @@ merged in PR #75. E1b activated existing Telegram presentation in PR #76, merged
 from deployment and LIVE acceptance. E2 is a separate presentation-only change.
 A cached process-local I18n instance holds catalogs; aiogram ContextVars hold locale.
 No custom plural engine, translation API, preference database or /language command.
-No command/profile publication or extra Bot API request is introduced.
+No command/profile publication is introduced. E3's one additional publication edit
+is explicitly budgeted below.
 
 ## Locale lifecycle and middleware
 
@@ -42,8 +43,10 @@ technical diagnostics, worker IPC and media selection are not translated.
 
 ## Catalogs and packaging
 
-[Review matrix](TRANSLATIONS.md) lists all 68 user-facing entries (66 singular and
-two plural groups), plus the catalogs retain two infrastructure entries. English
+[Review matrix](TRANSLATIONS.md) retains the 68 E1b user-facing entries and adds
+two E3 receipt strings. Catalogs now contain 72 entries including two infrastructure
+entries; the former YouTube starting-download string is retained as historical copy.
+No plural rules or substitution parameters change in E3. English
 msgids are trusted application copy. Translate first, then substitute plain named
 values. Counts use native gettext ngettext, including Russian plural forms.
 
@@ -68,8 +71,36 @@ sending, partial delivery is not success, and item numbers are original source p
 [E1b verification](TESTING.md#phase-8-e1b-telegram-interface-localization) and
 [E2 verification](TESTING.md#phase-8-e2-youtube-choice-ux) separate synthetic
 dispatcher/transport checks from LIVE acceptance. E2 performs no deployment.
-The YouTube publish-before-message-binding risk remains unchanged for E3. E2 does
-not implement editable status cards or terminal-message cleanup. A failed or ambiguous
+E2 did not fix the YouTube publish-before-message-binding risk or implement status
+cards. E3 addresses publication and durable request receipts as specified below;
+terminal-message cleanup remains outside this change. A failed or ambiguous
 quality edit retains the transitioned state: no automatic retry or download is added;
-a repeated old mode callback can render the same quality step. E3–E5 and manual
+a repeated old mode callback can render the same quality step. E4–E5 and manual
 preferences require separate authorization. Phase 9 reliability remains OPEN.
+
+## E3 publication and status-card decision
+
+Reason: sending an interactive keyboard before storing its message ID leaves a
+callback race. E3 sends a noninteractive, localized receipt first. Only a confirmed
+message response permits binding the pending interaction; a subsequent
+edit publishes the prompt and keyboard together. Store validation independently
+rejects unbound callbacks and missing or mismatched message IDs.
+
+The initial receipt includes recovery guidance if buttons never appear. The TTL
+starts at the original creation time, before the send. A failed or ambiguous initial
+send removes the unbound interaction. An ambiguous edit retains the bound interaction because Telegram may have applied it; there is no automatic
+retry. A visible keyboard can still be used, subject to the unchanged TTL.
+
+After terminal consume, the same message becomes a durable download-request
+receipt, replacing keyboard removal with one text-and-keyboard edit. Direct
+downloads use the same copy in their existing single status message. This records
+acceptance, not ongoing worker activity or delivery confirmation; it therefore
+remains truthful after success, failure or cancellation. No new metadata progress
+message, percentage, ETA or inferred FFmpeg stage is introduced. E4 still owns
+terminal outcome cards and comprehensive stale-message cleanup. Live progress
+would require a separately approved UI lifecycle; E3 does not add it implicitly.
+
+Budget: interactive publication adds exactly one editMessageText to its existing
+sendMessage. Mode-to-quality remains one acknowledgement plus one edit. Terminal
+selection remains one acknowledgement plus one edit; direct download message
+count is unchanged. Telegram edit failures are sanitized and do not retry media.

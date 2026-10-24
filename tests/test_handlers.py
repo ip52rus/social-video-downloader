@@ -53,7 +53,7 @@ def message():
     result.answer_document = AsyncMock()
     result.answer_audio = AsyncMock()
     result.answer_video = AsyncMock()
-    result.answer.return_value = SimpleNamespace(message_id=789)
+    result.answer.return_value = SimpleNamespace(message_id=789, edit_text=AsyncMock())
     result.from_user = SimpleNamespace(id=123)
     result.chat = SimpleNamespace(id=456)
     result.message_id = 111
@@ -321,7 +321,9 @@ async def test_youtube_url_is_downloaded_and_delivered_then_workspace_is_cleaned
     assert message.answer_video.await_args.kwargs["height"] == 1920
     assert message.answer_video.await_args.kwargs["duration"] == 73
     assert not uploaded_file.path.exists()
-    assert message.answer.await_args_list[0].args[0].startswith("Ссылка YouTube распознана")
+    assert message.answer.await_args_list[0].args[0] == handlers.tr(
+        "Download request accepted. Results appear in separate messages."
+    )
 
 
 @pytest.mark.asyncio
@@ -337,7 +339,7 @@ async def test_youtube_choose_mode_creates_pending_interaction_and_mode_keyboard
     await handle_text(message)
 
     assert service.calls == []
-    reply_markup = message.answer.await_args.kwargs["reply_markup"]
+    reply_markup = message.answer.return_value.edit_text.await_args.kwargs["reply_markup"]
     buttons = reply_markup.inline_keyboard
     assert [row[0].text for row in buttons] == ["🎬 Видео", "🎵 Аудио"]
     assert "youtube" not in buttons[0][0].callback_data
@@ -395,7 +397,7 @@ async def test_youtube_choose_quality_creates_pending_interaction_and_quality_ke
     await handle_text(message)
 
     assert service.calls == []
-    reply_markup = message.answer.await_args.kwargs["reply_markup"]
+    reply_markup = message.answer.return_value.edit_text.await_args.kwargs["reply_markup"]
     buttons = reply_markup.inline_keyboard
     assert [row[0].text for row in buttons] == ["Низкое", "Среднее"]
     assert buttons[1][0].callback_data == build_quality_callback_data("interaction-id", 1)
@@ -497,7 +499,10 @@ async def test_audio_mode_callback_downloads_exact_stored_options(monkeypatch):
     download.assert_awaited_once()
     assert download.await_args.args[2] == DownloadOptions(mode=DownloadMode.AUDIO_ONLY)
     service.create_choice_plan.assert_not_called()
-    callback.message.edit_reply_markup.assert_awaited_once_with(reply_markup=None)
+    callback.message.edit_text.assert_awaited_once_with(
+        handlers.tr("Download request accepted. Results appear in separate messages."),
+        reply_markup=None,
+    )
 
 
 @pytest.mark.asyncio
@@ -880,7 +885,7 @@ async def test_terminal_api_failures_preserve_exact_download_once(
     if failure_stage in {"ack", "both"}:
         callback.answer.side_effect = telegram_failure(error_type, "ack")
     if failure_stage in {"edit", "both"}:
-        callback.message.edit_reply_markup.side_effect = telegram_failure(error_type, "edit")
+        callback.message.edit_text.side_effect = telegram_failure(error_type, "edit_text")
     download = AsyncMock()
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
     service = MagicMock()
@@ -893,7 +898,10 @@ async def test_terminal_api_failures_preserve_exact_download_once(
     download.assert_awaited_once_with(callback.message, interaction.url, options)
     assert download.await_args.args[2] is options
     callback.answer.assert_awaited_once_with("Начинаю скачивание…")
-    callback.message.edit_reply_markup.assert_awaited_once_with(reply_markup=None)
+    callback.message.edit_text.assert_awaited_once_with(
+        handlers.tr("Download request accepted. Results appear in separate messages."),
+        reply_markup=None,
+    )
     second.answer.assert_awaited_once_with(handlers.tr(handlers._STALE_CALLBACK_MESSAGE))
     service.create_choice_plan.assert_not_called()
     assert (
@@ -940,7 +948,7 @@ async def test_callback_api_failures_do_not_repeat_media_upload(monkeypatch, flo
     payload = build_mode_callback_data(interaction.interaction_id, 1 if flow == "audio" else 0)
     callback = callback_query(payload)
     callback.answer.side_effect = telegram_failure(TelegramNetworkError, "ack")
-    callback.message.edit_reply_markup.side_effect = telegram_failure(TelegramBadRequest, "edit")
+    callback.message.edit_text.side_effect = telegram_failure(TelegramBadRequest, "edit_text")
 
     await handle_choice_callback(callback)
     await handle_choice_callback(callback_query(payload))
@@ -1062,13 +1070,7 @@ async def test_callback_cancellation_and_programming_errors_propagate(monkeypatc
     plan = choose_mode_plan() if stage.startswith("mode") else terminal_video_mode_plan()
     interaction = await create_pending_interaction(monkeypatch, plan)
     callback = callback_query(build_mode_callback_data(interaction.interaction_id, 0))
-    target = (
-        callback.answer
-        if stage.endswith("ack")
-        else callback.message.edit_text
-        if stage == "mode_edit"
-        else callback.message.edit_reply_markup
-    )
+    target = callback.answer if stage.endswith("ack") else callback.message.edit_text
     target.side_effect = failure()
     download = AsyncMock()
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)

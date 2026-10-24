@@ -74,3 +74,15 @@ No upload confirmation, retry, selection or resource-policy meaning is changed. 
 | Send a YouTube link or a public TikTok video link. | Отправь ссылку на YouTube или публичное TikTok-видео. | Envía un enlace de YouTube o de un vídeo público de TikTok. | handlers |
 | This post has {count} video. The limit is {limit}; no videos will be skipped. / This post has {count} videos. The limit is {limit}; no videos will be skipped. | В публикации {count} видео. Сейчас лимит — {limit}; пропускать остальные не будем. | Esta publicación tiene {count} vídeo. El límite es {limit}; no se omitirá ninguno. / Esta publicación tiene {count} vídeos. El límite es {limit}; no se omitirá ninguno. | Instagram counts; native ngettext; no retry |
 | Delivery confirmed: {count} video out of {total}. The rest were not sent; there will be no automatic retry. / Delivery confirmed: {count} videos out of {total}. The rest were not sent; there will be no automatic retry. | Подтверждена отправка {count} из {total} видео. Остальные не отправлены; автоматического повтора не будет. | Entrega confirmada: {count} vídeo de {total}. El resto no se envió; no habrá un reintento automático. / Entrega confirmada: {count} vídeos de {total}. El resto no se envió; no habrá un reintento automático. | Instagram counts; native ngettext; no retry |
+
+## E3 request receipts
+
+The original E1b rows are retained above. The former YouTube starting-download
+message is no longer emitted by the E3 direct flow. These two new strings describe
+confirmed request state, not progress, successful media delivery or a retry promise.
+The same pinned locale is used throughout a valid callback interaction.
+
+| EN source | RU | ES | Context / constraint |
+|---|---|---|---|
+| YouTube link recognized. If no buttons appear, send the link again. | Ссылка на YouTube распознана. Если кнопки не появятся, отправь ссылку ещё раз. | Enlace de YouTube reconocido. Si no aparecen botones, envía el enlace de nuevo. | Noninteractive receipt before binding; recovery guidance if publication cannot be confirmed. No automatic resend. |
+| Download request accepted. Results appear in separate messages. | Запрос на скачивание принят. Результат — отдельным сообщением. | Solicitud de descarga aceptada. El resultado se envía en un mensaje aparte. | Replaces the choice prompt after consume, or the direct-download starting status. Acceptance does not mean upload confirmation, continued activity or a guaranteed terminal notification after cancellation. |

@@ -55,9 +55,17 @@ terminal download starts so double-clicks cannot launch duplicate downloads. Bot
 makes pending buttons stale; persistent recovery and multi-instance coordination are
 deferred to production reliability work.
 
-After successful atomic terminal consumption, callback acknowledgement and keyboard
-cleanup are best-effort Telegram operations: expected `TelegramAPIError` failures are
-logged by operation and exception class without preventing the one selected download.
+E3 sends the YouTube choice message without a keyboard first, then atomically binds
+its confirmed message ID before editing in the prompt and buttons. Unbound records
+or missing/mismatched callback message IDs cannot resolve, transition or consume.
+A failed/cancelled initial send removes the unbound record; an uncertain edit retains
+the bound record without retry because the keyboard may already be visible. Binding
+does not renew the existing TTL and cannot retarget a message. See the
+[publication contract](INTERNATIONALIZATION.md#e3-publication-and-status-card-decision).
+
+After successful atomic terminal consumption, callback acknowledgement and the
+keyboard-removing request-receipt edit are best-effort Telegram operations: expected
+`TelegramAPIError` failures are logged by operation and exception class without preventing the one selected download.
 The stored URL and `DownloadOptions` remain authoritative; neither policy nor media
 upload is retried. Cancellation and unrelated programming errors still propagate.
 For nonterminal mode-to-quality transitions, acknowledgement failure does not prevent

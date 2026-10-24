@@ -752,8 +752,9 @@ Do not promise universal platform support or hard-code a long unsupported platfo
 ## Phase 8 - Unified Product UX
 
 E1a was merged in PR #75; E1b interface localization merged in PR #76.
-E2 YouTube choice text/keyboard synchronization is separately authorized. E3–E5
-UX/card work still requires owner decisions. Phase 9 remains OPEN.
+E2 YouTube choice text/keyboard synchronization merged in PR #77. E3 safe
+pre-binding and minimal YouTube request cards are separately authorized; E4–E5
+still require owner decisions. Phase 9 remains OPEN.
 
 - [x] Implement and verify inactive E1a: safe EN/RU/ES resolver, ContextVar middleware, compiled package
   catalogs and backward-compatible presentation locale in pending records. Telegram
@@ -774,10 +775,19 @@ UX/card work still requires owner decisions. Phase 9 remains OPEN.
   ambiguous-edit recovery and one-shot delivery. Six new cases; focused 540 passed,
   full offline 2493 passed / 1 skipped; quality/privacy checks PASS. See
   [E2 verification](TESTING.md#phase-8-e2-youtube-choice-ux).
-- [ ] Independently review E2 after exact-head CI.
-- [ ] Merge E2 only after a separate owner decision.
-- [ ] Deploy/LIVE-test E2 only after separate authorization.
-  E3 pre-binding/status cards and E4 terminal cleanup remain outside E2.
+- [x] Merge E2 PR #77 at b7462f8 after the separate owner decision;
+  post-merge CI #40110968231 SUCCESS. This does not establish LIVE acceptance.
+- [ ] Record separately authorized E2 LIVE acceptance if performed; not tested by E3.
+- [x] Complete E3 offline acceptance: fail-closed message binding; noninteractive
+  receipt → confirmed binding → prompt/keyboard edit; durable accepted-request
+  text on terminal selection and direct download. 58 new offline cases, 583
+  UI/packaging subset PASS; extended metadata/cache/parity/cancellation focused
+  set: 702 passed; full offline: 2551 passed / 1 skipped. See
+  [E3 verification](TESTING.md#phase-8-e3-pre-binding-and-status-cards).
+- [ ] Independently review E3 after exact-head CI; merge/deployment require separate
+  authorization. E4 terminal cards, delivery-outcome presentation, stale-message
+  cleanup and E5 acceptance are not implemented. Live progress beyond durable
+  request receipts needs an explicit UI lifecycle decision.
 
 - [ ] Review the complete multi-provider Telegram UI.
 - [ ] Standardize inline keyboards.

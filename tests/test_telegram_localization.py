@@ -269,7 +269,7 @@ async def test_youtube_messages_are_rendered_by_dispatcher(app, monkeypatch, loc
         "domain": "Couldn't process this link. Check it and try again.",
         "unexpected": "Something went wrong. Try again later.",
         "blocked": handlers._BLOCKED_CHOICE_MESSAGE,
-        "direct": "YouTube link recognized. Starting download…",
+        "direct": "Download request accepted. Results appear in separate messages.",
     }
     if case == "space":
         text = YT + " more"
@@ -302,10 +302,15 @@ async def test_youtube_mode_quality_delivery_pins_locale_and_one_shot(app, origi
     ]
     mode = prompt.reply_markup.inline_keyboard[0][0].callback_data
     await dp.feed_update(bot, callback_update(prompt, mode, current))
-    edit = next(c for c in session.calls if isinstance(c, EditMessageText))
+    edit = [c for c in session.calls if isinstance(c, EditMessageText)][-1]
     assert edit.text == translated("Choose the quality:", original)
     assert edit.chat_id == prompt.chat.id and edit.message_id == prompt.message_id
-    assert [type(c) for c in session.calls] == [SendMessage, AnswerCallbackQuery, EditMessageText]
+    assert [type(c) for c in session.calls] == [
+        SendMessage,
+        EditMessageText,
+        AnswerCallbackQuery,
+        EditMessageText,
+    ]
     assert [r[0].text for r in edit.reply_markup.inline_keyboard] == [
         translated("Low", original),
         translated("High", original),
@@ -547,9 +552,12 @@ async def test_parallel_dispatcher_messages_callbacks_and_nested_restore(app, mo
     finally:
         release.set()
         await asyncio.gather(*tasks, return_exceptions=True)
-    prompts = sorted(session.messages, key=lambda m: m.chat.id)
+    prompts = sorted(
+        (m for m in session.messages if m.reply_markup is not None), key=lambda m: m.chat.id
+    )
     for code, prompt in zip(LOCALES, prompts, strict=True):
         assert prompt.text == translated("Choose a format:", code)
+    session.calls.clear()  # Publication is separately asserted; inspect these transitions only.
     with get_i18n().use_locale("ru"):
         await asyncio.gather(
             *[
@@ -612,7 +620,7 @@ def test_complete_catalog_and_public_literal_inventory(locale):
         catalog = read_po(stream, locale=locale)
     assert not catalog.fuzzy and not list(catalog.check())
     messages = [m for m in catalog if m.id]
-    assert len(messages) == 70
+    assert len(messages) == 72
     for message in messages:
         assert not message.fuzzy
         variants = message.string if isinstance(message.string, tuple) else (message.string,)
@@ -899,7 +907,7 @@ async def test_youtube_lost_notification_keeps_pinned_quality_and_one_delivery(
     mode = prompt.reply_markup.inline_keyboard[0][0].callback_data
     session.fail = failure
     await dp.feed_update(bot, callback_update(prompt, mode, "es"))
-    edit = next(c for c in session.calls if isinstance(c, EditMessageText))
+    edit = [c for c in session.calls if isinstance(c, EditMessageText)][-1]
     assert edit.text == translated("Choose the quality:", locale)
     assert edit.reply_markup.inline_keyboard[0][0].text == translated("Low", locale)
     quality = edit.reply_markup.inline_keyboard[0][0].callback_data
@@ -1056,6 +1064,7 @@ async def test_quality_edit_applied_then_response_lost_keeps_exact_selection(
     prompt = session.messages[-1]
     mode = prompt.reply_markup.inline_keyboard[0][0].callback_data
     original_request = session.make_request
+    session.calls.clear()
     edit_attempts = 0
 
     async def ambiguous_edit(bot, method, timeout=None):
@@ -1085,7 +1094,7 @@ async def test_quality_edit_applied_then_response_lost_keeps_exact_selection(
     # A user repeats the old mode callback. "Not modified" is nonterminal too.
     await dp.feed_update(bot, callback_update(prompt, mode, current))
     assert edit_attempts == 2 and not downloads
-    assert len([c for c in session.calls if isinstance(c, SendMessage)]) == 1
+    assert not any(isinstance(c, SendMessage) for c in session.calls)
     assert all(
         c.text == translated("Choose the quality:", locale)
         for c in session.calls
@@ -1098,7 +1107,7 @@ async def test_quality_edit_applied_then_response_lost_keeps_exact_selection(
     assert downloads[0][0] == locale
     assert downloads[0][1][2].quality_id == "mode-video-high"
     assert session.calls[-1].text == translated(handlers._STALE_CALLBACK_MESSAGE, current)
-    assert edit_attempts == 2
+    assert edit_attempts == 3  # One further receipt edit, never a media retry.
     assert get_i18n().current_locale == "en"
 
 
@@ -1112,6 +1121,8 @@ async def test_concurrent_mode_callbacks_keep_one_quality_prompt_and_one_downloa
     prompt = session.messages[-1]
     mode = prompt.reply_markup.inline_keyboard[0][0].callback_data
     original_request = session.make_request
+    publication_edits = [c for c in session.calls if isinstance(c, EditMessageText)]
+    assert len(publication_edits) == 1
     entered, release = asyncio.Event(), asyncio.Event()
     edits_entered = 0
 
@@ -1137,7 +1148,7 @@ async def test_concurrent_mode_callbacks_keep_one_quality_prompt_and_one_downloa
     finally:
         release.set()
         await asyncio.gather(*tasks, return_exceptions=True)
-    edits = [c for c in session.calls if isinstance(c, EditMessageText)]
+    edits = [c for c in session.calls if isinstance(c, EditMessageText)][1:]
     assert len(edits) == 2
     assert all(
         c.text == translated("Choose the quality:", locale)
