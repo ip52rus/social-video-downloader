@@ -751,8 +751,9 @@ Do not promise universal platform support or hard-code a long unsupported platfo
 
 ## Phase 8 - Unified Product UX
 
-E1a was merged in PR #75; E1b interface localization is separately authorized.
-E2–E5 UX/card work still requires owner decisions. Phase 9 remains OPEN.
+E1a was merged in PR #75; E1b interface localization merged in PR #76.
+E2 YouTube choice text/keyboard synchronization is separately authorized. E3–E5
+UX/card work still requires owner decisions. Phase 9 remains OPEN.
 
 - [x] Implement and verify inactive E1a: safe EN/RU/ES resolver, ContextVar middleware, compiled package
   catalogs and backward-compatible presentation locale in pending records. Telegram
@@ -766,8 +767,17 @@ E2–E5 UX/card work still requires owner decisions. Phase 9 remains OPEN.
   sender middleware, validated pinned callbacks and unchanged media/API contracts.
   286 new cases; full offline 2487 passed / 1 skipped; wheel/catalog and quality gates PASS.
   See [contract](INTERNATIONALIZATION.md) and [translation review](TRANSLATIONS.md).
-- [ ] Independently review/merge the E1b Draft PR after exact-head CI. No deployment,
-  /language, profile mutation, E2 text synchronization or E3 editable/pre-bound card.
+- [x] Merge E1b PR #76 at 08d726d; post-merge CI #40085827763 SUCCESS.
+  E1b excluded /language, profile mutation, E2 text synchronization and E3 pre-binding.
+- [x] Complete E2 offline acceptance: one translated quality prompt plus keyboard edit
+  on the same YouTube message; pinned locale, unchanged callback/selection/media budgets,
+  ambiguous-edit recovery and one-shot delivery. Six new cases; focused 540 passed,
+  full offline 2493 passed / 1 skipped; quality/privacy checks PASS. See
+  [E2 verification](TESTING.md#phase-8-e2-youtube-choice-ux).
+- [ ] Independently review E2 after exact-head CI.
+- [ ] Merge E2 only after a separate owner decision.
+- [ ] Deploy/LIVE-test E2 only after separate authorization.
+  E3 pre-binding/status cards and E4 terminal cleanup remain outside E2.
 
 - [ ] Review the complete multi-provider Telegram UI.
 - [ ] Standardize inline keyboards.

@@ -1,10 +1,11 @@
-# Telegram internationalization (Phase 8 E1a / E1b)
+# Telegram internationalization (Phase 8 E1a / E1b / E2)
 
 ## Scope and decision
 
 E1a introduced aiogram I18n, gettext/Babel and package-local EN/RU/ES catalogs,
-merged in PR #75. E1b activates the foundation for existing Telegram presentation
-in this feature branch; independent review, merge and deployment remain separate gates.
+merged in PR #75. E1b activated existing Telegram presentation in PR #76, merged at
+08d726d; post-merge CI #40085827763 succeeded. Its offline evidence remains distinct
+from deployment and LIVE acceptance. E2 is a separate presentation-only change.
 A cached process-local I18n instance holds catalogs; aiogram ContextVars hold locale.
 No custom plural engine, translation API, preference database or /language command.
 No command/profile publication or extra Bot API request is introduced.
@@ -22,8 +23,10 @@ YouTube records the current request locale when creating pending choices. Only a
 the existing successful transition/terminal consume does presentation enter the
 pinned locale. Invalid indices, expired/unknown/foreign/wrong-chat/wrong-message and
 racing invalid callbacks use the current sender context. No TTL, payload, option ID,
-quality ID, callback routing or consume policy changes. Mode-to-quality edits still
-change only the keyboard: text synchronization belongs to E2.
+quality ID, callback routing or consume policy changes. E2 changes mode-to-quality
+presentation in one editMessageText call: both the translated quality prompt and its
+keyboard use the validated interaction locale.
+Acknowledgement order, request count and pending-state mutation remain unchanged.
 
 InstagramChoiceStore.resolve_selection() returns an immutable plan-plus-locale
 result after the same lock-protected token/owner/chat/message/expiry/index checks.
@@ -62,8 +65,11 @@ branches and message counts are preserved. RU busy copy uses informal singular v
 The review matrix records safety constraints: no automatic retry after uncertain
 sending, partial delivery is not success, and item numbers are original source positions.
 
-[Offline verification](TESTING.md#phase-8-e1b-telegram-interface-localization) separates
-synthetic dispatcher/transport checks from LIVE acceptance. No deployment is performed.
-The YouTube publish-before-message-binding risk remains unchanged for E3. Editable
-cards, new choice UX, terminal cards, manual preferences and E2–E5 require separate
-owner authorization. Phase 9 reliability remains OPEN.
+[E1b verification](TESTING.md#phase-8-e1b-telegram-interface-localization) and
+[E2 verification](TESTING.md#phase-8-e2-youtube-choice-ux) separate synthetic
+dispatcher/transport checks from LIVE acceptance. E2 performs no deployment.
+The YouTube publish-before-message-binding risk remains unchanged for E3. E2 does
+not implement editable status cards or terminal-message cleanup. A failed or ambiguous
+quality edit retains the transitioned state: no automatic retry or download is added;
+a repeated old mode callback can render the same quality step. E3–E5 and manual
+preferences require separate authorization. Phase 9 reliability remains OPEN.
