@@ -9,12 +9,13 @@ description = "Telegram-first service for downloading media from supported socia
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
-    "aiogram>=3.28,<4",
+    "aiogram[i18n]>=3.28,<4",
     "yt-dlp[default]>=2026.8,<2027",
 ]
 
 [dependency-groups]
 dev = [
+    "hatchling>=1.27,<2",
     "pytest>=8.4,<9",
     "pytest-asyncio>=1.2,<2",
     "ruff>=0.13,<1",

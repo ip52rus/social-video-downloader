@@ -2,6 +2,7 @@
 
 import json
 from dataclasses import replace
+from math import inf, nextafter
 from time import monotonic
 
 import pytest
@@ -161,20 +162,27 @@ def test_ram_refusal_does_not_evict_live_cache(monkeypatch):
     assert provider._take_cached_info(URL) is snapshot.info
 
 
-def test_import_keeps_original_timestamp_ttl_capacity_and_eviction(monkeypatch):
+@pytest.mark.parametrize("after_boundary", [False, True])
+def test_import_keeps_original_timestamp_ttl_capacity_and_eviction(monkeypatch, after_boundary):
     from social_video_downloader.providers import youtube
 
-    now = [monotonic()]
+    # One clock and an exactly representable origin keep the TTL boundary deterministic.
+    now = [1024.0]
     monkeypatch.setattr(youtube, "monotonic", lambda: now[0])
+    monkeypatch.setattr(wire, "monotonic", lambda: now[0])
     provider = YouTubeProvider()
-    req, payload = envelope()
+    req = wire.request(URL, "synthetic-request-nonce")
+    payload = wire.response(req, info(), now[0])
     snapshot = wire.validate_response(payload, req)
+    now[0] += 1.0
     provider._publish_snapshot(snapshot)
     stamp = snapshot.created_at
     assert provider._inspection_cache[URL][0] == stamp
-    now[0] = stamp + 179.999
-    assert provider._cached_info(URL) is not None
-    now[0] = stamp + 180
+    boundary = stamp + 180.0
+    assert boundary - stamp == 180.0
+    now[0] = nextafter(boundary, -inf)
+    assert provider._cached_info(URL) is snapshot.info
+    now[0] = nextafter(boundary, inf) if after_boundary else boundary
     assert provider._cached_info(URL) is None
     for i in range(33):
         now[0] += 1

@@ -7,6 +7,7 @@ from threading import Lock
 
 from social_video_downloader.domain.carousel import CarouselScope, CarouselSelectionPlan
 from social_video_downloader.services.instagram_acquisition import plan_payload
+from social_video_downloader.telegram_i18n import DEFAULT_LOCALE, validate_locale
 from social_video_downloader.telegram_interactions import (
     DEFAULT_INTERACTION_TTL,
     generate_interaction_id,
@@ -22,6 +23,10 @@ class InstagramChoice:
     plans: tuple[CarouselSelectionPlan, ...] = field(repr=False)
     expires_at: datetime
     message_id: int | None = None
+    locale: str = field(default=DEFAULT_LOCALE, kw_only=True)
+
+    def __post_init__(self):
+        validate_locale(self.locale)
 
 
 def parse_instagram_callback(data):
@@ -41,7 +46,8 @@ class InstagramChoiceStore:
         self._choices: dict[str, InstagramChoice] = {}
         self._lock = Lock()
 
-    def create(self, user_id, chat_id, plans):
+    def create(self, user_id, chat_id, plans, *, locale=DEFAULT_LOCALE):
+        validate_locale(locale)
         if type(user_id) is not int or type(chat_id) is not int or not 1 <= len(plans) <= 2:
             raise ValueError("Invalid Instagram choice owner or plans.")
         for plan in plans:
@@ -64,7 +70,9 @@ class InstagramChoiceStore:
             token = generate_interaction_id()
             if token in self._choices:
                 return None
-            choice = InstagramChoice(token, user_id, chat_id, tuple(plans), now + self._ttl)
+            choice = InstagramChoice(
+                token, user_id, chat_id, tuple(plans), now + self._ttl, locale=locale
+            )
             self._choices[token] = choice
             return choice
 

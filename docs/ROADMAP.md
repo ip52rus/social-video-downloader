@@ -416,8 +416,13 @@ Include:
 - final interaction-flow review.
 
 Goal: the bot should feel like one coherent service rather than several provider integrations.
-This is the next candidate direction after the Phase 9B documentation handoff, only
-after a separate owner decision; no Phase 8 implementation is authorized by that handoff.
+A separate owner decision authorized E1a only: inactive aiogram/gettext/Babel
+foundation, EN/RU/ES with English fallback, package-local compiled catalogs and
+presentation-only pending locale. No middleware activation or existing copy changes
+are included. E1b localization and E2–E5 UX/card work require separate authorization.
+See [internationalization contract](INTERNATIONALIZATION.md) and
+[offline verification](TESTING.md#phase-8-e1a-internationalization-foundation).
+Neither this foundation nor Phase 9B's narrow smoke closes Phase 9 reliability.
 
 ## Phase 9 - Production Reliability
 Complete the operational and reliability work that is intentionally not part of the functional MVP gate.

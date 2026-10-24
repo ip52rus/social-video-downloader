@@ -751,8 +751,18 @@ Do not promise universal platform support or hard-code a long unsupported platfo
 
 ## Phase 8 - Unified Product UX
 
-Next candidate direction after the Phase 9B documentation handoff; implementation
-requires a separate owner decision. Phase 9 reliability gates remain OPEN.
+E1a is a separately authorized inactive internationalization foundation. E1b activation
+and E2–E5 UX/card changes still require separate owner decisions. Phase 9 remains OPEN.
+
+- [x] Implement and verify inactive E1a: safe EN/RU/ES resolver, ContextVar middleware, compiled package
+  catalogs and backward-compatible presentation locale in pending records. Current
+  handlers/copy/routing/media remain unchanged; see
+  [foundation contract](INTERNATIONALIZATION.md) and
+  [verification](TESTING.md#phase-8-e1a-internationalization-foundation): 136 new cases,
+  full offline 2200 passed / 1 skipped; installed wheel resources and quality gates PASS.
+- [ ] Review/merge the separate E1a Draft PR after exact-head CI; no activation or deployment.
+- [ ] Separately authorize E1b: populate pinned locale in handlers and translate current
+  messages/buttons. No /language, command/profile mutation or editable card is in E1a.
 
 - [ ] Review the complete multi-provider Telegram UI.
 - [ ] Standardize inline keyboards.
