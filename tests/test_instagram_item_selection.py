@@ -41,6 +41,7 @@ from social_video_downloader.telegram_instagram_interactions import (
 )
 from social_video_downloader.telegram_instagram_posts import InstagramPostHandler
 from tests import test_instagram_acquisition as acquisition
+from tests.localization_fixtures import russian_presentation as russian_presentation
 from tests.test_instagram_carousel import PHOTO, URL, VIDEO, Runtime
 from tests.test_telegram_carousel import Sender, collection, install_preparation, response
 

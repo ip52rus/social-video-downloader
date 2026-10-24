@@ -17,6 +17,7 @@ from social_video_downloader.domain.errors import (
 from social_video_downloader.infrastructure.tiktok_native import FILE_BYTES
 from social_video_downloader.operation_logging import Operation
 from social_video_downloader.providers.tiktok import TikTokProvider
+from social_video_downloader.telegram_i18n import tr
 
 SEND_SECONDS = 120
 
@@ -81,23 +82,25 @@ class TelegramTikTokHandler:
 
     async def handle(self, message: Message, raw_url: str) -> None:
         if not self.allows(message):
-            await _notice(message, "Загрузка TikTok сейчас недоступна для этого аккаунта.")
+            await _notice(
+                message, tr("TikTok downloads aren't available for this account right now.")
+            )
             return
         try:
             url = self._provider.canonical_url(raw_url)
         except DownloaderError:
-            await _notice(message, "Отправь полную или короткую ссылку на публичное TikTok-видео.")
+            await _notice(message, tr("Send a full or short link to a public TikTok video."))
             return
         if self._blocked:
             await _notice(
-                message, "Загрузка TikTok приостановлена после ошибки завершения операции."
+                message, tr("TikTok downloads are paused after an operation cleanup error.")
             )
             return
         user_id = message.from_user.id
         # One dispatcher/event loop owns admission. No await between checking
         # capacity/user ownership and reserving: no waiters, queue or extra tasks.
         if user_id in self._active_users or len(self._active_users) >= self._max_concurrent:
-            await _notice(message, "Бот занят, попробуйте позже.")
+            await _notice(message, tr("The bot is busy. Try again later."))
             return
         self._active_users.add(user_id)
         with Operation("tiktok", "download_prepare") as operation:
@@ -106,7 +109,7 @@ class TelegramTikTokHandler:
             quarantine = False
             cleanup_failed = False
             try:
-                await _notice(message, "Ссылка TikTok распознана. Начинаю скачивание…")
+                await _notice(message, tr("TikTok link recognized. Starting download…"))
                 directory = TemporaryDirectory(prefix="telegram-tiktok-")
                 cancelled = Event()
                 # Executor Future is shielded directly, rather than a cancellable
@@ -121,7 +124,7 @@ class TelegramTikTokHandler:
                     async with asyncio.timeout(SEND_SECONDS):
                         sent = await message.answer_video(
                             FSInputFile(path),
-                            caption="TikTok video",
+                            caption=tr("TikTok video"),
                             supports_streaming=True,
                             **parameters,
                         )
@@ -141,19 +144,19 @@ class TelegramTikTokHandler:
                 quarantine = self._blocked = True
                 await _notice(
                     message,
-                    "Не удалось безопасно завершить операцию. Загрузка TikTok приостановлена.",
+                    tr("Couldn't safely finish the operation. TikTok downloads are paused."),
                 )
             except (DownloaderError, TelegramAPIError, TimeoutError, OSError) as error:
                 operation.fail(error)
                 await _notice(
                     message,
-                    "Не удалось подтвердить отправку видео. Автоматического повтора не будет."
+                    tr("Couldn't confirm video delivery. There will be no automatic retry.")
                     if sending
-                    else "Не удалось скачать или подготовить TikTok-видео. Попробуй другую ссылку.",
+                    else tr("Couldn't download or prepare the TikTok video. Try another link."),
                 )
             except Exception as error:
                 operation.fail(error)
-                await _notice(message, "Не удалось обработать TikTok-видео.")
+                await _notice(message, tr("Couldn't process the TikTok video."))
             except BaseException as error:
                 operation.fail(error)
                 raise
@@ -175,5 +178,5 @@ class TelegramTikTokHandler:
                     self._active_users.remove(user_id)
                 if cleanup_failed:
                     await _notice(
-                        message, "Ошибка завершения операции. Загрузка TikTok приостановлена."
+                        message, tr("Operation cleanup failed. TikTok downloads are paused.")
                     )

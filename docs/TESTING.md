@@ -206,6 +206,8 @@ stronger legacy YouTube thread-cancellation/upload-confirmation guarantees.
 
 ## Phase 8 E1a internationalization foundation
 
+Historical E1a evidence; E1b activation is recorded separately below.
+
 The E1a layer is intentionally inactive: no middleware is installed in bot.py and no
 current handler, message, keyboard, callback data, provider, media pipeline or runtime
 configuration is changed. EN/RU/ES catalogs contain infrastructure-only test strings.
@@ -250,6 +252,43 @@ not a new build system. Tests use the existing uv project tool for offline insta
 Exact-head CI must be checked on the separate Draft PR; local tests do not establish deployment,
 LIVE language selection or translated Telegram delivery. E1b–E5 remain outside scope.
 See [architecture and commands](INTERNATIONALIZATION.md).
+
+## Phase 8 E1b Telegram interface localization
+
+E1b activates E1a presentation in the existing nested router. Synthetic aiogram Updates
+pass through the real dispatcher and fake Bot API session; no poller or external API.
+EN/RU/ES cover /start feature combinations, URL/errors, YouTube mode/quality/direct
+flow, Reels, /p/ single/carousel, original img_index positions and photo offers,
+partial/uncertain delivery, busy/quarantine and the TikTok caption. Upstream titles
+remain unchanged. [Translation matrix](TRANSLATIONS.md) records 68 user-facing entries.
+
+The 286 new tests cover current sender fallback/regions, simultaneous RU/EN/ES messages
+and callbacks, pinned valid choices after language switching, invalid ownership/chat/
+message/expiry/restart, one-shot media counts, acknowledgement/edit failures, nested
+context, exception and repeated cancellation. Instagram uses the same atomic check
+for plan plus locale; legacy resolve() and publish/admission/consume order are preserved.
+Legacy direct-handler safety tests use an explicit Russian context; their safety
+assertions remain. Dispatcher tests separately prove automatic language selection.
+
+Existing focused regression: 546 passed. New dispatcher/catalog/fault matrix: 286 passed.
+Full offline E1b verification: **2487 passed / 1 skipped**, 461.04 s; the opt-in
+LIVE YouTube case remained skipped. The final supplementary TikTok access/short-link
+and packaging run passed 71 tests. An initial full run found three legacy direct-handler
+Russian text expectations in two additional TikTok modules; explicit RU context and
+the authorized informal busy wording corrected those expectations without weakening
+worker/admission/quarantine assertions. The final full run passed.
+Ruff lint/format, diff, privacy/scope and 70 local Markdown links/anchors passed.
+No providers, services, media infrastructure, dependencies, CI or Docker settings changed.
+
+Packaging checks build a wheel, install offline outside the checkout, and verify EN/RU/ES
+PO/MO resources. A final 11-test packaging/compiler run also verifies actual RU format
+prompt and ES TikTok caption from the installed wheel. Catalogs require nonempty/nonfuzzy
+translations, explicit placeholder
+flags and named-placeholder parity. Compilation remains deterministic. The network guard
+is inherited by child Python processes; own temporary directories are cleaned.
+Exact-head CI must be checked on the separate Draft PR. No LIVE Telegram/platform test,
+Docker build or deployment is claimed. YouTube pre-binding and mode-to-quality prompt
+text synchronization remain unchanged for E3/E2. Phase 9 reliability remains OPEN.
 
 ## YouTube cancellation safety (offline)
 

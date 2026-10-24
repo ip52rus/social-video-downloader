@@ -29,6 +29,12 @@ class InstagramChoice:
         validate_locale(self.locale)
 
 
+@dataclass(frozen=True, slots=True, repr=False)
+class InstagramSelection:
+    plan: CarouselSelectionPlan
+    locale: str
+
+
 def parse_instagram_callback(data):
     if not isinstance(data, str) or len(data) > 64:
         return None
@@ -92,6 +98,12 @@ class InstagramChoiceStore:
             return True
 
     def resolve(self, token, index, user_id, chat_id, message_id, *, consume=False):
+        selection = self.resolve_selection(
+            token, index, user_id, chat_id, message_id, consume=consume
+        )
+        return selection.plan if selection is not None else None
+
+    def resolve_selection(self, token, index, user_id, chat_id, message_id, *, consume=False):
         with self._lock:
             choice = self._choices.get(token)
             if choice is None:
@@ -112,7 +124,7 @@ class InstagramChoiceStore:
                 return None
             if consume:
                 self._choices.pop(token)
-            return choice.plans[index]
+            return InstagramSelection(choice.plans[index], choice.locale)
 
     def remove(self, token):
         with self._lock:

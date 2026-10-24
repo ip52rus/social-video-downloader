@@ -10,6 +10,7 @@ import pytest
 from social_video_downloader import telegram_tiktok as t
 from social_video_downloader.domain.errors import DownloadTimeoutError
 from tests.integration.test_video_preparation import generate
+from tests.localization_fixtures import russian_presentation as russian_presentation
 from tests.test_telegram_carousel import response
 from tests.test_tiktok_integration import FixtureProvider, message, synthetic_worker
 from tests.test_tiktok_native import A, B
@@ -64,7 +65,7 @@ async def test_two_real_workers_saturation_duplicate_and_slot_reuse(monkeypatch,
             excess = message(user)
             await handler.handle(excess, A)
             excess.answer_video.assert_not_awaited()
-            assert excess.answer.call_args.args == ("Бот занят, попробуйте позже.",)
+            assert excess.answer.call_args.args == ("Бот занят, попробуй позже.",)
         assert len(workers) == 2
         release[0].set()
         await asyncio.wait_for(tasks[0], 3)

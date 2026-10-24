@@ -1,20 +1,340 @@
-# Infrastructure-only catalog; current Telegram copy is not translated.
+# English translations for PROJECT.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+# E1b reviewed catalog.
 msgid ""
 msgstr ""
-"Project-Id-Version: social-video-downloader 0.1.0\n"
-"POT-Creation-Date: 2026-10-23 00:00+0000\n"
-"PO-Revision-Date: 2026-10-23 00:00+0000\n"
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-10-24 00:00+0000\n"
+"PO-Revision-Date: 2026-10-24 00:00+0000\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
+"Language-Team: en <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: telegram_instagram.py:220
+msgid "A Reel is already being processed. Wait for it to finish before sending another link."
+msgstr "A Reel is already being processed. Wait for it to finish before sending another link."
+
+#: telegram_instagram_posts.py:112
+msgid "All videos in the carousel"
+msgstr "All videos in the carousel"
+
+#: telegram_instagram_posts.py:288
+msgid "An Instagram link is already being processed. Send the next one later."
+msgstr "An Instagram link is already being processed. Send the next one later."
+
+#: telegram_instagram_posts.py:327
+msgid "Can't safely download the entire carousel: one or more items are unavailable or unrecognized."
+msgstr "Can't safely download the entire carousel: one or more items are unavailable or unrecognized."
+
+#: telegram_instagram_posts.py:345
+msgid "Carousel recognized. Preparing videos to send…"
+msgstr "Carousel recognized. Preparing videos to send…"
+
+#: handlers.py:361
+msgid "Choose a format:"
+msgstr "Choose a format:"
+
+#: handlers.py:384
+msgid "Choose the quality:"
+msgstr "Choose the quality:"
+
+#: telegram_instagram_posts.py:360
+msgid ""
+"Couldn't confirm delivery of the entire carousel. Some videos may have been delivered; there "
+"will be no automatic retry."
+msgstr ""
+"Couldn't confirm delivery of the entire carousel. Some videos may have been delivered; there "
+"will be no automatic retry."
+
+#: telegram_instagram.py:256 telegram_instagram_posts.py:175 telegram_instagram_posts.py:235
+#: telegram_tiktok.py:151
+msgid "Couldn't confirm video delivery. There will be no automatic retry."
+msgstr "Couldn't confirm video delivery. There will be no automatic retry."
+
+#: telegram_instagram.py:258
+msgid "Couldn't download or prepare the Reel within the limits."
+msgstr "Couldn't download or prepare the Reel within the limits."
+
+#: telegram_tiktok.py:153
+msgid "Couldn't download or prepare the TikTok video. Try another link."
+msgstr "Couldn't download or prepare the TikTok video. Try another link."
+
+#: telegram_instagram_posts.py:237
+msgid "Couldn't download or prepare the post within the limits."
+msgstr "Couldn't download or prepare the post within the limits."
+
+#: telegram_instagram_posts.py:374
+msgid "Couldn't download or prepare the post within the limits. Incomplete carousels are not sent."
+msgstr "Couldn't download or prepare the post within the limits. Incomplete carousels are not sent."
+
+#: telegram_instagram_posts.py:181
+msgid "Couldn't download or prepare the video. There will be no automatic retry."
+msgstr "Couldn't download or prepare the video. There will be no automatic retry."
+
+#: handlers.py:100
+msgid "Couldn't download the video. Try again later."
+msgstr "Couldn't download the video. Try again later."
+
+#: handlers.py:96
+msgid "Couldn't get video information. The video may be deleted, private or unavailable."
+msgstr "Couldn't get video information. The video may be deleted, private or unavailable."
+
+#: telegram_instagram_posts.py:102
+msgid "Couldn't identify the owner of this choice."
+msgstr "Couldn't identify the owner of this choice."
+
+#: telegram_instagram_posts.py:367
+msgid "Couldn't prepare or send the carousel. There will be no automatic retry."
+msgstr "Couldn't prepare or send the carousel. There will be no automatic retry."
+
+#: telegram_tiktok.py:157
+msgid "Couldn't process the TikTok video."
+msgstr "Couldn't process the TikTok video."
+
+#: handlers.py:87
+msgid "Couldn't process this choice. Send the link again."
+msgstr "Couldn't process this choice. Send the link again."
+
+#: handlers.py:103
+msgid "Couldn't process this link. Check it and try again."
+msgstr "Couldn't process this link. Check it and try again."
+
+#: handlers.py:139 handlers.py:148
+msgid "Couldn't recognize the link. Send a full HTTP or HTTPS link to YouTube, Instagram or TikTok."
+msgstr "Couldn't recognize the link. Send a full HTTP or HTTPS link to YouTube, Instagram or TikTok."
+
+#: telegram_tiktok.py:145
+msgid "Couldn't safely finish the operation. TikTok downloads are paused."
+msgstr "Couldn't safely finish the operation. TikTok downloads are paused."
+
+#: handlers.py:340
+msgid "Couldn't send the file to Telegram. Try again later."
+msgstr "Couldn't send the file to Telegram. Try again later."
+
+#: telegram_instagram_posts.py:1
+#, python-brace-format
+msgid ""
+"Delivery confirmed: {count} video out of {total}. The rest were not sent; there will be no "
+"automatic retry."
+msgid_plural ""
+"Delivery confirmed: {count} videos out of {total}. The rest were not sent; there will be no "
+"automatic retry."
+msgstr[0] ""
+"Delivery confirmed: {count} video out of {total}. The rest were not sent; there will be no "
+"automatic retry."
+msgstr[1] ""
+"Delivery confirmed: {count} videos out of {total}. The rest were not sent; there will be no "
+"automatic retry."
+
+#: handlers.py:102
+msgid "Downloads from this platform aren't enabled yet."
+msgstr "Downloads from this platform aren't enabled yet."
+
+#: handlers.py:124
+msgid "For /p/ links with img_index, choose all videos or the specified video."
+msgstr "For /p/ links with img_index, choose all videos or the specified video."
+
+#: handlers.py:72
+msgid ""
+"Hi! Send a YouTube link to download an individual video or audio. Instagram and TikTok "
+"downloads aren't enabled here."
+msgstr ""
+"Hi! Send a YouTube link to download an individual video or audio. Instagram and TikTok "
+"downloads aren't enabled here."
+
+#: handlers.py:83
+msgid "High"
+msgstr "High"
 
 msgid "I18n foundation"
 msgstr "I18n foundation"
+
+#: telegram_instagram_posts.py:170 telegram_instagram_posts.py:353
+msgid "Instagram is temporarily unavailable. Try again later."
+msgstr "Instagram is temporarily unavailable. Try again later."
+
+#: telegram_instagram_posts.py:283
+msgid "Invalid or ambiguous Instagram item number. Use a link with exactly one img_index."
+msgstr "Invalid or ambiguous Instagram item number. Use a link with exactly one img_index."
+
+#: telegram_instagram_posts.py:98
+#, python-brace-format
+msgid ""
+"Item #{position} is a photo. Photo downloads aren't supported yet. You can download all "
+"videos from this post."
+msgstr ""
+"Item #{position} is a photo. Photo downloads aren't supported yet. You can download all "
+"videos from this post."
+
+#: handlers.py:81
+msgid "Low"
+msgstr "Low"
+
+#: handlers.py:82
+msgid "Medium"
+msgstr "Medium"
+
+#: handlers.py:88
+msgid "No safe download option is available for this link."
+msgstr "No safe download option is available for this link."
+
+#: telegram_instagram_posts.py:323
+msgid "No videos are available in this post. Photos aren't downloaded."
+msgstr "No videos are available in this post. Photos aren't downloaded."
+
+#: telegram_instagram_posts.py:112
+#, python-brace-format
+msgid "Only video #{position}"
+msgstr "Only video #{position}"
+
+#: telegram_tiktok.py:179
+msgid "Operation cleanup failed. TikTok downloads are paused."
+msgstr "Operation cleanup failed. TikTok downloads are paused."
+
+#: telegram_instagram.py:216
+msgid ""
+"Public Reels and /p/ posts are supported. For /p/, use img_index to select an item; other "
+"selectors aren't supported."
+msgstr ""
+"Public Reels and /p/ posts are supported. For /p/, use img_index to select an item; other "
+"selectors aren't supported."
+
+#: handlers.py:166
+#, python-brace-format
+msgid "Recognized a {platform_label} link, but downloads from this platform aren't enabled yet."
+msgstr "Recognized a {platform_label} link, but downloads from this platform aren't enabled yet."
+
+#: telegram_instagram.py:226
+msgid "Reel link recognized. Starting download…"
+msgstr "Reel link recognized. Starting download…"
+
+#: handlers.py:129
+msgid ""
+"Send a YouTube link or a public Instagram Reel or /p/ link. Only videos are downloaded from "
+"carousels, in their original order; with img_index, choose all videos or the specified video."
+msgstr ""
+"Send a YouTube link or a public Instagram Reel or /p/ link. Only videos are downloaded from "
+"carousels, in their original order; with img_index, choose all videos or the specified video."
+
+#: handlers.py:120
+msgid "Send a YouTube link or a public TikTok video link."
+msgstr "Send a YouTube link or a public TikTok video link."
+
+#: handlers.py:118
+msgid "Send a YouTube link, a public Instagram Reel or /p/ link, or a public TikTok video link."
+msgstr "Send a YouTube link, a public Instagram Reel or /p/ link, or a public TikTok video link."
+
+#: telegram_tiktok.py:90
+msgid "Send a full or short link to a public TikTok video."
+msgstr "Send a full or short link to a public TikTok video."
+
+#: telegram_instagram_posts.py:197
+msgid "Single Instagram video recognized. Starting download…"
+msgstr "Single Instagram video recognized. Starting download…"
+
+#: handlers.py:177 handlers.py:346
+msgid "Something went wrong. Try again later."
+msgstr "Something went wrong. Try again later."
+
+#: handlers.py:478 telegram_instagram_posts.py:154
+msgid "Starting download…"
+msgstr "Starting download…"
+
+#: telegram_instagram_posts.py:106 telegram_instagram_posts.py:146 telegram_tiktok.py:101
+msgid "The bot is busy. Try again later."
+msgstr "The bot is busy. Try again later."
+
+#: handlers.py:336
+msgid "The file is too large to send through Telegram. Try a smaller video."
+msgstr "The file is too large to send through Telegram. Try a smaller video."
+
+#: handlers.py:98
+msgid "The video download is incomplete or couldn't be processed. Try another link."
+msgstr "The video download is incomplete or couldn't be processed. Try another link."
+
+#: telegram_instagram_posts.py:89
+msgid "There is no such item in this post. Check the number in the link."
+msgstr "There is no such item in this post. Check the number in the link."
+
+#: telegram_instagram_posts.py:140
+msgid "This choice has expired or belongs to another user."
+msgstr "This choice has expired or belongs to another user."
+
+#: handlers.py:237 telegram_instagram_posts.py:133
+msgid "This choice has expired. Send the link again."
+msgstr "This choice has expired. Send the link again."
+
+#: handlers.py:86
+msgid "This choice is no longer available. Send the link again."
+msgstr "This choice is no longer available. Send the link again."
+
+#: handlers.py:153
+msgid "This platform isn't supported yet. Send a YouTube, Instagram or TikTok link."
+msgstr "This platform isn't supported yet. Send a YouTube, Instagram or TikTok link."
+
+#: telegram_instagram_posts.py:1
+#, python-brace-format
+msgid "This post has {count} video. The limit is {limit}; no videos will be skipped."
+msgid_plural "This post has {count} videos. The limit is {limit}; no videos will be skipped."
+msgstr[0] "This post has {count} video. The limit is {limit}; no videos will be skipped."
+msgstr[1] "This post has {count} videos. The limit is {limit}; no videos will be skipped."
+
+#: handlers.py:540
+msgid "This request is already being processed."
+msgstr "This request is already being processed."
+
+#: telegram_tiktok.py:94
+msgid "TikTok downloads are paused after an operation cleanup error."
+msgstr "TikTok downloads are paused after an operation cleanup error."
+
+#: telegram_tiktok.py:85
+msgid "TikTok downloads aren't available for this account right now."
+msgstr "TikTok downloads aren't available for this account right now."
+
+#: telegram_tiktok.py:110
+msgid "TikTok link recognized. Starting download…"
+msgstr "TikTok link recognized. Starting download…"
+
+#: telegram_tiktok.py:125
+msgid "TikTok video"
+msgstr "TikTok video"
+
+#: telegram_instagram_posts.py:319
+msgid "Use a link to the whole post without individual item selectors or unknown parameters."
+msgstr "Use a link to the whole post without individual item selectors or unknown parameters."
+
+#: telegram_instagram_posts.py:95
+#, python-brace-format
+msgid "You selected video #{position} in the Instagram carousel. What would you like to download?"
+msgstr "You selected video #{position} in the Instagram carousel. What would you like to download?"
+
+#: handlers.py:184
+msgid "YouTube link recognized. Starting download…"
+msgstr "YouTube link recognized. Starting download…"
+
+#: handlers.py:94
+msgid "YouTube processing is busy or temporarily unavailable. Try again later."
+msgstr "YouTube processing is busy or temporarily unavailable. Try again later."
 
 #, python-brace-format
 msgid "{count} file"
 msgid_plural "{count} files"
 msgstr[0] "{count} file"
 msgstr[1] "{count} files"
+
+#: handlers.py:76
+msgid "🎬 Video"
+msgstr "🎬 Video"
+
+#: handlers.py:77
+msgid "🎵 Audio"
+msgstr "🎵 Audio"

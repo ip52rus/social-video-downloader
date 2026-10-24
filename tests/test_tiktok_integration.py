@@ -34,6 +34,7 @@ from social_video_downloader.providers.tiktok import TikTokProvider
 from social_video_downloader.services.choice_model import ChoicePlanState
 from social_video_downloader.services.download import DownloadService
 from tests.integration.test_video_preparation import generate
+from tests.localization_fixtures import russian_presentation as russian_presentation
 from tests.test_telegram_carousel import response
 from tests.test_tiktok_native import MEDIA, A
 from tests.test_tiktok_native import offline as offline

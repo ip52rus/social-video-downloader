@@ -46,6 +46,7 @@ from social_video_downloader.services.choice_model import (
 )
 from social_video_downloader.services.download import DownloadService
 from social_video_downloader.services.quality_tiers import QualityTier
+from social_video_downloader.telegram_i18n import get_i18n, tr
 from social_video_downloader.telegram_interactions import (
     CallbackAction,
     CallbackParseStatus,
@@ -68,41 +69,41 @@ _PLATFORM_LABELS = {
 }
 
 _START_MESSAGE = (
-    "Привет! Я бот для скачивания видео и другого медиа. "
-    "Отправь ссылку на YouTube, Instagram или TikTok. "
-    "Сейчас бот умеет скачивать отдельные видео с YouTube. "
-    "Загрузка из Instagram и TikTok пока не подключена."
+    "Hi! Send a YouTube link to download an individual video or audio. "
+    "Instagram and TikTok downloads aren't enabled here."
 )
 
 _MODE_LABELS = {
-    UserChoiceKind.VIDEO: "🎬 Видео",
-    UserChoiceKind.AUDIO: "🎵 Аудио",
+    UserChoiceKind.VIDEO: "🎬 Video",
+    UserChoiceKind.AUDIO: "🎵 Audio",
 }
 
 _QUALITY_LABELS = {
-    QualityTier.LOW: "Низкое",
-    QualityTier.MEDIUM: "Среднее",
-    QualityTier.HIGH: "Высокое",
+    QualityTier.LOW: "Low",
+    QualityTier.MEDIUM: "Medium",
+    QualityTier.HIGH: "High",
 }
 
-_STALE_CALLBACK_MESSAGE = "Выбор больше недоступен. Отправь ссылку ещё раз."
-_INVALID_CALLBACK_MESSAGE = "Не удалось обработать выбор. Отправь ссылку ещё раз."
-_BLOCKED_CHOICE_MESSAGE = "Для этой ссылки нет безопасного варианта скачивания."
+_STALE_CALLBACK_MESSAGE = "This choice is no longer available. Send the link again."
+_INVALID_CALLBACK_MESSAGE = "Couldn't process this choice. Send the link again."
+_BLOCKED_CHOICE_MESSAGE = "No safe download option is available for this link."
 
 
 def _download_error_message(error: DownloaderError) -> str:
     """Translate expected domain failures into safe, actionable user messages."""
     if isinstance(error, MetadataBusyError):
-        return "Сейчас обработка YouTube занята или временно недоступна. Попробуй чуть позже."
+        return tr("YouTube processing is busy or temporarily unavailable. Try again later.")
     if isinstance(error, MetadataExtractionError):
-        return "Не удалось получить данные видео. Возможно, оно удалено, закрыто или недоступно."
+        return tr(
+            "Couldn't get video information. The video may be deleted, private or unavailable."
+        )
     if isinstance(error, MediaProcessingError):
-        return "Видео скачано не полностью или не удалось обработать. Попробуй другую ссылку."
+        return tr("The video download is incomplete or couldn't be processed. Try another link.")
     if isinstance(error, DownloadFailedError):
-        return "Не удалось скачать видео. Попробуй ещё раз позже."
+        return tr("Couldn't download the video. Try again later.")
     if isinstance(error, UnsupportedPlatformError):
-        return "Скачивание с этой платформы пока не подключено."
-    return "Не удалось обработать эту ссылку. Проверь её и попробуй ещё раз."
+        return tr("Downloads from this platform aren't enabled yet.")
+    return tr("Couldn't process this link. Check it and try again.")
 
 
 async def _notify_download_error(message: Message, error: DownloaderError) -> None:
@@ -116,17 +117,28 @@ async def _notify_download_error(message: Message, error: DownloaderError) -> No
 async def handle_start(message: Message, instagram_reels=None, tiktok_videos=None) -> None:
     """Explain current capabilities and how to submit a link."""
     if tiktok_videos is not None and tiktok_videos.allows(message):
-        instagram = ", публичный Instagram Reel или /p/" if instagram_reels is not None else ""
-        await message.answer(f"Отправь ссылку на YouTube{instagram} или публичное TikTok-видео.")
+        text = (
+            tr(
+                "Send a YouTube link, a public Instagram Reel or /p/ link, or a "
+                "public TikTok video link."
+            )
+            if instagram_reels is not None
+            else tr("Send a YouTube link or a public TikTok video link.")
+        )
+        await message.answer(text)
         if instagram_reels is not None:
-            await message.answer("Для /p/ с img_index можно выбрать все видео или указанное видео.")
+            await message.answer(
+                tr("For /p/ links with img_index, choose all videos or the specified video.")
+            )
     elif instagram_reels is None:
-        await message.answer(_START_MESSAGE)
+        await message.answer(tr(_START_MESSAGE))
     else:
         await message.answer(
-            "Отправь ссылку на YouTube, публичный Instagram Reel или /p/. "
-            "Из каруселей скачиваются только видео, в исходном порядке; "
-            "для /p/ с img_index можно выбрать все видео или указанное видео."
+            tr(
+                "Send a YouTube link or a public Instagram Reel or /p/ link. Only "
+                "videos are downloaded from carousels, in their original order; "
+                "with img_index, choose all videos or the specified video."
+            )
         )
 
 
@@ -136,8 +148,10 @@ async def handle_text(message: Message, instagram_reels=None, tiktok_videos=None
 
     if any(character.isspace() for character in submitted_text):
         await message.answer(
-            "Не удалось распознать ссылку. Отправь полную HTTP- или HTTPS-ссылку "
-            "на YouTube, Instagram или TikTok."
+            tr(
+                "Couldn't recognize the link. Send a full HTTP or HTTPS link to "
+                "YouTube, Instagram or TikTok."
+            )
         )
         return
 
@@ -146,13 +160,15 @@ async def handle_text(message: Message, instagram_reels=None, tiktok_videos=None
         platform = detect_platform(normalized_url)
     except InvalidMediaURLError:
         await message.answer(
-            "Не удалось распознать ссылку. Отправь полную HTTP- или HTTPS-ссылку "
-            "на YouTube, Instagram или TikTok."
+            tr(
+                "Couldn't recognize the link. Send a full HTTP or HTTPS link to "
+                "YouTube, Instagram or TikTok."
+            )
         )
         return
     except UnsupportedPlatformError:
         await message.answer(
-            "Эта платформа пока не поддерживается. Отправь ссылку на YouTube, Instagram или TikTok."
+            tr("This platform isn't supported yet. Send a YouTube, Instagram or TikTok link.")
         )
         return
 
@@ -165,8 +181,13 @@ async def handle_text(message: Message, instagram_reels=None, tiktok_videos=None
         return
     if platform is not Platform.YOUTUBE:
         await message.answer(
-            f"Ссылка {platform_label} распознана, но скачивание "
-            "с этой платформы пока не подключено."
+            tr(
+                (
+                    "Recognized a {platform_label} link, but downloads from this "
+                    "platform aren't enabled yet."
+                ),
+                platform_label=platform_label,
+            )
         )
         return
 
@@ -177,14 +198,14 @@ async def handle_text(message: Message, instagram_reels=None, tiktok_videos=None
         await _notify_download_error(message, error)
         return
     except Exception:
-        await message.answer("Произошла внутренняя ошибка. Попробуй ещё раз позже.")
+        await message.answer(tr("Something went wrong. Try again later."))
         return
 
     if plan.state is ChoicePlanState.DIRECT_DOWNLOAD:
         if plan.automatic_options is None:
-            await message.answer(_BLOCKED_CHOICE_MESSAGE)
+            await message.answer(tr(_BLOCKED_CHOICE_MESSAGE))
             return
-        await message.answer("Ссылка YouTube распознана. Начинаю скачивание…")
+        await message.answer(tr("YouTube link recognized. Starting download…"))
         await _download_and_deliver_media(message, normalized_url, plan.automatic_options)
         return
 
@@ -196,21 +217,21 @@ async def handle_text(message: Message, instagram_reels=None, tiktok_videos=None
         await _send_quality_choices(message, normalized_url, plan)
         return
 
-    await message.answer(_BLOCKED_CHOICE_MESSAGE)
+    await message.answer(tr(_BLOCKED_CHOICE_MESSAGE))
 
 
 async def handle_choice_callback(callback: CallbackQuery) -> None:
     """Resolve mode and quality callbacks against stored pending interaction state."""
     parse_result = parse_callback_data(callback.data or "")
     if parse_result.status is not CallbackParseStatus.VALID or parse_result.callback is None:
-        await callback.answer(_INVALID_CALLBACK_MESSAGE)
+        await callback.answer(tr(_INVALID_CALLBACK_MESSAGE))
         return
 
     message = callback.message
     owner_user_id = callback.from_user.id
     chat_id = _callback_chat_id(callback)
     if message is None or chat_id is None:
-        await callback.answer(_STALE_CALLBACK_MESSAGE)
+        await callback.answer(tr(_STALE_CALLBACK_MESSAGE))
         return
 
     message_id = getattr(message, "message_id", None)
@@ -237,7 +258,7 @@ async def handle_instagram_callback(callback: CallbackQuery, instagram_reels=Non
     handler = getattr(instagram_reels, "_post_handler", None)
     if handler is None:
         with suppress(TelegramAPIError):
-            await callback.answer("Выбор устарел. Отправь ссылку заново.")
+            await callback.answer(tr("This choice has expired. Send the link again."))
         return
     await handler.handle_callback(callback)
 
@@ -336,17 +357,17 @@ async def _download_and_deliver_media(
         except TelegramEntityTooLarge as error:
             operation.fail(error)
             await message.answer(
-                "Файл слишком большой для отправки через Telegram. Попробуй видео меньшего размера."
+                tr("The file is too large to send through Telegram. Try a smaller video.")
             )
         except TelegramAPIError as error:
             operation.fail(error)
-            await message.answer("Не удалось отправить файл в Telegram. Попробуй ещё раз позже.")
+            await message.answer(tr("Couldn't send the file to Telegram. Try again later."))
         except DownloaderError as error:
             operation.fail(error)
             await _notify_download_error(message, error)
         except Exception as error:
             operation.fail(error)
-            await message.answer("Произошла внутренняя ошибка. Попробуй ещё раз позже.")
+            await message.answer(tr("Something went wrong. Try again later."))
 
 
 async def _send_mode_choices(message: Message, url: str, plan: ChoicePlan) -> None:
@@ -358,9 +379,10 @@ async def _send_mode_choices(message: Message, url: str, plan: ChoicePlan) -> No
         url=url,
         plan=plan,
         active_step=PendingInteractionStep.MODE,
+        locale=get_i18n().current_locale,
     )
     sent_message = await message.answer(
-        "Выбери формат:",
+        tr("Choose a format:"),
         reply_markup=_mode_keyboard(interaction.interaction_id, plan.mode_choices),
     )
     pending_interaction_store.set_message_id(
@@ -380,9 +402,10 @@ async def _send_quality_choices(message: Message, url: str, plan: ChoicePlan) ->
         url=url,
         plan=plan,
         active_step=PendingInteractionStep.QUALITY,
+        locale=get_i18n().current_locale,
     )
     sent_message = await message.answer(
-        "Выбери качество:",
+        tr("Choose the quality:"),
         reply_markup=_quality_keyboard(interaction.interaction_id, plan.quality_choices),
     )
     pending_interaction_store.set_message_id(
@@ -399,7 +422,7 @@ async def _handle_mode_callback(
     mode_index: int,
 ) -> None:
     if mode_index < 0 or mode_index >= len(interaction.plan.mode_choices):
-        await callback.answer(_INVALID_CALLBACK_MESSAGE)
+        await callback.answer(tr(_INVALID_CALLBACK_MESSAGE))
         return
 
     mode_choice = interaction.plan.mode_choices[mode_index]
@@ -408,7 +431,7 @@ async def _handle_mode_callback(
         return
 
     if not mode_choice.quality_choices:
-        await callback.answer(_INVALID_CALLBACK_MESSAGE)
+        await callback.answer(tr(_INVALID_CALLBACK_MESSAGE))
         return
 
     transition = pending_interaction_store.transition_to_quality(
@@ -422,22 +445,23 @@ async def _handle_mode_callback(
         await callback.answer(_callback_status_message(transition.status))
         return
 
-    try:
-        await callback.answer()
-    except TelegramAPIError as error:
-        report_failure("youtube", "notification", error)
-    if callback.message is not None:
+    with get_i18n().use_locale(transition.interaction.locale):
         try:
-            await callback.message.edit_reply_markup(
-                reply_markup=_quality_keyboard(
-                    interaction.interaction_id,
-                    transition.interaction.plan.mode_choices[mode_index].quality_choices,
-                )
-            )
+            await callback.answer()
         except TelegramAPIError as error:
-            # Keep the state: the edit may have reached Telegram despite a lost response.
-            # An old mode button can safely retry this same nonterminal transition.
             report_failure("youtube", "notification", error)
+        if callback.message is not None:
+            try:
+                await callback.message.edit_reply_markup(
+                    reply_markup=_quality_keyboard(
+                        interaction.interaction_id,
+                        transition.interaction.plan.mode_choices[mode_index].quality_choices,
+                    )
+                )
+            except TelegramAPIError as error:
+                # Keep the state: the edit may have reached Telegram despite a lost response.
+                # An old mode button can safely retry this same nonterminal transition.
+                report_failure("youtube", "notification", error)
 
 
 async def _handle_quality_callback(
@@ -447,7 +471,7 @@ async def _handle_quality_callback(
 ) -> None:
     quality_choices = _active_quality_choices(interaction)
     if quality_index < 0 or quality_index >= len(quality_choices):
-        await callback.answer(_INVALID_CALLBACK_MESSAGE)
+        await callback.answer(tr(_INVALID_CALLBACK_MESSAGE))
         return
 
     await _consume_and_download(
@@ -472,17 +496,18 @@ async def _consume_and_download(
         await callback.answer(_callback_status_message(consume.status))
         return
 
-    pending_interaction_store.remove(interaction.interaction_id)
-    try:
-        await callback.answer("Начинаю скачивание…")
-    except TelegramAPIError as error:
-        report_failure("youtube", "notification", error)
-    if callback.message is not None:
+    with get_i18n().use_locale(interaction.locale):
+        pending_interaction_store.remove(interaction.interaction_id)
         try:
-            await callback.message.edit_reply_markup(reply_markup=None)
+            await callback.answer(tr("Starting download…"))
         except TelegramAPIError as error:
             report_failure("youtube", "notification", error)
-        await _download_and_deliver_media(callback.message, interaction.url, options)
+        if callback.message is not None:
+            try:
+                await callback.message.edit_reply_markup(reply_markup=None)
+            except TelegramAPIError as error:
+                report_failure("youtube", "notification", error)
+            await _download_and_deliver_media(callback.message, interaction.url, options)
 
 
 def _mode_keyboard(
@@ -493,7 +518,7 @@ def _mode_keyboard(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=_MODE_LABELS[choice.kind],
+                    text=tr(_MODE_LABELS[choice.kind]),
                     callback_data=build_mode_callback_data(interaction_id, index),
                 )
             ]
@@ -510,7 +535,7 @@ def _quality_keyboard(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=_QUALITY_LABELS[choice.tier],
+                    text=tr(_QUALITY_LABELS[choice.tier]),
                     callback_data=build_quality_callback_data(interaction_id, index),
                 )
             ]
@@ -536,8 +561,8 @@ def _callback_chat_id(callback: CallbackQuery) -> int | None:
 
 def _callback_status_message(status: PendingInteractionStatus) -> str:
     if status is PendingInteractionStatus.CONSUMED:
-        return "Запрос уже обрабатывается."
-    return _STALE_CALLBACK_MESSAGE
+        return tr("This request is already being processed.")
+    return tr(_STALE_CALLBACK_MESSAGE)
 
 
 def create_router() -> Router:

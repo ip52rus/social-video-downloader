@@ -1,4 +1,4 @@
-"""Offline E1a foundation; localized Telegram UX is deliberately not activated."""
+"""Offline locale foundation and activation compatibility."""
 
 import asyncio
 from dataclasses import fields, replace
@@ -34,6 +34,7 @@ from social_video_downloader.telegram_i18n import (
     DEFAULT_LOCALE,
     RequestLocaleMiddleware,
     create_i18n,
+    get_i18n,
     locale_for_event,
     resolve_locale,
 )
@@ -420,16 +421,17 @@ def test_real_gettext_plural_and_placeholders(engine, locale, count):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("locale", ["en", "ru", "es"])
-async def test_current_start_copy_unchanged_without_activation(locale):
+async def test_start_copy_uses_active_context(locale):
     msg = SimpleNamespace(from_user=user(locale), answer=AsyncMock())
-    await handlers.handle_start(msg)
-    msg.answer.assert_awaited_once_with(handlers._START_MESSAGE)
+    with get_i18n().use_locale(locale):
+        await handlers.handle_start(msg)
+        msg.answer.assert_awaited_once_with(get_i18n().gettext(handlers._START_MESSAGE))
 
 
-def test_existing_dispatcher_does_not_install_localization():
+def test_dispatcher_installs_localization():
     dispatcher = create_dispatcher()
     routers = [dispatcher, *dispatcher.sub_routers]
-    assert not any(
+    assert any(
         isinstance(middleware, RequestLocaleMiddleware)
         for router in routers
         for observer in router.observers.values()

@@ -38,6 +38,7 @@ from social_video_downloader.telegram_interactions import (
     build_mode_callback_data,
     build_quality_callback_data,
 )
+from tests.localization_fixtures import russian_presentation as russian_presentation
 
 
 @pytest.fixture
@@ -253,6 +254,7 @@ async def create_pending_interaction(monkeypatch, plan: ChoicePlan):
         url="https://www.youtube.com/watch?v=abc",
         plan=plan,
         active_step=PendingInteractionStep.MODE,
+        locale="ru",
     )
 
 
@@ -264,7 +266,7 @@ async def test_start_explains_current_download_capabilities(message):
     assert "YouTube" in reply
     assert "Instagram" in reply
     assert "TikTok" in reply
-    assert "скачивать" in reply.lower()
+    assert "скачать" in reply.lower()
 
 
 @pytest.mark.asyncio
@@ -646,6 +648,7 @@ async def test_quality_callback_downloads_exact_stored_quality_options(monkeypat
         url="https://www.youtube.com/watch?v=abc",
         plan=choose_quality_plan(),
         active_step=PendingInteractionStep.QUALITY,
+        locale="ru",
     )
     download = AsyncMock()
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
@@ -679,6 +682,7 @@ async def test_quality_callback_respects_selected_mode_context(monkeypatch):
         url="https://www.youtube.com/watch?v=abc",
         plan=plan,
         active_step=PendingInteractionStep.MODE,
+        locale="ru",
     )
     store.transition_to_quality(
         interaction.interaction_id,
@@ -881,7 +885,7 @@ async def test_terminal_api_failures_preserve_exact_download_once(
     assert download.await_args.args[2] is options
     callback.answer.assert_awaited_once_with("Начинаю скачивание…")
     callback.message.edit_reply_markup.assert_awaited_once_with(reply_markup=None)
-    second.answer.assert_awaited_once_with(handlers._STALE_CALLBACK_MESSAGE)
+    second.answer.assert_awaited_once_with(handlers.tr(handlers._STALE_CALLBACK_MESSAGE))
     service.create_choice_plan.assert_not_called()
     assert (
         '"category": "telegram_network"'
@@ -909,7 +913,7 @@ async def test_concurrent_terminal_callbacks_with_ack_failure_download_once(monk
     await asyncio.gather(handle_choice_callback(first), handle_choice_callback(second))
 
     download.assert_awaited_once()
-    second.answer.assert_awaited_once_with(handlers._STALE_CALLBACK_MESSAGE)
+    second.answer.assert_awaited_once_with(handlers.tr(handlers._STALE_CALLBACK_MESSAGE))
 
 
 @pytest.mark.asyncio

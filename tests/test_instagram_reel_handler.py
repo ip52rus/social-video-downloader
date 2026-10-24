@@ -27,6 +27,7 @@ from social_video_downloader.domain.errors import (
 )
 from social_video_downloader.handlers import handle_text
 from tests.integration.test_video_preparation import generate
+from tests.localization_fixtures import russian_presentation as russian_presentation
 from tests.test_instagram_provider import INFO, Factory
 from tests.test_telegram_carousel import response
 

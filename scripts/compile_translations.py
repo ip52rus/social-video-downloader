@@ -26,19 +26,39 @@ def placeholders(text: str) -> set[str]:
 
 
 def compile_catalog(source: Path, locale: str) -> bytes:
+    raw_lines = source.read_text(encoding="utf-8").splitlines()
     with source.open("rb") as stream:
         catalog = read_po(stream, locale=locale, domain="messages", abort_invalid=True)
-    if list(catalog.check()) or any(message.fuzzy for message in catalog if message.id):
+    if (
+        catalog.fuzzy
+        or list(catalog.check())
+        or any(message.fuzzy for message in catalog if message.id)
+    ):
         raise ValueError("Invalid or fuzzy translation catalog.")
     for message in catalog:
-        if not message.id or "python-brace-format" not in message.flags:
+        if not message.id:
             continue
         originals = message.id if isinstance(message.id, tuple) else (message.id,)
         translations = message.string if isinstance(message.string, tuple) else (message.string,)
+        if any(not isinstance(text, str) or not text for text in translations):
+            raise ValueError("Translations must not be empty.")
         expected = placeholders(originals[0])
-        if any(placeholders(text) != expected for text in originals) or any(
-            placeholders(text) != expected for text in translations if text
-        ):
+        names = [placeholders(text) for text in (*originals, *translations)]
+        if any(names):
+            comments = []
+            for line in reversed(raw_lines[: message.lineno - 1]):
+                if not line.startswith("#"):
+                    break
+                comments.append(line)
+            if not any(
+                "python-brace-format" in line[2:].replace(",", " ").split()
+                for line in comments
+                if line.startswith("#,")
+            ):
+                raise ValueError(
+                    "Placeholder messages must be explicitly marked python-brace-format."
+                )
+        if any(fields != expected for fields in names):
             raise ValueError("Translation placeholders do not match the source.")
     output = BytesIO()
     write_mo(output, catalog, use_fuzzy=False)
