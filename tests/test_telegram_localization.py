@@ -10,10 +10,11 @@ import pytest
 import pytest_asyncio
 from aiogram import Bot
 from aiogram.client.session.base import BaseSession
-from aiogram.exceptions import TelegramNetworkError
+from aiogram.exceptions import TelegramBadRequest, TelegramNetworkError
 from aiogram.methods import (
     AnswerCallbackQuery,
     EditMessageReplyMarkup,
+    EditMessageText,
     SendAudio,
     SendMessage,
     SendVideo,
@@ -73,7 +74,9 @@ class Session(BaseSession):
             raise self.error_type(method=method, message="Synthetic lost response")
         if isinstance(method, AnswerCallbackQuery):
             return True
-        if isinstance(method, (SendMessage, EditMessageReplyMarkup, SendVideo, SendAudio)):
+        if isinstance(
+            method, (SendMessage, EditMessageReplyMarkup, EditMessageText, SendVideo, SendAudio)
+        ):
             payload = {
                 "message_id": getattr(method, "message_id", None) or 1000 + len(self.messages),
                 "date": 0,
@@ -85,7 +88,7 @@ class Session(BaseSession):
                     "language_code": "en",
                 },
             }
-            if isinstance(method, SendMessage):
+            if isinstance(method, (SendMessage, EditMessageText)):
                 payload.update(text=method.text, reply_markup=method.reply_markup)
                 assert len(method.text) <= 4096
             if isinstance(method, SendVideo):
@@ -299,7 +302,10 @@ async def test_youtube_mode_quality_delivery_pins_locale_and_one_shot(app, origi
     ]
     mode = prompt.reply_markup.inline_keyboard[0][0].callback_data
     await dp.feed_update(bot, callback_update(prompt, mode, current))
-    edit = next(c for c in session.calls if isinstance(c, EditMessageReplyMarkup))
+    edit = next(c for c in session.calls if isinstance(c, EditMessageText))
+    assert edit.text == translated("Choose the quality:", original)
+    assert edit.chat_id == prompt.chat.id and edit.message_id == prompt.message_id
+    assert [type(c) for c in session.calls] == [SendMessage, AnswerCallbackQuery, EditMessageText]
     assert [r[0].text for r in edit.reply_markup.inline_keyboard] == [
         translated("Low", original),
         translated("High", original),
@@ -558,8 +564,9 @@ async def test_parallel_dispatcher_messages_callbacks_and_nested_restore(app, mo
         )
         assert get_i18n().current_locale == "ru"
     edits = sorted(
-        (c for c in session.calls if isinstance(c, EditMessageReplyMarkup)), key=lambda c: c.chat_id
+        (c for c in session.calls if isinstance(c, EditMessageText)), key=lambda c: c.chat_id
     )
+    assert [c.text for c in edits] == [translated("Choose the quality:", c) for c in LOCALES]
     assert [c.reply_markup.inline_keyboard[0][0].text for c in edits] == [
         translated("Low", c) for c in LOCALES
     ]
@@ -882,7 +889,7 @@ async def test_instagram_callback_error_is_pinned(app, monkeypatch, tmp_path, lo
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("locale", LOCALES)
-@pytest.mark.parametrize("failure", [AnswerCallbackQuery, EditMessageReplyMarkup])
+@pytest.mark.parametrize("failure", [AnswerCallbackQuery, EditMessageText])
 async def test_youtube_lost_notification_keeps_pinned_quality_and_one_delivery(
     app, locale, failure
 ):
@@ -892,7 +899,8 @@ async def test_youtube_lost_notification_keeps_pinned_quality_and_one_delivery(
     mode = prompt.reply_markup.inline_keyboard[0][0].callback_data
     session.fail = failure
     await dp.feed_update(bot, callback_update(prompt, mode, "es"))
-    edit = next(c for c in session.calls if isinstance(c, EditMessageReplyMarkup))
+    edit = next(c for c in session.calls if isinstance(c, EditMessageText))
+    assert edit.text == translated("Choose the quality:", locale)
     assert edit.reply_markup.inline_keyboard[0][0].text == translated("Low", locale)
     quality = edit.reply_markup.inline_keyboard[0][0].callback_data
     await dp.feed_update(bot, callback_update(prompt, quality, "es"))
@@ -1035,3 +1043,114 @@ async def test_tiktok_cleanup_notification_and_quarantine_preserve_send_count(
     )
     assert tt._blocked and 7 in tt._active_users
     assert len([c for c in session.calls if isinstance(c, SendVideo)]) == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("locale", LOCALES)
+async def test_quality_edit_applied_then_response_lost_keeps_exact_selection(
+    app, monkeypatch, locale
+):
+    dp, bot, session, _, _, downloads = app()
+    current = {"en": "ru", "ru": "es", "es": "en"}[locale]
+    await dp.feed_update(bot, message_update(YT, locale))
+    prompt = session.messages[-1]
+    mode = prompt.reply_markup.inline_keyboard[0][0].callback_data
+    original_request = session.make_request
+    edit_attempts = 0
+
+    async def ambiguous_edit(bot, method, timeout=None):
+        nonlocal edit_attempts
+        if isinstance(method, EditMessageText):
+            edit_attempts += 1
+            if edit_attempts == 1:
+                # Fake Telegram applies both fields, but its response is lost.
+                await original_request(bot, method, timeout)
+                raise TelegramNetworkError(method=method, message="Synthetic lost edit response")
+            session.calls.append(method)
+            raise TelegramBadRequest(method=method, message="message is not modified")
+        return await original_request(bot, method, timeout)
+
+    monkeypatch.setattr(session, "make_request", ambiguous_edit)
+    await dp.feed_update(bot, callback_update(prompt, mode, current))
+    assert edit_attempts == 1  # No automatic edit retry.
+    assert not downloads
+    applied = session.messages[-1]
+    assert applied.message_id == prompt.message_id and applied.chat.id == prompt.chat.id
+    assert applied.text == translated("Choose the quality:", locale)
+    assert [row[0].text for row in applied.reply_markup.inline_keyboard] == [
+        translated("Low", locale),
+        translated("High", locale),
+    ]
+
+    # A user repeats the old mode callback. "Not modified" is nonterminal too.
+    await dp.feed_update(bot, callback_update(prompt, mode, current))
+    assert edit_attempts == 2 and not downloads
+    assert len([c for c in session.calls if isinstance(c, SendMessage)]) == 1
+    assert all(
+        c.text == translated("Choose the quality:", locale)
+        for c in session.calls
+        if isinstance(c, EditMessageText)
+    )
+    quality = applied.reply_markup.inline_keyboard[1][0].callback_data
+    await dp.feed_update(bot, callback_update(applied, quality, current))
+    await dp.feed_update(bot, callback_update(applied, quality, current))
+    assert len(downloads) == 1
+    assert downloads[0][0] == locale
+    assert downloads[0][1][2].quality_id == "mode-video-high"
+    assert session.calls[-1].text == translated(handlers._STALE_CALLBACK_MESSAGE, current)
+    assert edit_attempts == 2
+    assert get_i18n().current_locale == "en"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("locale", LOCALES)
+async def test_concurrent_mode_callbacks_keep_one_quality_prompt_and_one_download(
+    app, monkeypatch, locale
+):
+    dp, bot, session, _, _, downloads = app()
+    await dp.feed_update(bot, message_update(YT, locale))
+    prompt = session.messages[-1]
+    mode = prompt.reply_markup.inline_keyboard[0][0].callback_data
+    original_request = session.make_request
+    entered, release = asyncio.Event(), asyncio.Event()
+    edits_entered = 0
+
+    async def overlapping_edit(bot, method, timeout=None):
+        nonlocal edits_entered
+        if isinstance(method, EditMessageText):
+            edits_entered += 1
+            if edits_entered == 2:
+                entered.set()
+            await release.wait()
+        return await original_request(bot, method, timeout)
+
+    monkeypatch.setattr(session, "make_request", overlapping_edit)
+    tasks = [
+        asyncio.create_task(dp.feed_update(bot, callback_update(prompt, mode, code)))
+        for code in ("en", "es")
+    ]
+    try:
+        await asyncio.wait_for(entered.wait(), 3)
+        assert not downloads
+        release.set()
+        await asyncio.gather(*tasks)
+    finally:
+        release.set()
+        await asyncio.gather(*tasks, return_exceptions=True)
+    edits = [c for c in session.calls if isinstance(c, EditMessageText)]
+    assert len(edits) == 2
+    assert all(
+        c.text == translated("Choose the quality:", locale)
+        and c.message_id == prompt.message_id
+        and c.chat_id == prompt.chat.id
+        and c.reply_markup == edits[0].reply_markup
+        for c in edits
+    )
+    assert len([c for c in session.calls if isinstance(c, SendMessage)]) == 1
+    quality = edits[0].reply_markup.inline_keyboard[0][0].callback_data
+    await asyncio.gather(
+        dp.feed_update(bot, callback_update(prompt, quality, "en")),
+        dp.feed_update(bot, callback_update(prompt, quality, "es")),
+    )
+    assert len(downloads) == 1 and downloads[0][0] == locale
+    assert downloads[0][1][2].quality_id == "mode-video-low"

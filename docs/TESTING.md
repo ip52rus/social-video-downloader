@@ -290,6 +290,38 @@ Exact-head CI must be checked on the separate Draft PR. No LIVE Telegram/platfor
 Docker build or deployment is claimed. YouTube pre-binding and mode-to-quality prompt
 text synchronization remain unchanged for E3/E2. Phase 9 reliability remains OPEN.
 
+## Phase 8 E2 YouTube choice UX
+
+E2 replaces only the nonterminal mode-to-quality editReplyMarkup with editMessageText,
+using the existing translated "Choose the quality:" msgid and unchanged quality
+keyboard. One callback acknowledgement and one edit still update the original message;
+no extra send, automatic retry, media operation or required user action is introduced.
+The validated pending locale covers both text and buttons after language switching.
+
+The real-dispatcher fake-transport tests assert EN/RU/ES prompt/keyboard pairing,
+message identity and request count. Six additional cases exercise an edit applied
+before its response is lost, a repeated mode callback receiving "message is not
+modified", and overlapping mode callbacks followed by duplicate terminal selection.
+They check exact stored quality IDs, pinned locale and one download. Existing tests
+continue to cover audio/direct paths, invalid ownership/expiry/restart, callback
+ack/edit errors, cancellation and unrelated platform delivery.
+
+Focused handlers/callbacks/choice/i18n: **540 passed**, 25.34 s.
+Full offline suite: **2493 passed / 1 skipped**, 449.95 s, including Instagram/TikTok,
+YouTube cancellation/cache and installed-wheel/catalog regressions. Only the opt-in
+LIVE YouTube test was skipped. An inherited Python socket/DNS guard was verified
+before pytest; fake Telegram and synthetic media only. Owned test/install temporary
+files were cleaned. Ruff lint/format, diff/privacy/scope and 72 local Markdown
+links/anchors passed. No dependencies, catalogs, worker or delivery contracts changed.
+Exact-head CI is a publication gate on the separate E2 Draft PR; local success is
+not deployment or LIVE acceptance.
+
+If Telegram rejects an edit before applying it, the old format prompt can remain.
+The state stays recoverable without hidden retries; an old mode button may re-render
+the quality step, and a delivered quality button remains usable. Terminal-message
+cleanup (E4) and publish-before-binding (E3) are unchanged. No E2 deployment, LIVE
+Telegram or external media verification is claimed.
+
 ## YouTube cancellation safety (offline)
 
 The offline snapshot feasibility gate separately reproduced a workspace race in the

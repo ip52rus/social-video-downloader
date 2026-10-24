@@ -6,7 +6,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from aiogram.exceptions import TelegramBadRequest, TelegramNetworkError
-from aiogram.methods import AnswerCallbackQuery, EditMessageReplyMarkup, SendMessage
+from aiogram.methods import (
+    AnswerCallbackQuery,
+    EditMessageReplyMarkup,
+    EditMessageText,
+    SendMessage,
+)
 
 import social_video_downloader.handlers as handlers
 from social_video_downloader.domain.errors import (
@@ -238,6 +243,7 @@ def callback_query(
     callback.message.chat = SimpleNamespace(id=chat_id)
     callback.message.message_id = message_id
     callback.message.edit_reply_markup = AsyncMock()
+    callback.message.edit_text = AsyncMock()
     callback.message.answer = AsyncMock()
     callback.message.answer_audio = AsyncMock()
     callback.message.answer_video = AsyncMock()
@@ -596,8 +602,10 @@ async def test_video_mode_callback_transitions_to_quality_without_download(monke
     await handle_choice_callback(callback)
 
     download.assert_not_awaited()
-    callback.message.edit_reply_markup.assert_awaited_once()
-    reply_markup = callback.message.edit_reply_markup.await_args.kwargs["reply_markup"]
+    callback.message.edit_text.assert_awaited_once()
+    assert callback.message.edit_text.await_args.args == ("Выбери качество:",)
+    callback.message.edit_reply_markup.assert_not_awaited()
+    reply_markup = callback.message.edit_text.await_args.kwargs["reply_markup"]
     assert [row[0].text for row in reply_markup.inline_keyboard] == ["Низкое", "Высокое"]
     result = handlers.pending_interaction_store.lookup(
         interaction.interaction_id,
@@ -617,7 +625,7 @@ async def test_mode_to_quality_callback_acknowledges_before_keyboard_edit(monkey
     async def edit_after_ack(*args, **kwargs):
         assert callback.answer.await_count == 1
 
-    callback.message.edit_reply_markup = AsyncMock(side_effect=edit_after_ack)
+    callback.message.edit_text = AsyncMock(side_effect=edit_after_ack)
 
     await handle_choice_callback(callback)
 
@@ -846,6 +854,7 @@ def telegram_failure(error_type, operation):
     methods = {
         "ack": AnswerCallbackQuery(callback_query_id="test-callback"),
         "edit": EditMessageReplyMarkup(chat_id=456, message_id=789),
+        "edit_text": EditMessageText(chat_id=456, message_id=789, text="Choose the quality:"),
         "notify": SendMessage(chat_id=456, text="test response"),
     }
     return error_type(method=methods[operation], message="sensitive diagnostic details")
@@ -977,7 +986,7 @@ async def test_quality_transition_api_failure_keeps_recoverable_state(
     if failure_stage in {"ack", "both"}:
         callback.answer.side_effect = telegram_failure(error_type, "ack")
     if failure_stage in {"edit", "both"}:
-        callback.message.edit_reply_markup.side_effect = telegram_failure(error_type, "edit")
+        callback.message.edit_text.side_effect = telegram_failure(error_type, "edit_text")
     download = AsyncMock()
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
 
@@ -991,14 +1000,14 @@ async def test_quality_transition_api_failure_keeps_recoverable_state(
     assert result.interaction.active_step is PendingInteractionStep.QUALITY
     assert result.interaction.selected_mode_index == 0
     download.assert_not_awaited()
-    callback.message.edit_reply_markup.assert_awaited_once()
+    callback.message.edit_text.assert_awaited_once()
     assert "sensitive diagnostic details" not in caplog.text
 
     # The old mode button can retry, while an already-applied edit is valid too.
     if failure_stage in {"edit", "both"}:
         retry = callback_query(payload)
         await handle_choice_callback(retry)
-        retry.message.edit_reply_markup.assert_awaited_once()
+        retry.message.edit_text.assert_awaited_once()
         download.assert_not_awaited()
     quality = callback_query(build_quality_callback_data(interaction.interaction_id, 1))
     await handle_choice_callback(quality)
@@ -1053,7 +1062,13 @@ async def test_callback_cancellation_and_programming_errors_propagate(monkeypatc
     plan = choose_mode_plan() if stage.startswith("mode") else terminal_video_mode_plan()
     interaction = await create_pending_interaction(monkeypatch, plan)
     callback = callback_query(build_mode_callback_data(interaction.interaction_id, 0))
-    target = callback.answer if stage.endswith("ack") else callback.message.edit_reply_markup
+    target = (
+        callback.answer
+        if stage.endswith("ack")
+        else callback.message.edit_text
+        if stage == "mode_edit"
+        else callback.message.edit_reply_markup
+    )
     target.side_effect = failure()
     download = AsyncMock()
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)

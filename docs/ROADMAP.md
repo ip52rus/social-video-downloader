@@ -417,11 +417,15 @@ Include:
 
 Goal: the bot should feel like one coherent service rather than several provider integrations.
 E1a foundation was merged in PR #75 (post-merge CI #40078428913 SUCCESS).
-E1b is implemented and offline-verified (2487 passed / 1 skipped) in a separate
-feature branch for independent review: EN/RU/ES Telegram presentation
-with English fallback and validated request-pinned callbacks. Existing flow, media
-policies and API budgets remain; no editable cards, profile mutation or manual language
-selection. E2–E5 and LIVE/deployment require separate authorization.
+E1b merged in PR #76 at 08d726d after offline verification (2487 passed / 1 skipped);
+post-merge CI #40085827763 SUCCESS. It provides EN/RU/ES Telegram presentation,
+English fallback and validated request-pinned callbacks. E2 is separately authorized:
+synchronize the YouTube format-to-quality prompt and keyboard in one existing-message
+edit, without extra messages/actions or changes to choices, media or API budgets.
+E2 is implemented and offline-verified (540 focused; 2493 passed / 1 skipped full).
+Independent review, merge, deployment and LIVE verification remain separate E2
+gates. E3 pre-binding/editable
+status cards, E4 terminal cards and E5 acceptance are not included.
 See [internationalization contract](INTERNATIONALIZATION.md), [review matrix](TRANSLATIONS.md)
 and [E1b verification](TESTING.md#phase-8-e1b-telegram-interface-localization).
 Neither localization nor Phase 9B's narrow smoke closes Phase 9 reliability.

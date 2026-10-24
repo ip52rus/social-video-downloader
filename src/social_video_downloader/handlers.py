@@ -452,11 +452,12 @@ async def _handle_mode_callback(
             report_failure("youtube", "notification", error)
         if callback.message is not None:
             try:
-                await callback.message.edit_reply_markup(
+                await callback.message.edit_text(
+                    tr("Choose the quality:"),
                     reply_markup=_quality_keyboard(
                         interaction.interaction_id,
                         transition.interaction.plan.mode_choices[mode_index].quality_choices,
-                    )
+                    ),
                 )
             except TelegramAPIError as error:
                 # Keep the state: the edit may have reached Telegram despite a lost response.
