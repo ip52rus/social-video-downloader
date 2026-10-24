@@ -194,14 +194,20 @@ async def test_worker_failure_without_cancel_preserves_existing_error_behavior(p
     pipeline.block = stage
     pipeline.fail = True
     pipeline.release.set()
-    await handlers._download_and_deliver_media(pipeline.message, URL, options(stage))
+    result = await handlers._download_and_deliver_media(pipeline.message, URL, options(stage))
 
     assert pipeline.finished.is_set()
     assert not pipeline.workspace.exists()
     assert pipeline.calls.count(stage) == 1
-    # Video probing remains best effort; the other stages retain the error response.
+    # Video probing remains best effort; other stages return a typed failure for the card.
     assert pipeline.message.answer_video.await_count == (stage == "probe")
-    assert pipeline.message.answer.await_count == (stage != "probe")
+    pipeline.message.answer.assert_not_awaited()
+    expected = (
+        handlers.YouTubeDeliveryState.DELIVERED
+        if stage == "probe"
+        else handlers.YouTubeDeliveryState.FAILED
+    )
+    assert result.state is expected
     pipeline.message.answer_audio.assert_not_awaited()
 
 

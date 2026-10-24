@@ -112,10 +112,16 @@ async def test_early_callback_before_binding_and_during_applied_edit(
     )
     original = session.make_request
     card_id = None
+    callbacks = []
+    acknowledged = asyncio.Event()
 
     async def publication(bot, method, timeout=None):
         nonlocal card_id
         result = await original(bot, method, timeout)
+        if isinstance(method, AnswerCallbackQuery) and method.text == translated(
+            "Starting download…", locale
+        ):
+            acknowledged.set()
         if isinstance(method, SendMessage):
             assert method.reply_markup is None
             assert method.text == translated(RECEIPT, locale)
@@ -128,12 +134,17 @@ async def test_early_callback_before_binding_and_during_applied_edit(
             assert method.message_id == card_id
             assert lookup(store, card_id).status is Status.FOUND
             # Telegram exposes the buttons while the publisher still awaits its response.
-            await dp.feed_update(bot, callback_update(result, payload, "es"))
-            assert len(downloads) == 1 and downloads[0][0] == locale
+            callbacks.append(
+                asyncio.create_task(dp.feed_update(bot, callback_update(result, payload, "es")))
+            )
+            await asyncio.wait_for(acknowledged.wait(), 3)
+            assert lookup(store, card_id).status is Status.UNKNOWN  # Consumed before any new await.
+            assert not downloads  # Presentation waits until publication settles.
         return result
 
     monkeypatch.setattr(session, "make_request", publication)
     await dp.feed_update(bot, message_update(YT, locale))
+    await asyncio.gather(*callbacks)
     assert lookup(store, card_id).status is Status.UNKNOWN
     await dp.feed_update(bot, callback_update(session.messages[-1], payload, "es"))
     assert len(downloads) == 1
@@ -141,7 +152,10 @@ async def test_early_callback_before_binding_and_during_applied_edit(
     receipts = [
         c for c in session.calls if isinstance(c, EditMessageText) and c.reply_markup is None
     ]
-    assert len(receipts) == 1 and receipts[0].text == translated(ACCEPTED, locale)
+    assert [r.text for r in receipts] == [
+        translated(ACCEPTED, locale),
+        translated("✅ File sent.", locale),
+    ]
 
 
 @pytest.mark.asyncio
@@ -206,7 +220,7 @@ async def test_publication_edit_failure_preserves_binding_without_retry(
             dp.feed_update(bot, callback_update(card, payload, "es")),
         )
         assert len(downloads) == 1 and downloads[0][0] == locale
-        assert session.messages[-1].text == translated(ACCEPTED, locale)
+        assert session.messages[-1].text == translated("✅ File sent.", locale)
         assert session.messages[-1].reply_markup is None
     else:
         assert card.reply_markup is None  # Honest receipt retains recovery guidance.
@@ -343,7 +357,7 @@ async def test_two_concurrent_requests_bind_to_their_own_cards(app, monkeypatch,
     assert sorted(locale for locale, _ in downloads) == ["es", "ru"]
     assert len(downloads) == 2
     assert len([c for c in session.calls if isinstance(c, SendMessage)]) == 2
-    assert len([c for c in session.calls if isinstance(c, EditMessageText)]) == 4
+    assert len([c for c in session.calls if isinstance(c, EditMessageText)]) == 6
     assert len([c for c in session.calls if isinstance(c, AnswerCallbackQuery)]) == 3
 
 
@@ -362,7 +376,7 @@ async def test_terminal_receipt_lost_response_never_repeats_download(
 
     async def failed_receipt(bot, method, timeout=None):
         nonlocal attempts
-        if isinstance(method, EditMessageText):
+        if isinstance(method, EditMessageText) and method.text == translated(ACCEPTED, locale):
             attempts += 1
             assert method.text == translated(ACCEPTED, locale)
             assert method.reply_markup is None

@@ -270,8 +270,8 @@ async def test_start_explains_current_download_capabilities(message):
 
     reply = message.answer.await_args.args[0]
     assert "YouTube" in reply
-    assert "Instagram" in reply
-    assert "TikTok" in reply
+    assert "Instagram" not in reply
+    assert "TikTok" not in reply
     assert "скачать" in reply.lower()
 
 
@@ -360,7 +360,11 @@ async def test_youtube_choose_mode_creates_pending_interaction_and_mode_keyboard
 async def test_choice_callback_is_bound_to_keyboard_message_id(message, monkeypatch):
     store = pending_store()
     service = FakeDownloadService(plan=choose_mode_plan())
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "download_service", service)
     monkeypatch.setattr(handlers, "pending_interaction_store", store)
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
@@ -459,7 +463,12 @@ async def test_download_failure_returns_safe_message_and_cleans_workspace(messag
     await handle_text(message)
 
     assert message.answer_video.await_count == 0
-    replies = [call.args[0] for call in message.answer.await_args_list]
+    replies = [
+        call.args[0]
+        for call in (
+            message.answer.await_args_list + message.answer.return_value.edit_text.await_args_list
+        )
+    ]
     assert any("Не удалось скачать видео" in reply for reply in replies)
     assert all("private provider detail" not in reply for reply in replies)
     assert not service.calls[0][1].exists()
@@ -487,7 +496,11 @@ async def test_text_handler_rejects_unsupported_platform(message):
 @pytest.mark.asyncio
 async def test_audio_mode_callback_downloads_exact_stored_options(monkeypatch):
     interaction = await create_pending_interaction(monkeypatch, choose_mode_plan())
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     service = MagicMock()
     service.create_choice_plan = MagicMock(side_effect=AssertionError)
     monkeypatch.setattr(handlers, "download_service", service)
@@ -499,9 +512,13 @@ async def test_audio_mode_callback_downloads_exact_stored_options(monkeypatch):
     download.assert_awaited_once()
     assert download.await_args.args[2] == DownloadOptions(mode=DownloadMode.AUDIO_ONLY)
     service.create_choice_plan.assert_not_called()
-    callback.message.edit_text.assert_awaited_once_with(
+    assert callback.message.edit_text.await_count == 2
+    assert [c.args[0] for c in callback.message.edit_text.await_args_list] == [
         handlers.tr("Download request accepted. Results appear in separate messages."),
-        reply_markup=None,
+        handlers.tr("✅ File sent."),
+    ]
+    assert all(
+        c.kwargs == {"reply_markup": None} for c in callback.message.edit_text.await_args_list
     )
 
 
@@ -584,7 +601,11 @@ async def test_terminal_callback_acknowledges_before_download(monkeypatch):
 @pytest.mark.asyncio
 async def test_terminal_video_mode_callback_downloads_exact_stored_options(monkeypatch):
     interaction = await create_pending_interaction(monkeypatch, terminal_video_mode_plan())
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
     callback = callback_query(build_mode_callback_data(interaction.interaction_id, 0))
 
@@ -600,7 +621,11 @@ async def test_terminal_video_mode_callback_downloads_exact_stored_options(monke
 @pytest.mark.asyncio
 async def test_video_mode_callback_transitions_to_quality_without_download(monkeypatch):
     interaction = await create_pending_interaction(monkeypatch, choose_mode_plan())
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
     callback = callback_query(build_mode_callback_data(interaction.interaction_id, 0))
 
@@ -640,7 +665,11 @@ async def test_mode_to_quality_callback_acknowledges_before_keyboard_edit(monkey
 @pytest.mark.asyncio
 async def test_invalid_mode_index_is_safe_failure(monkeypatch):
     interaction = await create_pending_interaction(monkeypatch, choose_mode_plan())
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
     callback = callback_query(build_mode_callback_data(interaction.interaction_id, 99))
 
@@ -663,7 +692,11 @@ async def test_quality_callback_downloads_exact_stored_quality_options(monkeypat
         active_step=PendingInteractionStep.QUALITY,
         locale="ru",
     )
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
     callback = callback_query(build_quality_callback_data(interaction.interaction_id, 1))
 
@@ -704,7 +737,11 @@ async def test_quality_callback_respects_selected_mode_context(monkeypatch):
         mode_index=0,
         message_id=789,
     )
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
     callback = callback_query(build_quality_callback_data(interaction.interaction_id, 1))
 
@@ -720,7 +757,11 @@ async def test_quality_callback_respects_selected_mode_context(monkeypatch):
 @pytest.mark.asyncio
 async def test_invalid_quality_index_is_safe_failure(monkeypatch):
     interaction = await create_pending_interaction(monkeypatch, choose_quality_plan())
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
     callback = callback_query(build_quality_callback_data(interaction.interaction_id, 99))
 
@@ -740,7 +781,11 @@ async def test_invalid_quality_index_is_safe_failure(monkeypatch):
     ],
 )
 async def test_malformed_or_unsupported_callback_is_safe_failure(monkeypatch, payload):
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
 
     await handle_choice_callback(callback_query(payload))
@@ -751,7 +796,11 @@ async def test_malformed_or_unsupported_callback_is_safe_failure(monkeypatch, pa
 @pytest.mark.asyncio
 async def test_unknown_callback_is_safe_failure(monkeypatch):
     monkeypatch.setattr(handlers, "pending_interaction_store", pending_store())
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
 
     await handle_choice_callback(callback_query(build_mode_callback_data("missing", 0)))
@@ -773,7 +822,11 @@ async def test_expired_callback_is_safe_failure(monkeypatch):
         plan=terminal_video_mode_plan(),
     )
     current_time["value"] = now + timedelta(minutes=15)
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
 
     await handle_choice_callback(
@@ -786,7 +839,11 @@ async def test_expired_callback_is_safe_failure(monkeypatch):
 @pytest.mark.asyncio
 async def test_wrong_owner_callback_is_safe_failure(monkeypatch):
     interaction = await create_pending_interaction(monkeypatch, terminal_video_mode_plan())
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
 
     await handle_choice_callback(
@@ -799,7 +856,11 @@ async def test_wrong_owner_callback_is_safe_failure(monkeypatch):
 @pytest.mark.asyncio
 async def test_wrong_chat_callback_is_safe_failure(monkeypatch):
     interaction = await create_pending_interaction(monkeypatch, terminal_video_mode_plan())
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
 
     await handle_choice_callback(
@@ -812,7 +873,11 @@ async def test_wrong_chat_callback_is_safe_failure(monkeypatch):
 @pytest.mark.asyncio
 async def test_wrong_message_callback_is_safe_failure(monkeypatch):
     interaction = await create_pending_interaction(monkeypatch, terminal_video_mode_plan())
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
 
     await handle_choice_callback(
@@ -831,7 +896,11 @@ async def test_consumed_callback_is_safe_failure(monkeypatch):
         chat_id=456,
         message_id=789,
     )
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
 
     await handle_choice_callback(
@@ -844,7 +913,11 @@ async def test_consumed_callback_is_safe_failure(monkeypatch):
 @pytest.mark.asyncio
 async def test_double_click_starts_only_one_download(monkeypatch):
     interaction = await create_pending_interaction(monkeypatch, terminal_video_mode_plan())
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
     first = callback_query(build_mode_callback_data(interaction.interaction_id, 0))
     second = callback_query(build_mode_callback_data(interaction.interaction_id, 0))
@@ -886,7 +959,11 @@ async def test_terminal_api_failures_preserve_exact_download_once(
         callback.answer.side_effect = telegram_failure(error_type, "ack")
     if failure_stage in {"edit", "both"}:
         callback.message.edit_text.side_effect = telegram_failure(error_type, "edit_text")
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
     service = MagicMock()
     monkeypatch.setattr(handlers, "download_service", service)
@@ -898,9 +975,13 @@ async def test_terminal_api_failures_preserve_exact_download_once(
     download.assert_awaited_once_with(callback.message, interaction.url, options)
     assert download.await_args.args[2] is options
     callback.answer.assert_awaited_once_with("Начинаю скачивание…")
-    callback.message.edit_text.assert_awaited_once_with(
+    assert callback.message.edit_text.await_count == 2
+    assert [c.args[0] for c in callback.message.edit_text.await_args_list] == [
         handlers.tr("Download request accepted. Results appear in separate messages."),
-        reply_markup=None,
+        handlers.tr("✅ File sent."),
+    ]
+    assert all(
+        c.kwargs == {"reply_markup": None} for c in callback.message.edit_text.await_args_list
     )
     second.answer.assert_awaited_once_with(handlers.tr(handlers._STALE_CALLBACK_MESSAGE))
     service.create_choice_plan.assert_not_called()
@@ -924,7 +1005,11 @@ async def test_concurrent_terminal_callbacks_with_ack_failure_download_once(monk
         raise telegram_failure(TelegramNetworkError, "ack")
 
     first.answer.side_effect = fail_after_yield
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
 
     await asyncio.gather(handle_choice_callback(first), handle_choice_callback(second))
@@ -971,7 +1056,11 @@ async def test_failed_terminal_consume_never_downloads(monkeypatch):
         return original_consume(*args, **kwargs)
 
     monkeypatch.setattr(store, "consume_terminal", competing_consume)
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
     callback = callback_query(build_mode_callback_data(interaction.interaction_id, 0))
 
@@ -995,7 +1084,11 @@ async def test_quality_transition_api_failure_keeps_recoverable_state(
         callback.answer.side_effect = telegram_failure(error_type, "ack")
     if failure_stage in {"edit", "both"}:
         callback.message.edit_text.side_effect = telegram_failure(error_type, "edit_text")
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
 
     await handle_choice_callback(callback)
@@ -1038,7 +1131,12 @@ async def test_metadata_error_notification_failure_is_safe(
         error=original if phase == "download" else None,
     )
     monkeypatch.setattr(handlers, "download_service", service)
-    message.answer.side_effect = telegram_failure(error_type, "notify")
+    if phase == "planning":
+        message.answer.side_effect = telegram_failure(error_type, "notify")
+    else:
+        message.answer.return_value.edit_text.side_effect = telegram_failure(
+            error_type, "edit_text"
+        )
     message.text = "https://www.youtube.com/watch?v=abc"
 
     if phase == "planning":
@@ -1046,10 +1144,18 @@ async def test_metadata_error_notification_failure_is_safe(
         assert len(service.plan_calls) == 1
         assert not service.calls
     else:
-        await handlers._download_and_deliver_media(message, message.text, DownloadOptions())
+        await handlers._run_youtube_request(
+            message, message.answer.return_value, message.text, DownloadOptions()
+        )
         assert len(service.calls) == 1
 
-    message.answer.assert_awaited_once_with(handlers._download_error_message(original))
+    if phase == "planning":
+        message.answer.assert_awaited_once_with(handlers._download_error_message(original))
+    else:
+        message.answer.assert_not_awaited()
+        message.answer.return_value.edit_text.assert_awaited_once_with(
+            handlers._download_error_message(original), reply_markup=None
+        )
     assert '"category": "metadata_unavailable"' in caplog.text
     assert (
         '"category": "telegram_network"'
@@ -1072,7 +1178,11 @@ async def test_callback_cancellation_and_programming_errors_propagate(monkeypatc
     callback = callback_query(build_mode_callback_data(interaction.interaction_id, 0))
     target = callback.answer if stage.endswith("ack") else callback.message.edit_text
     target.side_effect = failure()
-    download = AsyncMock()
+    download = AsyncMock(
+        return_value=handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED, handlers.tr("✅ File sent.")
+        )
+    )
     monkeypatch.setattr(handlers, "_download_and_deliver_media", download)
 
     with pytest.raises(failure):
@@ -1139,7 +1249,7 @@ async def test_audio_preparation_failure_is_safe_and_cleans_workspace(
     monkeypatch.setattr(handlers, "download_service", service)
     audio_preparation.side_effect = MediaProcessingError("private preparation details")
 
-    await handlers._download_and_deliver_media(
+    result = await handlers._download_and_deliver_media(
         message,
         "https://www.youtube.com/watch?v=abc",
         DownloadOptions(mode=DownloadMode.AUDIO_ONLY),
@@ -1147,5 +1257,7 @@ async def test_audio_preparation_failure_is_safe_and_cleans_workspace(
 
     message.answer_audio.assert_not_awaited()
     message.answer_video.assert_not_awaited()
-    assert "private" not in message.answer.await_args.args[0]
+    assert result.state is handlers.YouTubeDeliveryState.FAILED
+    assert "private" not in result.text
+    message.answer.assert_not_awaited()
     assert not service.calls[0][1].exists()

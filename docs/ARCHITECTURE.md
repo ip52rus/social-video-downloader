@@ -63,16 +63,22 @@ the bound record without retry because the keyboard may already be visible. Bind
 does not renew the existing TTL and cannot retarget a message. See the
 [publication contract](INTERNATIONALIZATION.md#e3-publication-and-status-card-decision).
 
-After successful atomic terminal consumption, callback acknowledgement and the
-keyboard-removing request-receipt edit are best-effort Telegram operations: expected
-`TelegramAPIError` failures are logged by operation and exception class without preventing the one selected download.
-The stored URL and `DownloadOptions` remain authoritative; neither policy nor media
-upload is retried. Cancellation and unrelated programming errors still propagate.
-For nonterminal mode-to-quality transitions, acknowledgement failure does not prevent
-the keyboard edit. An edit failure retains the unconsumed quality state because Telegram
-may have applied the edit before losing the response; an old mode button can retry the
-same transition. Domain download-error notifications are also best-effort, preserving
-the original domain error category when the notification fails.
+After atomic terminal consumption, acknowledgement and card edits are best-effort.
+The selected URL and DownloadOptions remain authoritative; UI failures cannot revive
+consumed choices or retry media. E4 returns a typed result from the existing YouTube
+Telegram pipeline and edits the same card after media/workspace completion. A media
+field in the response confirms delivery; missing/lost responses stay uncertain. A
+positive acknowledgement stays authoritative if later cleanup fails.
+
+Per-interaction async locks sequence UI edits only. Mode callbacks revalidate under
+that lock after acknowledgement, preventing locally queued quality prompts from
+repainting consumed requests. Immutable record replacements share that lock; other
+requests have independent locks. The store's threading lock, worker drain, admission,
+TTL and one-shot consume are unchanged. No network/FFmpeg work runs under the store
+lock, and no media work runs under the UI lock. A failed edit has no automatic retry
+or fallback send. Cancellation stays authoritative even if its final notice fails.
+Metadata errors before a card exists retain standalone best-effort notification.
+See [terminal contract](INTERNATIONALIZATION.md#e4-terminal-presentation-decision).
 
 The synchronous download and media-preparation operations run in worker threads so yt-dlp and FFmpeg do not block the aiogram event loop. Before delivery, the Telegram layer probes media with ffprobe and prepares the downloaded media through this pipeline:
 

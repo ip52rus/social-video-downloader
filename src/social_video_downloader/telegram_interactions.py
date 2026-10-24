@@ -1,6 +1,7 @@
 """Internal Telegram pending-interaction state and callback payload helpers."""
 
 import secrets
+from asyncio import Lock as PresentationLock
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
@@ -86,6 +87,9 @@ class PendingInteraction:
     created_at: datetime
     expires_at: datetime
     locale: str = field(default=DEFAULT_LOCALE, kw_only=True)
+    presentation_lock: PresentationLock = field(
+        default_factory=PresentationLock, kw_only=True, compare=False, repr=False
+    )
     consumed: bool = False
     active_step: PendingInteractionStep | None = None
     selected_mode_index: int | None = None
