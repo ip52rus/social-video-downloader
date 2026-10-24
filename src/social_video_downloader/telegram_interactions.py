@@ -302,7 +302,7 @@ class InMemoryPendingInteractionStore:
         chat_id: int,
         message_id: int,
     ) -> PendingInteractionResult:
-        """Record the Telegram message that carries this interaction's buttons."""
+        """Bind once to a confirmed message; never retarget a published interaction."""
         with self._lock:
             result = self._validated_result(
                 interaction_id,
@@ -310,6 +310,7 @@ class InMemoryPendingInteractionStore:
                 chat_id=chat_id,
                 message_id=None,
                 now=self._clock(),
+                binding=True,
             )
             if result.status is not PendingInteractionStatus.FOUND:
                 return result
@@ -317,6 +318,13 @@ class InMemoryPendingInteractionStore:
             interaction = result.interaction
             if interaction is None:
                 raise RuntimeError("found interaction result without interaction.")
+
+            if (
+                type(message_id) is not int
+                or message_id <= 0
+                or interaction.message_id not in (None, message_id)
+            ):
+                return PendingInteractionResult(status=PendingInteractionStatus.WRONG_MESSAGE)
 
             updated = replace(interaction, message_id=message_id)
             self._interactions[interaction_id] = updated
@@ -380,6 +388,7 @@ class InMemoryPendingInteractionStore:
         chat_id: int,
         message_id: int | None,
         now: datetime,
+        binding: bool = False,
     ) -> PendingInteractionResult:
         interaction = self._interactions.get(interaction_id)
         if interaction is None:
@@ -395,10 +404,12 @@ class InMemoryPendingInteractionStore:
         if chat_id != interaction.chat_id:
             return PendingInteractionResult(status=PendingInteractionStatus.WRONG_CHAT)
 
-        if (
-            message_id is not None
-            and interaction.message_id is not None
-            and message_id != interaction.message_id
+        # Only set_message_id may validate an unbound record. Public callback
+        # reads/transitions/consume must prove the exact bound Telegram message.
+        if not binding and (
+            interaction.message_id is None
+            or message_id is None
+            or message_id != interaction.message_id
         ):
             return PendingInteractionResult(status=PendingInteractionStatus.WRONG_MESSAGE)
 

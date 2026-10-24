@@ -205,7 +205,7 @@ async def handle_text(message: Message, instagram_reels=None, tiktok_videos=None
         if plan.automatic_options is None:
             await message.answer(tr(_BLOCKED_CHOICE_MESSAGE))
             return
-        await message.answer(tr("YouTube link recognized. Starting download…"))
+        await message.answer(tr("Download request accepted. Results appear in separate messages."))
         await _download_and_deliver_media(message, normalized_url, plan.automatic_options)
         return
 
@@ -371,49 +371,60 @@ async def _download_and_deliver_media(
 
 
 async def _send_mode_choices(message: Message, url: str, plan: ChoicePlan) -> None:
-    owner_user_id = message.from_user.id
-    chat_id = message.chat.id
-    interaction = pending_interaction_store.create(
-        owner_user_id=owner_user_id,
-        chat_id=chat_id,
-        url=url,
-        plan=plan,
-        active_step=PendingInteractionStep.MODE,
-        locale=get_i18n().current_locale,
-    )
-    sent_message = await message.answer(
-        tr("Choose a format:"),
-        reply_markup=_mode_keyboard(interaction.interaction_id, plan.mode_choices),
-    )
-    pending_interaction_store.set_message_id(
-        interaction.interaction_id,
-        owner_user_id=owner_user_id,
-        chat_id=chat_id,
-        message_id=sent_message.message_id,
-    )
+    await _publish_choices(message, url, plan, PendingInteractionStep.MODE)
 
 
 async def _send_quality_choices(message: Message, url: str, plan: ChoicePlan) -> None:
-    owner_user_id = message.from_user.id
-    chat_id = message.chat.id
+    await _publish_choices(message, url, plan, PendingInteractionStep.QUALITY)
+
+
+async def _publish_choices(
+    message: Message, url: str, plan: ChoicePlan, step: PendingInteractionStep
+) -> None:
     interaction = pending_interaction_store.create(
-        owner_user_id=owner_user_id,
-        chat_id=chat_id,
+        owner_user_id=message.from_user.id,
+        chat_id=message.chat.id,
         url=url,
         plan=plan,
-        active_step=PendingInteractionStep.QUALITY,
+        active_step=step,
         locale=get_i18n().current_locale,
     )
-    sent_message = await message.answer(
-        tr("Choose the quality:"),
-        reply_markup=_quality_keyboard(interaction.interaction_id, plan.quality_choices),
-    )
-    pending_interaction_store.set_message_id(
+    # Never put a token in Telegram before its confirmed message is bound. If
+    # sendMessage applied but its response is lost/cancelled, no buttons exist.
+    try:
+        card = await message.answer(
+            tr("YouTube link recognized. If no buttons appear, send the link again.")
+        )
+    except TelegramAPIError as error:
+        pending_interaction_store.remove(interaction.interaction_id)
+        report_failure("youtube", "notification", error)
+        return
+    except BaseException:
+        pending_interaction_store.remove(interaction.interaction_id)
+        raise
+
+    binding = pending_interaction_store.set_message_id(
         interaction.interaction_id,
-        owner_user_id=owner_user_id,
-        chat_id=chat_id,
-        message_id=sent_message.message_id,
+        owner_user_id=message.from_user.id,
+        chat_id=message.chat.id,
+        message_id=card.message_id,
     )
+    if binding.status is not PendingInteractionStatus.FOUND:
+        # Expiry/removal while sendMessage was pending must not publish a keyboard.
+        pending_interaction_store.remove(interaction.interaction_id)
+        return
+    if step is PendingInteractionStep.MODE:
+        text = tr("Choose a format:")
+        keyboard = _mode_keyboard(interaction.interaction_id, plan.mode_choices)
+    else:
+        text = tr("Choose the quality:")
+        keyboard = _quality_keyboard(interaction.interaction_id, plan.quality_choices)
+    try:
+        await card.edit_text(text, reply_markup=keyboard)
+    except TelegramAPIError as error:
+        # Keep the binding: the edit may have succeeded despite a lost response.
+        # Never resend automatically; the initial receipt explains recovery.
+        report_failure("youtube", "notification", error)
 
 
 async def _handle_mode_callback(
@@ -505,7 +516,10 @@ async def _consume_and_download(
             report_failure("youtube", "notification", error)
         if callback.message is not None:
             try:
-                await callback.message.edit_reply_markup(reply_markup=None)
+                await callback.message.edit_text(
+                    tr("Download request accepted. Results appear in separate messages."),
+                    reply_markup=None,
+                )
             except TelegramAPIError as error:
                 report_failure("youtube", "notification", error)
             await _download_and_deliver_media(callback.message, interaction.url, options)

@@ -174,11 +174,14 @@ def test_lookup_accepts_correct_owner_and_chat() -> None:
     interaction = store.create(
         owner_user_id=123,
         chat_id=456,
+        message_id=789,
         url="https://www.youtube.com/watch?v=example",
         plan=_choice_plan(),
     )
 
-    result = store.lookup(interaction.interaction_id, owner_user_id=123, chat_id=456)
+    result = store.lookup(
+        interaction.interaction_id, owner_user_id=123, chat_id=456, message_id=789
+    )
 
     assert result.status is PendingInteractionStatus.FOUND
     assert result.interaction == interaction
@@ -189,6 +192,7 @@ def test_lookup_rejects_wrong_owner() -> None:
     interaction = store.create(
         owner_user_id=123,
         chat_id=456,
+        message_id=789,
         url="https://www.youtube.com/watch?v=example",
         plan=_choice_plan(),
     )
@@ -203,6 +207,7 @@ def test_lookup_rejects_wrong_chat() -> None:
     interaction = store.create(
         owner_user_id=123,
         chat_id=456,
+        message_id=789,
         url="https://www.youtube.com/watch?v=example",
         plan=_choice_plan(),
     )
@@ -212,7 +217,7 @@ def test_lookup_rejects_wrong_chat() -> None:
     assert result.status is PendingInteractionStatus.WRONG_CHAT
 
 
-def test_lookup_supports_optional_message_validation() -> None:
+def test_lookup_rejects_wrong_message() -> None:
     store = _store()
     interaction = store.create(
         owner_user_id=123,
@@ -238,19 +243,26 @@ def test_expiry_at_15_minute_boundary_and_lazy_removal() -> None:
     interaction = store.create(
         owner_user_id=123,
         chat_id=456,
+        message_id=789,
         url="https://www.youtube.com/watch?v=example",
         plan=_choice_plan(),
     )
 
     clock.advance(timedelta(minutes=15) - timedelta(microseconds=1))
-    before_expiry = store.lookup(interaction.interaction_id, owner_user_id=123, chat_id=456)
+    before_expiry = store.lookup(
+        interaction.interaction_id, owner_user_id=123, chat_id=456, message_id=789
+    )
     assert before_expiry.status is PendingInteractionStatus.FOUND
 
     clock.advance(timedelta(microseconds=1))
-    expired = store.lookup(interaction.interaction_id, owner_user_id=123, chat_id=456)
+    expired = store.lookup(
+        interaction.interaction_id, owner_user_id=123, chat_id=456, message_id=789
+    )
     assert expired.status is PendingInteractionStatus.EXPIRED
 
-    removed = store.lookup(interaction.interaction_id, owner_user_id=123, chat_id=456)
+    removed = store.lookup(
+        interaction.interaction_id, owner_user_id=123, chat_id=456, message_id=789
+    )
     assert removed.status is PendingInteractionStatus.UNKNOWN
 
 
@@ -260,6 +272,7 @@ def test_expired_interaction_cannot_transition_to_quality_without_prior_lookup()
     interaction = store.create(
         owner_user_id=123,
         chat_id=456,
+        message_id=789,
         url="https://www.youtube.com/watch?v=example",
         plan=_choice_plan(),
         active_step=PendingInteractionStep.MODE,
@@ -270,9 +283,12 @@ def test_expired_interaction_cannot_transition_to_quality_without_prior_lookup()
         interaction.interaction_id,
         owner_user_id=123,
         chat_id=456,
+        message_id=789,
         mode_index=0,
     )
-    removed = store.lookup(interaction.interaction_id, owner_user_id=123, chat_id=456)
+    removed = store.lookup(
+        interaction.interaction_id, owner_user_id=123, chat_id=456, message_id=789
+    )
 
     assert expired.status is PendingInteractionStatus.EXPIRED
     assert removed.status is PendingInteractionStatus.UNKNOWN
@@ -284,6 +300,7 @@ def test_expired_interaction_cannot_be_consumed_without_prior_lookup() -> None:
     interaction = store.create(
         owner_user_id=123,
         chat_id=456,
+        message_id=789,
         url="https://www.youtube.com/watch?v=example",
         plan=_choice_plan(),
     )
@@ -294,7 +311,9 @@ def test_expired_interaction_cannot_be_consumed_without_prior_lookup() -> None:
         owner_user_id=123,
         chat_id=456,
     )
-    removed = store.lookup(interaction.interaction_id, owner_user_id=123, chat_id=456)
+    removed = store.lookup(
+        interaction.interaction_id, owner_user_id=123, chat_id=456, message_id=789
+    )
 
     assert expired.status is PendingInteractionStatus.EXPIRED
     assert removed.status is PendingInteractionStatus.UNKNOWN
@@ -305,6 +324,7 @@ def test_mode_to_quality_transition_persists_selected_mode_index() -> None:
     interaction = store.create(
         owner_user_id=123,
         chat_id=456,
+        message_id=789,
         url="https://www.youtube.com/watch?v=example",
         plan=_choice_plan(),
         active_step=PendingInteractionStep.MODE,
@@ -314,6 +334,7 @@ def test_mode_to_quality_transition_persists_selected_mode_index() -> None:
         interaction.interaction_id,
         owner_user_id=123,
         chat_id=456,
+        message_id=789,
         mode_index=0,
     )
 
@@ -329,13 +350,20 @@ def test_terminal_consume_succeeds_once_then_reports_consumed() -> None:
     interaction = store.create(
         owner_user_id=123,
         chat_id=456,
+        message_id=789,
         url="https://www.youtube.com/watch?v=example",
         plan=_choice_plan(),
     )
 
-    first = store.consume_terminal(interaction.interaction_id, owner_user_id=123, chat_id=456)
-    second = store.consume_terminal(interaction.interaction_id, owner_user_id=123, chat_id=456)
-    lookup = store.lookup(interaction.interaction_id, owner_user_id=123, chat_id=456)
+    first = store.consume_terminal(
+        interaction.interaction_id, owner_user_id=123, chat_id=456, message_id=789
+    )
+    second = store.consume_terminal(
+        interaction.interaction_id, owner_user_id=123, chat_id=456, message_id=789
+    )
+    lookup = store.lookup(
+        interaction.interaction_id, owner_user_id=123, chat_id=456, message_id=789
+    )
 
     assert first.status is PendingInteractionStatus.FOUND
     assert first.interaction is not None
@@ -345,7 +373,7 @@ def test_terminal_consume_succeeds_once_then_reports_consumed() -> None:
 
 
 def test_unknown_interaction_returns_unknown() -> None:
-    result = _store().lookup("missing", owner_user_id=123, chat_id=456)
+    result = _store().lookup("missing", owner_user_id=123, chat_id=456, message_id=789)
 
     assert result.status is PendingInteractionStatus.UNKNOWN
 
@@ -355,6 +383,7 @@ def test_two_thread_terminal_consume_allows_exactly_one_success() -> None:
     interaction = store.create(
         owner_user_id=123,
         chat_id=456,
+        message_id=789,
         url="https://www.youtube.com/watch?v=example",
         plan=_choice_plan(),
     )
@@ -366,6 +395,7 @@ def test_two_thread_terminal_consume_allows_exactly_one_success() -> None:
             interaction.interaction_id,
             owner_user_id=123,
             chat_id=456,
+            message_id=789,
         ).status
 
     with ThreadPoolExecutor(max_workers=2) as executor:

@@ -355,3 +355,9 @@ msgstr "🎬 Vídeo"
 #: handlers.py:77
 msgid "🎵 Audio"
 msgstr "🎵 Audio"
+
+msgid "YouTube link recognized. If no buttons appear, send the link again."
+msgstr "Enlace de YouTube reconocido. Si no aparecen botones, envía el enlace de nuevo."
+
+msgid "Download request accepted. Results appear in separate messages."
+msgstr "Solicitud de descarga aceptada. El resultado se envía en un mensaje aparte."

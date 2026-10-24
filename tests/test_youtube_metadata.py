@@ -445,13 +445,16 @@ async def test_real_handler_uses_async_service_and_produces_only_choices(owner, 
     monkeypatch.setattr(handlers, "download_service", configured)
     msg = MagicMock()
     msg.text = URL
-    msg.answer = AsyncMock(return_value=SimpleNamespace(message_id=789))
+    card = SimpleNamespace(message_id=789, edit_text=AsyncMock())
+    msg.answer = AsyncMock(return_value=card)
     msg.answer_video = AsyncMock()
     msg.answer_audio = AsyncMock()
     msg.chat.id, msg.from_user.id = 2, 1
     await handlers.handle_text(msg)
     msg.answer.assert_awaited_once()
-    assert msg.answer.call_args.kwargs["reply_markup"] is not None
+    assert msg.answer.call_args.kwargs.get("reply_markup") is None
+    card.edit_text.assert_awaited_once()
+    assert card.edit_text.call_args.kwargs["reply_markup"] is not None
     msg.answer_video.assert_not_awaited()
     msg.answer_audio.assert_not_awaited()
     assert len(state.processes) == 1

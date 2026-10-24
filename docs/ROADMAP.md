@@ -423,9 +423,15 @@ English fallback and validated request-pinned callbacks. E2 is separately author
 synchronize the YouTube format-to-quality prompt and keyboard in one existing-message
 edit, without extra messages/actions or changes to choices, media or API budgets.
 E2 is implemented and offline-verified (540 focused; 2493 passed / 1 skipped full).
-Independent review, merge, deployment and LIVE verification remain separate E2
-gates. E3 pre-binding/editable
-status cards, E4 terminal cards and E5 acceptance are not included.
+E2 merged in PR #77 at b7462f8; post-merge CI #40110968231 succeeded.
+Deployment and LIVE evidence remain distinct from these offline/CI results.
+E3 implements safe YouTube pre-binding and reuses choice messages as durable
+request receipts. It adds one edit to interactive publication, without new user
+actions, worker stages, media retries or terminal delivery claims. See
+[E3 verification](TESTING.md#phase-8-e3-pre-binding-and-status-cards).
+Independent review, merge, deployment and LIVE acceptance of E3 remain separate
+gates. E4 terminal outcome cards/comprehensive obsolete-message cleanup and E5
+acceptance are outside E3; no new phase starts automatically.
 See [internationalization contract](INTERNATIONALIZATION.md), [review matrix](TRANSLATIONS.md)
 and [E1b verification](TESTING.md#phase-8-e1b-telegram-interface-localization).
 Neither localization nor Phase 9B's narrow smoke closes Phase 9 reliability.
