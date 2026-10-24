@@ -416,13 +416,15 @@ Include:
 - final interaction-flow review.
 
 Goal: the bot should feel like one coherent service rather than several provider integrations.
-A separate owner decision authorized E1a only: inactive aiogram/gettext/Babel
-foundation, EN/RU/ES with English fallback, package-local compiled catalogs and
-presentation-only pending locale. No middleware activation or existing copy changes
-are included. E1b localization and E2–E5 UX/card work require separate authorization.
-See [internationalization contract](INTERNATIONALIZATION.md) and
-[offline verification](TESTING.md#phase-8-e1a-internationalization-foundation).
-Neither this foundation nor Phase 9B's narrow smoke closes Phase 9 reliability.
+E1a foundation was merged in PR #75 (post-merge CI #40078428913 SUCCESS).
+E1b is implemented and offline-verified (2487 passed / 1 skipped) in a separate
+feature branch for independent review: EN/RU/ES Telegram presentation
+with English fallback and validated request-pinned callbacks. Existing flow, media
+policies and API budgets remain; no editable cards, profile mutation or manual language
+selection. E2–E5 and LIVE/deployment require separate authorization.
+See [internationalization contract](INTERNATIONALIZATION.md), [review matrix](TRANSLATIONS.md)
+and [E1b verification](TESTING.md#phase-8-e1b-telegram-interface-localization).
+Neither localization nor Phase 9B's narrow smoke closes Phase 9 reliability.
 
 ## Phase 9 - Production Reliability
 Complete the operational and reliability work that is intentionally not part of the functional MVP gate.

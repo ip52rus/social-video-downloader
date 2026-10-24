@@ -18,6 +18,7 @@ from social_video_downloader.infrastructure import tiktok_native as n
 from social_video_downloader.infrastructure import tiktok_short_links as short
 from social_video_downloader.providers.tiktok import TikTokProvider
 from tests.integration.test_video_preparation import generate
+from tests.localization_fixtures import russian_presentation as russian_presentation
 from tests.test_telegram_carousel import response as telegram_response
 from tests.test_tiktok_integration import FixtureProvider, message
 from tests.test_tiktok_native import MEDIA, A, B, key, network, response
@@ -373,7 +374,7 @@ async def test_short_network_starts_after_slot_and_cancel_isolated_from_other_us
             blocked = message(user)
             await handler.handle(blocked, VM)
             blocked.answer_video.assert_not_awaited()
-            assert blocked.answer.call_args.args == ("Бот занят, попробуйте позже.",)
+            assert blocked.answer.call_args.args == ("Бот занят, попробуй позже.",)
         tasks[0].cancel()
         async with asyncio.timeout(3):
             while not saw_cancel.is_set():

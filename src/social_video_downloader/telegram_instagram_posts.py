@@ -40,6 +40,7 @@ from social_video_downloader.services.instagram_acquisition import (
     validate_plan,
 )
 from social_video_downloader.services.instagram_carousel import InstagramCarouselService
+from social_video_downloader.telegram_i18n import get_i18n, tr, trn
 from social_video_downloader.telegram_instagram import (
     _SEND_SECONDS,
     _WORK_SECONDS,
@@ -85,31 +86,47 @@ class InstagramPostHandler:
     async def _offer_choice(self, message, plan, position):
         validate_plan(plan, _ACQUISITION_LIMITS)
         if position > len(plan.items):
-            await message.answer("Такого элемента в публикации нет. Проверь номер в ссылке.")
+            await message.answer(
+                tr("There is no such item in this post. Check the number in the link.")
+            )
             return
         item = plan.items[position - 1]
         plans = (plan,)
         if item.kind is CarouselItemKind.VIDEO:
             plans += (InstagramCarouselService.select_video(plan, position),)
-            text = f"Ты выбрал видео №{position} из Instagram-карусели. Что скачать?"
+            text = tr(
+                (
+                    "You selected video #{position} in the Instagram carousel. What "
+                    "would you like to download?"
+                ),
+                position=position,
+            )
         else:
-            text = (
-                f"Элемент №{position} — фотография. Фото пока не скачиваются. "
-                "Можно скачать все видео из этой публикации."
+            text = tr(
+                (
+                    "Item #{position} is a photo. Photo downloads aren't supported yet."
+                    " You can download all videos from this post."
+                ),
+                position=position,
             )
         user_id = getattr(message.from_user, "id", None)
         if type(user_id) is not int:
-            await message.answer("Не удалось определить владельца выбора.")
+            await message.answer(tr("Couldn't identify the owner of this choice."))
             return
-        choice = self._choices.create(user_id, message.chat.id, plans)
+        choice = self._choices.create(
+            user_id, message.chat.id, plans, locale=get_i18n().current_locale
+        )
         if choice is None:
-            await message.answer("Бот занят, попробуйте позже.")
+            await message.answer(tr("The bot is busy. Try again later."))
             return
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text=label, callback_data=f"ig:v1:{choice.token}:{index}")]
                 for index, label in enumerate(
-                    ("Все видео из карусели", f"Только видео №{position}")[: len(plans)]
+                    (
+                        tr("All videos in the carousel"),
+                        tr("Only video #{position}", position=position),
+                    )[: len(plans)]
                 )
             ]
         )
@@ -130,58 +147,64 @@ class InstagramPostHandler:
         message = callback.message
         if parsed is None or not isinstance(message, Message):
             with suppress(TelegramAPIError, TimeoutError):
-                await callback.answer("Выбор устарел. Отправь ссылку заново.")
+                await callback.answer(tr("This choice has expired. Send the link again."))
             return
         token, index = parsed
         args = (token, index, callback.from_user.id, message.chat.id, message.message_id)
-        if self._choices.resolve(*args) is None:
+        selection = self._choices.resolve_selection(*args)
+        if selection is None:
             with suppress(TelegramAPIError, TimeoutError):
-                await callback.answer("Выбор устарел или принадлежит другому пользователю.")
+                await callback.answer(tr("This choice has expired or belongs to another user."))
             return
-        owner = self._reel_handler
-        if owner._active:
-            with suppress(TelegramAPIError, TimeoutError):
-                await callback.answer("Бот занят, попробуйте позже.")
-            return  # The choice remains pending; never consume a busy request.
-        owner._active = True  # No await between admission check and reservation.
-        with Operation("instagram", "download") as operation:
-            try:
-                guard = _Guard(Event(), seconds=_ACQUISITION_LIMITS.max_seconds)
-                try:
-                    async with asyncio.timeout(10):
-                        await callback.answer("Начинаю скачивание…")
-                except (TelegramAPIError, TimeoutError) as error:
-                    operation.fail(error)
-                    return  # Keep the choice available if acknowledgement failed.
-                plan = self._choices.resolve(*args, consume=True)
-                if plan is None:
-                    operation.fail(category="refused")
-                    return
+        with get_i18n().use_locale(selection.locale):
+            owner = self._reel_handler
+            if owner._active:
                 with suppress(TelegramAPIError, TimeoutError):
-                    async with asyncio.timeout(10):
-                        await message.edit_reply_markup(reply_markup=None)
-                await self._send_carousel(message, plan, guard, operation)
-            except DownloadCleanupError as error:
-                owner._blocked = True
-                operation.fail(error)
-                with suppress(TelegramAPIError):
-                    await message.answer("Instagram временно недоступен. Попробуй позже.")
-            except CarouselDeliveryError as error:
-                operation.fail(error)
-                with suppress(TelegramAPIError):
-                    await message.answer(
-                        "Не удалось подтвердить отправку видео. Автоматического повтора не будет."
-                    )
-            except (DownloaderError, TelegramAPIError, TimeoutError, OSError) as error:
-                operation.fail(error)
-                with suppress(TelegramAPIError):
-                    await message.answer(
-                        "Не удалось скачать или подготовить видео. "
-                        "Автоматического повтора не будет."
-                    )
-            finally:
-                if not owner._blocked:
-                    owner._active = False
+                    await callback.answer(tr("The bot is busy. Try again later."))
+                return  # The choice remains pending; never consume a busy request.
+            owner._active = True  # No await between admission check and reservation.
+            with Operation("instagram", "download") as operation:
+                try:
+                    guard = _Guard(Event(), seconds=_ACQUISITION_LIMITS.max_seconds)
+                    try:
+                        async with asyncio.timeout(10):
+                            await callback.answer(tr("Starting download…"))
+                    except (TelegramAPIError, TimeoutError) as error:
+                        operation.fail(error)
+                        return  # Keep the choice available if acknowledgement failed.
+                    selected = self._choices.resolve_selection(*args, consume=True)
+                    if selected is None:
+                        operation.fail(category="refused")
+                        return
+                    with suppress(TelegramAPIError, TimeoutError):
+                        async with asyncio.timeout(10):
+                            await message.edit_reply_markup(reply_markup=None)
+                    await self._send_carousel(message, selected.plan, guard, operation)
+                except DownloadCleanupError as error:
+                    owner._blocked = True
+                    operation.fail(error)
+                    with suppress(TelegramAPIError):
+                        await message.answer(
+                            tr("Instagram is temporarily unavailable. Try again later.")
+                        )
+                except CarouselDeliveryError as error:
+                    operation.fail(error)
+                    with suppress(TelegramAPIError):
+                        await message.answer(
+                            tr("Couldn't confirm video delivery. There will be no automatic retry.")
+                        )
+                except (DownloaderError, TelegramAPIError, TimeoutError, OSError) as error:
+                    operation.fail(error)
+                    with suppress(TelegramAPIError):
+                        await message.answer(
+                            tr(
+                                "Couldn't download or prepare the video. There will be no automatic"
+                                " retry."
+                            )
+                        )
+                finally:
+                    if not owner._blocked:
+                        owner._active = False
 
     async def _send_single(self, message: Message, metadata, provider, guard, operation) -> None:
         """Consume the positively inspected snapshot through the existing worker."""
@@ -193,7 +216,7 @@ class InstagramPostHandler:
         try:
             guard.check()
             async with asyncio.timeout(_remaining(guard)):
-                await message.answer("Одиночное видео Instagram распознано. Начинаю скачивание…")
+                await message.answer(tr("Single Instagram video recognized. Starting download…"))
             guard.check()
             with TemporaryDirectory(prefix="instagram-post-") as directory:
                 try:
@@ -231,9 +254,9 @@ class InstagramPostHandler:
         except (DownloaderError, TelegramAPIError, TimeoutError) as error:
             operation.fail(error)
             text = (
-                "Не удалось подтвердить отправку видео. Автоматического повтора не будет."
+                tr("Couldn't confirm video delivery. There will be no automatic retry.")
                 if sending
-                else "Не удалось скачать или подготовить публикацию в пределах лимитов."
+                else tr("Couldn't download or prepare the post within the limits.")
             )
             with suppress(TelegramAPIError):
                 await message.answer(text)
@@ -279,13 +302,17 @@ class InstagramPostHandler:
             position = instagram_item_position(raw_url)
         except InvalidMediaURLError:
             await message.answer(
-                "Некорректный или неоднозначный номер элемента Instagram. "
-                "Нужна ссылка с одним img_index."
+                tr(
+                    "Invalid or ambiguous Instagram item number. Use a link with "
+                    "exactly one img_index."
+                )
             )
             return
         owner = self._reel_handler
         if owner._active:
-            await message.answer("Уже обрабатываю Instagram-ссылку. Отправь следующую позже.")
+            await message.answer(
+                tr("An Instagram link is already being processed. Send the next one later.")
+            )
             return
         owner._active = True
         with Operation("instagram", "metadata") as operation:
@@ -316,17 +343,21 @@ class InstagramPostHandler:
                         CarouselIssue.AMBIGUOUS_REFERENCE,
                     }:
                         await message.answer(
-                            "Нужна ссылка на публикацию целиком без выбора отдельных элементов "
-                            "и неизвестных параметров."
+                            tr(
+                                "Use a link to the whole post without individual item selectors or "
+                                "unknown parameters."
+                            )
                         )
                     elif plan.issue is CarouselIssue.NO_VIDEOS:
                         await message.answer(
-                            "В публикации нет доступных видео. Фото не скачиваются."
+                            tr("No videos are available in this post. Photos aren't downloaded.")
                         )
                     else:
                         await message.answer(
-                            "Невозможно безопасно скачать всю карусель: один или несколько "
-                            "элементов недоступны или не распознаны."
+                            tr(
+                                "Can't safely download the entire carousel: one or more items are "
+                                "unavailable or unrecognized."
+                            )
                         )
                     return
 
@@ -338,14 +369,24 @@ class InstagramPostHandler:
                 if len(plan.selected_videos) > _ACQUISITION_LIMITS.max_videos:
                     operation.fail(category="refused")
                     await message.answer(
-                        f"В публикации {len(plan.selected_videos)} видео. Сейчас лимит — "
-                        f"{_ACQUISITION_LIMITS.max_videos}; пропускать остальные не будем."
+                        trn(
+                            (
+                                "This post has {count} video. The limit is {limit}; no videos will "
+                                "be skipped."
+                            ),
+                            (
+                                "This post has {count} videos. The limit is {limit}; no videos will"
+                                " be skipped."
+                            ),
+                            count=len(plan.selected_videos),
+                            limit=_ACQUISITION_LIMITS.max_videos,
+                        )
                     )
                     return
 
                 guard.check()
                 async with asyncio.timeout(_remaining(guard)):
-                    await message.answer("Карусель распознана. Подготавливаю видео к отправке…")
+                    await message.answer(tr("Carousel recognized. Preparing videos to send…"))
                 guard.check()
                 operation.phase = "download"
                 await self._send_carousel(message, plan, guard, operation)
@@ -353,31 +394,45 @@ class InstagramPostHandler:
                 owner._blocked = True
                 operation.fail(error)
                 with suppress(TelegramAPIError):
-                    await message.answer("Instagram временно недоступен. Попробуй позже.")
+                    await message.answer(
+                        tr("Instagram is temporarily unavailable. Try again later.")
+                    )
             except CarouselDeliveryError as error:
                 operation.fail(error)
                 progress = error.progress
                 confirmed = len(progress.confirmed_positions)
                 if progress.uncertain_positions:
-                    text = (
-                        "Не удалось подтвердить отправку всей карусели. "
-                        "Часть видео могла быть доставлена; автоматического повтора не будет."
+                    text = tr(
+                        "Couldn't confirm delivery of the entire carousel. Some videos may "
+                        "have been delivered; there will be no automatic retry."
                     )
                 elif confirmed:
-                    text = (
-                        f"Подтверждена отправка {confirmed} из {progress.total_videos} видео. "
-                        "Остальные не отправлены; автоматического повтора не будет."
+                    text = trn(
+                        (
+                            "Delivery confirmed: {count} video out of {total}. The rest were "
+                            "not sent; there will be no automatic retry."
+                        ),
+                        (
+                            "Delivery confirmed: {count} videos out of {total}. The rest were "
+                            "not sent; there will be no automatic retry."
+                        ),
+                        count=confirmed,
+                        total=progress.total_videos,
                     )
                 else:
-                    text = "Не удалось подготовить или отправить карусель. Автоповтора не будет."
+                    text = tr(
+                        "Couldn't prepare or send the carousel. There will be no automatic retry."
+                    )
                 with suppress(TelegramAPIError):
                     await message.answer(text)
             except (DownloaderError, TelegramAPIError, TimeoutError, OSError) as error:
                 operation.fail(error)
                 with suppress(TelegramAPIError):
                     await message.answer(
-                        "Не удалось скачать или подготовить публикацию в пределах лимитов. "
-                        "Неполные карусели намеренно не отправляются."
+                        tr(
+                            "Couldn't download or prepare the post within the limits. "
+                            "Incomplete carousels are not sent."
+                        )
                     )
             finally:
                 if not owner._blocked:

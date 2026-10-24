@@ -10,6 +10,7 @@ from social_video_downloader.config import Settings
 from social_video_downloader.handlers import create_router
 from social_video_downloader.logging_config import configure_logging
 from social_video_downloader.operation_logging import Operation, report_failure
+from social_video_downloader.telegram_i18n import RequestLocaleMiddleware, get_i18n
 
 
 def create_bot(settings: Settings) -> Bot:
@@ -44,7 +45,10 @@ def create_dispatcher(
         dispatcher["instagram_reels"] = (
             instagram_reels if instagram_reels is not None else InstagramReelHandler()
         )
-    dispatcher.include_router(create_router())
+    router = create_router()
+    localization = RequestLocaleMiddleware(get_i18n())
+    localization.setup(router, exclude={"update"})
+    dispatcher.include_router(router)
     return dispatcher
 
 

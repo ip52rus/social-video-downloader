@@ -1,6 +1,7 @@
-"""Inactive Telegram localization foundation; no network or dispatcher registration."""
+"""Telegram locale resolution and presentation using aiogram/gettext."""
 
 import re
+from functools import lru_cache
 from pathlib import Path
 from typing import Literal, cast
 
@@ -57,9 +58,9 @@ def create_i18n() -> I18n:
 
 
 class RequestLocaleMiddleware(I18nMiddleware):
-    """Prepared sender context; not installed in the existing dispatcher.
+    """Sender context installed on the Telegram router message/callback observers.
 
-    After existing store validation, future handlers can enter the stored locale
+    After existing store validation, handlers enter the stored locale
     with i18n.use_locale(interaction.locale). This layer makes no access decision.
     """
 
@@ -67,3 +68,19 @@ class RequestLocaleMiddleware(I18nMiddleware):
         if isinstance(event, (Message, CallbackQuery)):
             return locale_for_event(event)
         return resolve_locale(getattr(data.get("event_from_user"), "language_code", None))
+
+
+@lru_cache(maxsize=1)
+def get_i18n() -> I18n:
+    """Shared catalogs; aiogram keeps each request locale in a ContextVar."""
+    return create_i18n()
+
+
+def tr(message: str, **values) -> str:
+    """Translate trusted source copy before plain named substitution."""
+    return get_i18n().gettext(message).format(**values)
+
+
+def trn(singular: str, plural: str, count: int, **values) -> str:
+    """Use native gettext plural rules; count is also a named placeholder."""
+    return get_i18n().gettext(singular, plural, n=count).format(count=count, **values)

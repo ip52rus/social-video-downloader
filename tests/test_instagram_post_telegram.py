@@ -38,6 +38,7 @@ from social_video_downloader.telegram_instagram_posts import (
     TelegramCarouselDelivery,
 )
 from tests.integration.test_video_preparation import generate
+from tests.localization_fixtures import russian_presentation as russian_presentation
 from tests.test_instagram_carousel import (
     INVALID_CAROUSEL_SOURCES,
     ITEM_REFERENCE_SUFFIXES,

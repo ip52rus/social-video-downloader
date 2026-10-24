@@ -1,50 +1,69 @@
-# Internationalization foundation (Phase 8 E1a)
+# Telegram internationalization (Phase 8 E1a / E1b)
 
 ## Scope and decision
 
-Use aiogram I18n, GNU gettext and Babel instead of a custom translation engine or
-plural rules. The foundation is inactive: bot.py, current messages/keyboards,
-callback routing and media pipelines remain unchanged. Activation in E1b, editable
-cards, manual language selection and command/profile publication require separate
-authorization. No translation service, database or runtime API call is introduced.
+E1a introduced aiogram I18n, gettext/Babel and package-local EN/RU/ES catalogs,
+merged in PR #75. E1b activates the foundation for existing Telegram presentation
+in this feature branch; independent review, merge and deployment remain separate gates.
+A cached process-local I18n instance holds catalogs; aiogram ContextVars hold locale.
+No custom plural engine, translation API, preference database or /language command.
+No command/profile publication or extra Bot API request is introduced.
 
-## Locale lifecycle
+## Locale lifecycle and middleware
 
-Resolve the sender's optional Telegram language_code locally. Bounded ASCII tags
-are parsed by Babel; regional tags select a supported base language (en/ru/es).
-Missing, malformed, unsupported languages or tag shapes fall back to English.
-This is not a universal BCP 47 parser or client-specific language detection.
+The existing nested Telegram router installs the standard I18n middleware on its
+observers (excluding update). Message/callback sender language_code is normalized
+locally, bounded to 64 ASCII characters and parsed by Babel. Supported regional
+codes resolve to en/ru/es; missing, malformed, unsupported languages and unsupported
+extensions fall back to English. This is not universal BCP 47 parsing or a promise
+about a particular Telegram client. Never use callback.message.from_user as locale.
 
-RequestLocaleMiddleware is opt-in and not registered in the dispatcher. It uses
-aiogram ContextVar contexts, restored after exceptions and cancellation. Callback
-locale comes from callback.from_user, never callback.message.from_user.
+YouTube records the current request locale when creating pending choices. Only after
+the existing successful transition/terminal consume does presentation enter the
+pinned locale. Invalid indices, expired/unknown/foreign/wrong-chat/wrong-message and
+racing invalid callbacks use the current sender context. No TTL, payload, option ID,
+quality ID, callback routing or consume policy changes. Mode-to-quality edits still
+change only the keyboard: text synchronization belongs to E2.
 
-Pending records have a keyword-only presentation locale, default en for existing
-callers. Current handlers do not populate the user locale or render translations. Creation validates this resolved value. Binding, transitions, expiry and
-consume retain their contracts. Future handlers must validate the pending record's
-owner/chat/message/freshness before using its pinned locale. Invalid/stale/foreign
-callbacks use the current sender locale. Locale does not enter ChoicePlan, callback
-data, quality IDs, source identities or worker IPC. These are foundation contracts,
-not integrated acceptance of translated user interactions.
+InstagramChoiceStore.resolve_selection() returns an immutable plan-plus-locale
+result after the same lock-protected token/owner/chat/message/expiry/index checks.
+resolve() remains a plan-only compatible adapter. The callback keeps its existing
+validate → admission → acknowledge → consume → edit → acquisition sequence. Busy
+choices remain pending; failed acknowledgement does not consume. No unsafe preliminary
+lookup or additional consume is added. After validation, the original request locale
+is used even if the sender later changes Telegram language. Restart makes choices stale.
+
+Contexts restore after success, exceptions and repeated cancellation; concurrent
+requests do not share mutable locale state. Source URLs/identities, upstream titles,
+technical diagnostics, worker IPC and media selection are not translated.
 
 ## Catalogs and packaging
 
-Package-local locales contain only infrastructure test strings in EN/RU/ES.
-Translate before named substitution; use ngettext for counts. The compiler validates
-plain named brace placeholders; attribute access, conversions and format specifications
-are not part of this initial catalog contract. Do not translate
-upstream titles or machine identifiers. Adding a language needs a catalog, registry
-entry and tests, with no media logic change or preference storage.
+[Review matrix](TRANSLATIONS.md) lists all 68 user-facing entries (66 singular and
+two plural groups), plus the catalogs retain two infrastructure entries. English
+msgids are trusted application copy. Translate first, then substitute plain named
+values. Counts use native gettext ngettext, including Russian plural forms.
 
-Compile with `uv run python scripts/compile_translations.py`; verify without writes
-with `uv run python scripts/compile_translations.py --check`. Version .mo files with
-their .po sources. Compilation is deterministic; no build hook mutates source files.
-The wheel must contain both formats. Test installation into an isolated target and
-import outside the source tree: source-file presence alone is insufficient.
-Existing Docker source-copy/package-install steps remain; no image build is claimed.
+The compiler requires nonempty, nonfuzzy translations, explicit python-brace-format
+markers in PO source, and exact placeholder parity. Babel auto-adds format flags;
+the explicit source check prevents missing markers from being silently accepted.
+Attribute/index access, conversions and format specifications are not allowed.
 
-## Verification boundary
+Run `uv run python scripts/compile_translations.py`; verify without writes using
+`uv run python scripts/compile_translations.py --check`. Version PO and MO together.
+The wheel includes both formats; build/install tests import outside the checkout.
+Adding languages requires catalogs, registry and tests, without changing media logic.
 
-See [foundation verification](TESTING.md#phase-8-e1a-internationalization-foundation).
-The full E1b text catalog, activation, manual overrides, profile metadata and LIVE
-acceptance are outside E1a. Phase 9 reliability remains OPEN.
+## Meaning and verification boundary
+
+The disabled-platform /start branch previously suggested unavailable platforms; its
+copy now explicitly describes YouTube and disabled Instagram/TikTok. Enabled-platform
+branches and message counts are preserved. RU busy copy uses informal singular voice.
+The review matrix records safety constraints: no automatic retry after uncertain
+sending, partial delivery is not success, and item numbers are original source positions.
+
+[Offline verification](TESTING.md#phase-8-e1b-telegram-interface-localization) separates
+synthetic dispatcher/transport checks from LIVE acceptance. No deployment is performed.
+The YouTube publish-before-message-binding risk remains unchanged for E3. Editable
+cards, new choice UX, terminal cards, manual preferences and E2–E5 require separate
+owner authorization. Phase 9 reliability remains OPEN.

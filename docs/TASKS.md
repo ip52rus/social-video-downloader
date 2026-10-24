@@ -751,18 +751,23 @@ Do not promise universal platform support or hard-code a long unsupported platfo
 
 ## Phase 8 - Unified Product UX
 
-E1a is a separately authorized inactive internationalization foundation. E1b activation
-and E2–E5 UX/card changes still require separate owner decisions. Phase 9 remains OPEN.
+E1a was merged in PR #75; E1b interface localization is separately authorized.
+E2–E5 UX/card work still requires owner decisions. Phase 9 remains OPEN.
 
 - [x] Implement and verify inactive E1a: safe EN/RU/ES resolver, ContextVar middleware, compiled package
-  catalogs and backward-compatible presentation locale in pending records. Current
-  handlers/copy/routing/media remain unchanged; see
+  catalogs and backward-compatible presentation locale in pending records. Telegram
+  handlers/copy/routing/media were unchanged at E1a verification; see
   [foundation contract](INTERNATIONALIZATION.md) and
   [verification](TESTING.md#phase-8-e1a-internationalization-foundation): 136 new cases,
   full offline 2200 passed / 1 skipped; installed wheel resources and quality gates PASS.
-- [ ] Review/merge the separate E1a Draft PR after exact-head CI; no activation or deployment.
-- [ ] Separately authorize E1b: populate pinned locale in handlers and translate current
-  messages/buttons. No /language, command/profile mutation or editable card is in E1a.
+- [x] Merge E1a PR #75; post-merge CI #40078428913 SUCCESS on efb4f324. No E1a deployment.
+- [x] Separately authorize E1b automatic interface localization.
+- [x] Complete E1b offline acceptance: 68 user-facing entries, EN/RU/ES catalogs,
+  sender middleware, validated pinned callbacks and unchanged media/API contracts.
+  286 new cases; full offline 2487 passed / 1 skipped; wheel/catalog and quality gates PASS.
+  See [contract](INTERNATIONALIZATION.md) and [translation review](TRANSLATIONS.md).
+- [ ] Independently review/merge the E1b Draft PR after exact-head CI. No deployment,
+  /language, profile mutation, E2 text synchronization or E3 editable/pre-bound card.
 
 - [ ] Review the complete multi-provider Telegram UI.
 - [ ] Standardize inline keyboards.

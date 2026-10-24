@@ -18,6 +18,7 @@ from social_video_downloader.domain.models import DownloadedMedia, Platform
 from social_video_downloader.infrastructure import tiktok_native as n
 from social_video_downloader.providers.tiktok import TikTokProvider
 from tests.integration.test_video_preparation import generate
+from tests.localization_fixtures import russian_presentation as russian_presentation
 from tests.test_tiktok_integration import message
 from tests.test_tiktok_native import MEDIA, A, response
 from tests.test_tiktok_native import offline as offline

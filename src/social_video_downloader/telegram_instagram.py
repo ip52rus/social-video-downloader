@@ -31,6 +31,7 @@ from social_video_downloader.infrastructure.telegram_media import (
 )
 from social_video_downloader.operation_logging import Operation
 from social_video_downloader.providers.instagram import InstagramProvider
+from social_video_downloader.telegram_i18n import tr
 
 _MAX_BYTES = 25 * 1024**2
 _WORK_SECONDS = 180
@@ -212,18 +213,25 @@ class InstagramReelHandler:
             url = _reel_url(raw_url)
         except InvalidMediaURLError:
             await message.answer(
-                "Поддерживаются публичные Reels и публикации /p/. "
-                "Для /p/ поддерживается выбор через img_index; другие селекторы не поддерживаются."
+                tr(
+                    "Public Reels and /p/ posts are supported. For /p/, use img_index "
+                    "to select an item; other selectors aren't supported."
+                )
             )
             return
         if self._active:
-            await message.answer("Уже обрабатываю Reel. Дождись завершения и отправь ссылку позже.")
+            await message.answer(
+                tr(
+                    "A Reel is already being processed. Wait for it to finish before "
+                    "sending another link."
+                )
+            )
             return
         self._active = True
         with Operation("instagram", "download_prepare") as operation:
             sending = False
             try:
-                await message.answer("Ссылка Reel распознана. Начинаю скачивание…")
+                await message.answer(tr("Reel link recognized. Starting download…"))
                 with TemporaryDirectory(prefix="instagram-reel-") as directory:
                     try:
                         cancelled = Event()
@@ -253,9 +261,9 @@ class InstagramReelHandler:
             except (DownloaderError, TelegramAPIError, TimeoutError) as error:
                 operation.fail(error)
                 text = (
-                    "Не удалось подтвердить отправку видео. Автоматического повтора не будет."
+                    tr("Couldn't confirm video delivery. There will be no automatic retry.")
                     if sending
-                    else "Не удалось скачать или подготовить Reel в пределах лимитов."
+                    else tr("Couldn't download or prepare the Reel within the limits.")
                 )
                 with suppress(TelegramAPIError):
                     await message.answer(text)

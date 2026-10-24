@@ -109,6 +109,8 @@ installed = pathlib.Path(sys.argv[1]).resolve()
 assert pathlib.Path(telegram_i18n.__file__).resolve().is_relative_to(installed)
 engine = create_i18n()
 assert engine.gettext('I18n foundation', locale='ru') == 'Основа локализации'
+assert engine.gettext('Choose a format:', locale='ru') == 'Выбери формат:'
+assert engine.gettext('TikTok video', locale='es') == 'Vídeo de TikTok'
 translated = engine.gettext('{count} file', '{count} files', n=2, locale='es')
 assert translated.format(count=2) == '2 archivos'
 print(json.dumps(sorted(engine.available_locales)))
