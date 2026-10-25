@@ -27,6 +27,10 @@ This file defines the operating rules for AI agents working on the Social Video 
   progress. GitHub is the synchronized remote history and checkpoint after a verified
   stage, not the place to infer uncommitted local state.
 - Keep main working.
+- All new project Git worktrees MUST be created in permanent storage, for example
+  `~/PycharmProjects/social-video-downloader-worktrees/`. This applies to every future
+  Codex task. NEVER create working worktrees in `/private/tmp`, `/tmp`, system temp
+  directories, or any other automatically cleaned temporary location.
 - Use focused branches for non-trivial changes.
 - Make atomic commits.
 - Use Conventional Commit prefixes: feat, fix, refactor, test, docs, chore, build, ci, perf.

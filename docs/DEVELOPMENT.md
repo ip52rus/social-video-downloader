@@ -29,6 +29,15 @@ After a stage is implemented and verified, synchronize the remote history by com
 ## Branches
 Use `feature/name`, `fix/name`, `refactor/name`, or `docs/name` for non-trivial work.
 
+## Permanent worktrees
+
+All new project Git worktrees must live in permanent storage, for example
+`~/PycharmProjects/social-video-downloader-worktrees/`. Never create working
+worktrees in `/private/tmp`, `/tmp` or automatically cleaned temporary directories.
+This is a standing rule for all future agent tasks, not a phase-specific exception.
+Historical damaged directories and private preservation archives remain untouched;
+unknown historical untracked/ignored data is not claimed recovered.
+
 ## Commits
 Use Conventional Commit prefixes. One coherent change per commit.
 

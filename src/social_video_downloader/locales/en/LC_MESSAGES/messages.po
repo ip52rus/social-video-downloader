@@ -344,3 +344,31 @@ msgstr "YouTube link recognized. If no buttons appear, send the link again."
 
 msgid "Download request accepted. Results appear in separate messages."
 msgstr "Download request accepted. Results appear in separate messages."
+
+#, python-brace-format
+msgid "👋 Hi! I can help you download videos from {platforms}.\n\n🔗 Just send a video link.\n\nIf buttons appear, choose the format or quality you want — and I'll send the file right here."
+msgstr "👋 Hi! I can help you download videos from {platforms}.\n\n🔗 Just send a video link.\n\nIf buttons appear, choose the format or quality you want — and I'll send the file right here."
+
+msgid "YouTube, Instagram and TikTok"
+msgstr "YouTube, Instagram and TikTok"
+
+msgid "YouTube and Instagram"
+msgstr "YouTube and Instagram"
+
+msgid "YouTube and TikTok"
+msgstr "YouTube and TikTok"
+
+msgid "✅ File sent."
+msgstr "✅ File sent."
+
+msgid "Telegram delivery wasn't confirmed. The file may have arrived. There will be no automatic retry."
+msgstr "Telegram delivery wasn't confirmed. The file may have arrived. There will be no automatic retry."
+
+msgid "Request interrupted. Delivery isn't confirmed. There will be no automatic retry."
+msgstr "Request interrupted. Delivery isn't confirmed. There will be no automatic retry."
+
+msgid "File sent. An error occurred while finishing the request; there will be no automatic retry."
+msgstr "File sent. An error occurred while finishing the request; there will be no automatic retry."
+
+msgid "Instagram selection accepted. Results appear in separate messages."
+msgstr "Instagram selection accepted. Results appear in separate messages."

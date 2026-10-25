@@ -156,6 +156,10 @@ async def app(monkeypatch):
 
     async def selected(*args):
         downloads.append((get_i18n().current_locale, args))
+        return handlers.YouTubeDeliveryResult(
+            handlers.YouTubeDeliveryState.DELIVERED,
+            translated("✅ File sent.", get_i18n().current_locale),
+        )
 
     monkeypatch.setattr(handlers, "_download_and_deliver_media", selected)
 
@@ -188,24 +192,19 @@ async def test_start_real_dispatcher_flags_and_sender_language(app, code, enable
     dp, bot, session, *_ = app(instagram=enabled[0], tiktok=enabled[1])
     await dp.feed_update(bot, message_update("/start", code))
     locale = resolve_locale(code)
-    if enabled == (True, True):
-        source = (
-            "Send a YouTube link, a public Instagram Reel or /p/ link, or a "
-            "public TikTok video link."
-        )
-    elif enabled == (False, True):
-        source = "Send a YouTube link or a public TikTok video link."
-    elif enabled == (True, False):
-        source = (
-            "Send a YouTube link or a public Instagram Reel or /p/ link. Only "
-            "videos are downloaded from carousels, in their original order; "
-            "with img_index, choose all videos or the specified video."
-        )
-    else:
-        source = handlers._START_MESSAGE
+    platforms = (
+        translated("YouTube, Instagram and TikTok", locale)
+        if enabled == (True, True)
+        else translated("YouTube and TikTok", locale)
+        if enabled == (False, True)
+        else translated("YouTube and Instagram", locale)
+        if enabled == (True, False)
+        else "YouTube"
+    )
     calls = [c for c in session.calls if isinstance(c, SendMessage)]
-    assert calls[0].text == translated(source, locale)
-    assert len(calls) == (2 if enabled == (True, True) else 1)
+    assert calls[0].text == translated(handlers._START_MESSAGE, locale, platforms=platforms)
+    assert len(calls) == 1
+    assert "img_index" not in calls[0].text
     assert get_i18n().current_locale == "en"
 
 
@@ -285,7 +284,10 @@ async def test_youtube_messages_are_rendered_by_dispatcher(app, monkeypatch, loc
     monkeypatch.setattr(handlers, "download_service", service)
     await dp.feed_update(bot, message_update(text, locale))
     assert session.calls[0].text == translated(sources[case], locale, platform_label="Instagram")
-    assert len(session.calls) == 1
+    assert len(session.calls) == (2 if case == "direct" else 1)
+    if case == "direct":
+        assert isinstance(session.calls[-1], EditMessageText)
+        assert session.calls[-1].text == translated("✅ File sent.", locale)
     assert len(downloads) == (1 if case == "direct" else 0)
 
 
@@ -455,7 +457,7 @@ async def test_instagram_atomic_locale_ownership_and_admission(
     if case == "ack":
         session.fail = AnswerCallbackQuery
     if case == "edit":
-        session.fail = EditMessageReplyMarkup
+        session.fail = EditMessageText
     await dp.feed_update(bot, callback_update(prompt, data, current, user, **changes))
     if case in {"valid", "edit"}:
         assert len(sent) == 1 and sent[0][0] == original
@@ -620,7 +622,7 @@ def test_complete_catalog_and_public_literal_inventory(locale):
         catalog = read_po(stream, locale=locale)
     assert not catalog.fuzzy and not list(catalog.check())
     messages = [m for m in catalog if m.id]
-    assert len(messages) == 72
+    assert len(messages) == 81
     for message in messages:
         assert not message.fuzzy
         variants = message.string if isinstance(message.string, tuple) else (message.string,)
@@ -1016,7 +1018,10 @@ async def test_actual_youtube_delivery_messages_counts_and_source_caption(
         "download": "Couldn't download the video. Try again later.",
         "prepare": "The video download is incomplete or couldn't be processed. Try another link.",
         "unexpected": "Something went wrong. Try again later.",
-        "uncertain": "Couldn't send the file to Telegram. Try again later.",
+        "uncertain": (
+            "Telegram delivery wasn't confirmed. The file may have arrived. "
+            "There will be no automatic retry."
+        ),
         "oversize": "The file is too large to send through Telegram. Try a smaller video.",
     }
     if case in sources:
@@ -1026,7 +1031,11 @@ async def test_actual_youtube_delivery_messages_counts_and_source_caption(
     if uploads:
         assert uploads[0].caption == "Synthetic {title}"
     assert len(service.calls) == 1
-    assert len(session.calls) == (3 if case in {"uncertain", "oversize"} else 2)
+    assert isinstance(session.calls[-1], EditMessageText)
+    assert len([c for c in session.calls if isinstance(c, SendMessage)]) == 1
+    assert len(session.calls) == (3 if uploads else 2)
+    if case in {"success", "audio"}:
+        assert session.calls[-1].text == translated("✅ File sent.", locale)
 
 
 @pytest.mark.asyncio
@@ -1107,7 +1116,7 @@ async def test_quality_edit_applied_then_response_lost_keeps_exact_selection(
     assert downloads[0][0] == locale
     assert downloads[0][1][2].quality_id == "mode-video-high"
     assert session.calls[-1].text == translated(handlers._STALE_CALLBACK_MESSAGE, current)
-    assert edit_attempts == 3  # One further receipt edit, never a media retry.
+    assert edit_attempts == 4  # Receipt and terminal outcome are distinct planned edits.
     assert get_i18n().current_locale == "en"
 
 
@@ -1130,7 +1139,7 @@ async def test_concurrent_mode_callbacks_keep_one_quality_prompt_and_one_downloa
         nonlocal edits_entered
         if isinstance(method, EditMessageText):
             edits_entered += 1
-            if edits_entered == 2:
+            if edits_entered == 1:
                 entered.set()
             await release.wait()
         return await original_request(bot, method, timeout)
@@ -1143,6 +1152,7 @@ async def test_concurrent_mode_callbacks_keep_one_quality_prompt_and_one_downloa
     try:
         await asyncio.wait_for(entered.wait(), 3)
         assert not downloads
+        assert edits_entered == 1  # The other presentation waits; media admission is unchanged.
         release.set()
         await asyncio.gather(*tasks)
     finally:

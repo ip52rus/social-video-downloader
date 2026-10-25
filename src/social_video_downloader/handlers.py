@@ -4,12 +4,21 @@ import asyncio
 from collections.abc import Callable
 from contextlib import suppress
 from contextvars import copy_context
+from dataclasses import dataclass
+from enum import StrEnum
 from functools import partial
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from aiogram import F, Router
-from aiogram.exceptions import TelegramAPIError, TelegramEntityTooLarge
+from aiogram.exceptions import (
+    TelegramAPIError,
+    TelegramBadRequest,
+    TelegramEntityTooLarge,
+    TelegramForbiddenError,
+    TelegramRetryAfter,
+    TelegramUnauthorizedError,
+)
 from aiogram.filters import CommandStart
 from aiogram.types import (
     CallbackQuery,
@@ -69,9 +78,35 @@ _PLATFORM_LABELS = {
 }
 
 _START_MESSAGE = (
-    "Hi! Send a YouTube link to download an individual video or audio. "
-    "Instagram and TikTok downloads aren't enabled here."
+    "👋 Hi! I can help you download videos from {platforms}.\n\n"
+    "🔗 Just send a video link.\n\n"
+    "If buttons appear, choose the format or quality you want — and I'll send the file right here."
 )
+
+
+class YouTubeDeliveryState(StrEnum):
+    DELIVERED = "delivered"
+    FAILED = "failed"
+    UNCERTAIN = "uncertain"
+
+
+@dataclass(frozen=True, slots=True)
+class YouTubeDeliveryResult:
+    """Presentation evidence only; never authorizes a retry or media operation."""
+
+    state: YouTubeDeliveryState
+    text: str
+
+
+def _uncertain_delivery() -> YouTubeDeliveryResult:
+    return YouTubeDeliveryResult(
+        YouTubeDeliveryState.UNCERTAIN,
+        tr(
+            "Telegram delivery wasn't confirmed. The file may have arrived. "
+            "There will be no automatic retry."
+        ),
+    )
+
 
 _MODE_LABELS = {
     UserChoiceKind.VIDEO: "🎬 Video",
@@ -116,30 +151,17 @@ async def _notify_download_error(message: Message, error: DownloaderError) -> No
 
 async def handle_start(message: Message, instagram_reels=None, tiktok_videos=None) -> None:
     """Explain current capabilities and how to submit a link."""
-    if tiktok_videos is not None and tiktok_videos.allows(message):
-        text = (
-            tr(
-                "Send a YouTube link, a public Instagram Reel or /p/ link, or a "
-                "public TikTok video link."
-            )
-            if instagram_reels is not None
-            else tr("Send a YouTube link or a public TikTok video link.")
-        )
-        await message.answer(text)
-        if instagram_reels is not None:
-            await message.answer(
-                tr("For /p/ links with img_index, choose all videos or the specified video.")
-            )
-    elif instagram_reels is None:
-        await message.answer(tr(_START_MESSAGE))
+    instagram = instagram_reels is not None
+    tiktok = tiktok_videos is not None and tiktok_videos.allows(message)
+    if instagram and tiktok:
+        platforms = tr("YouTube, Instagram and TikTok")
+    elif instagram:
+        platforms = tr("YouTube and Instagram")
+    elif tiktok:
+        platforms = tr("YouTube and TikTok")
     else:
-        await message.answer(
-            tr(
-                "Send a YouTube link or a public Instagram Reel or /p/ link. Only "
-                "videos are downloaded from carousels, in their original order; "
-                "with img_index, choose all videos or the specified video."
-            )
-        )
+        platforms = "YouTube"
+    await message.answer(tr(_START_MESSAGE, platforms=platforms))
 
 
 async def handle_text(message: Message, instagram_reels=None, tiktok_videos=None) -> None:
@@ -205,8 +227,10 @@ async def handle_text(message: Message, instagram_reels=None, tiktok_videos=None
         if plan.automatic_options is None:
             await message.answer(tr(_BLOCKED_CHOICE_MESSAGE))
             return
-        await message.answer(tr("Download request accepted. Results appear in separate messages."))
-        await _download_and_deliver_media(message, normalized_url, plan.automatic_options)
+        card = await message.answer(
+            tr("Download request accepted. Results appear in separate messages.")
+        )
+        await _run_youtube_request(message, card, normalized_url, plan.automatic_options)
         return
 
     if plan.state is ChoicePlanState.CHOOSE_MODE:
@@ -289,8 +313,10 @@ async def _download_and_deliver_media(
     message: Message,
     url: str,
     options: DownloadOptions,
-) -> None:
-    """Download media with selected options and deliver it through the existing pipeline."""
+) -> YouTubeDeliveryResult:
+    """Run the existing media work once and return only confirmed delivery evidence."""
+    sending = False
+    confirmed = False
     with Operation("youtube", "download") as operation:
         try:
             with TemporaryDirectory(prefix="social-video-downloader-") as temporary_directory:
@@ -315,12 +341,19 @@ async def _download_and_deliver_media(
                             {"duration": audio.duration} if audio.duration is not None else {}
                         )
                         operation.phase = "upload"
-                        await message.answer_audio(
+                        sending = True
+                        sent_message = await message.answer_audio(
                             FSInputFile(audio.file_path),
                             caption=downloaded.metadata.title[:1024],
                             **audio_parameters,
                         )
-                        return
+                        confirmed = getattr(sent_message, "audio", None) is not None
+                        if not confirmed:
+                            operation.fail(category="unconfirmed_upload")
+                            return _uncertain_delivery()
+                        return YouTubeDeliveryResult(
+                            YouTubeDeliveryState.DELIVERED, tr("✅ File sent.")
+                        )
 
                     telegram_video = await _run_workspace_thread(
                         prepare_telegram_video,
@@ -338,6 +371,7 @@ async def _download_and_deliver_media(
                         report_failure("youtube", "prepare", error)
 
                     operation.phase = "upload"
+                    sending = True
                     sent_message = await message.answer_video(
                         FSInputFile(telegram_video),
                         caption=downloaded.metadata.title[:1024],
@@ -345,29 +379,111 @@ async def _download_and_deliver_media(
                         **upload_parameters,
                     )
 
-                    if sent_message.video is None:
+                    confirmed = getattr(sent_message, "video", None) is not None
+                    if not confirmed:
                         operation.fail(category="unconfirmed_upload")
+                        return _uncertain_delivery()
                     operation.phase = "cleanup"
+                    return YouTubeDeliveryResult(
+                        YouTubeDeliveryState.DELIVERED, tr("✅ File sent.")
+                    )
                 except BaseException as error:
                     operation.fail(error)
                     raise
                 finally:
                     operation.phase = "cleanup"
 
-        except TelegramEntityTooLarge as error:
-            operation.fail(error)
-            await message.answer(
-                tr("The file is too large to send through Telegram. Try a smaller video.")
-            )
-        except TelegramAPIError as error:
-            operation.fail(error)
-            await message.answer(tr("Couldn't send the file to Telegram. Try again later."))
-        except DownloaderError as error:
-            operation.fail(error)
-            await _notify_download_error(message, error)
         except Exception as error:
             operation.fail(error)
-            await message.answer(tr("Something went wrong. Try again later."))
+            if confirmed:
+                return YouTubeDeliveryResult(
+                    YouTubeDeliveryState.DELIVERED,
+                    tr(
+                        "File sent. An error occurred while finishing the request; "
+                        "there will be no automatic retry."
+                    ),
+                )
+            # A negative Bot API acknowledgement is different from a lost response.
+            rejected = isinstance(
+                error,
+                (
+                    TelegramBadRequest,
+                    TelegramForbiddenError,
+                    TelegramUnauthorizedError,
+                    TelegramRetryAfter,
+                    TelegramEntityTooLarge,
+                ),
+            )
+            if sending and not rejected:
+                return _uncertain_delivery()
+            if isinstance(error, TelegramEntityTooLarge):
+                text = tr("The file is too large to send through Telegram. Try a smaller video.")
+            elif isinstance(error, TelegramAPIError):
+                text = tr("Couldn't send the file to Telegram. Try again later.")
+            elif isinstance(error, DownloaderError):
+                text = _download_error_message(error)
+            else:
+                text = tr("Something went wrong. Try again later.")
+            return YouTubeDeliveryResult(YouTubeDeliveryState.FAILED, text)
+
+
+async def _edit_youtube_card_once(card: Message, text: str, keyboard=None) -> None:
+    try:
+        await card.edit_text(text, reply_markup=keyboard)
+    except (TelegramAPIError, TimeoutError) as error:
+        report_failure("youtube", "notification", error)
+
+
+async def _edit_youtube_status(card, text, interaction=None) -> None:
+    if interaction is None:
+        await _edit_youtube_card_once(card, text)
+    else:
+        async with interaction.presentation_lock:
+            await _edit_youtube_card_once(card, text)
+
+
+async def _run_youtube_request(
+    message: Message,
+    card: Message,
+    url: str,
+    options: DownloadOptions,
+    *,
+    interaction: PendingInteraction | None = None,
+    callback: CallbackQuery | None = None,
+) -> None:
+    """Render once after owned media work; never infer media success from an edit."""
+    try:
+        if callback is not None:
+            try:
+                await callback.answer(tr("Starting download…"))
+            except TelegramAPIError as error:
+                report_failure("youtube", "notification", error)
+            await _edit_youtube_status(
+                card,
+                tr("Download request accepted. Results appear in separate messages."),
+                interaction,
+            )
+        result = await _download_and_deliver_media(message, url, options)
+    except asyncio.CancelledError:
+        # The media coroutine has already drained its owned workspace workers.
+        # A further cancellation may abort this best-effort UI attempt, never the drain.
+        try:
+            await _edit_youtube_status(
+                card,
+                tr(
+                    "Request interrupted. Delivery isn't confirmed. "
+                    "There will be no automatic retry."
+                ),
+                interaction,
+            )
+        except asyncio.CancelledError:
+            pass
+        except Exception as notification_error:
+            report_failure("youtube", "notification", notification_error)
+        raise
+    if not isinstance(result, YouTubeDeliveryResult):
+        result = _uncertain_delivery()
+    await _edit_youtube_status(card, result.text, interaction)
 
 
 async def _send_mode_choices(message: Message, url: str, plan: ChoicePlan) -> None:
@@ -419,12 +535,15 @@ async def _publish_choices(
     else:
         text = tr("Choose the quality:")
         keyboard = _quality_keyboard(interaction.interaction_id, plan.quality_choices)
-    try:
-        await card.edit_text(text, reply_markup=keyboard)
-    except TelegramAPIError as error:
-        # Keep the binding: the edit may have succeeded despite a lost response.
-        # Never resend automatically; the initial receipt explains recovery.
-        report_failure("youtube", "notification", error)
+    async with interaction.presentation_lock:
+        current = pending_interaction_store.lookup(
+            interaction.interaction_id,
+            owner_user_id=message.from_user.id,
+            chat_id=message.chat.id,
+            message_id=card.message_id,
+        )
+        if current.status is PendingInteractionStatus.FOUND:
+            await _edit_youtube_card_once(card, text, keyboard)
 
 
 async def _handle_mode_callback(
@@ -462,18 +581,23 @@ async def _handle_mode_callback(
         except TelegramAPIError as error:
             report_failure("youtube", "notification", error)
         if callback.message is not None:
-            try:
-                await callback.message.edit_text(
+            async with transition.interaction.presentation_lock:
+                current = pending_interaction_store.lookup(
+                    interaction.interaction_id,
+                    owner_user_id=callback.from_user.id,
+                    chat_id=interaction.chat_id,
+                    message_id=getattr(callback.message, "message_id", None),
+                )
+                if current.status is not PendingInteractionStatus.FOUND:
+                    return
+                await _edit_youtube_card_once(
+                    callback.message,
                     tr("Choose the quality:"),
-                    reply_markup=_quality_keyboard(
+                    _quality_keyboard(
                         interaction.interaction_id,
                         transition.interaction.plan.mode_choices[mode_index].quality_choices,
                     ),
                 )
-            except TelegramAPIError as error:
-                # Keep the state: the edit may have reached Telegram despite a lost response.
-                # An old mode button can safely retry this same nonterminal transition.
-                report_failure("youtube", "notification", error)
 
 
 async def _handle_quality_callback(
@@ -510,19 +634,15 @@ async def _consume_and_download(
 
     with get_i18n().use_locale(interaction.locale):
         pending_interaction_store.remove(interaction.interaction_id)
-        try:
-            await callback.answer(tr("Starting download…"))
-        except TelegramAPIError as error:
-            report_failure("youtube", "notification", error)
         if callback.message is not None:
-            try:
-                await callback.message.edit_text(
-                    tr("Download request accepted. Results appear in separate messages."),
-                    reply_markup=None,
-                )
-            except TelegramAPIError as error:
-                report_failure("youtube", "notification", error)
-            await _download_and_deliver_media(callback.message, interaction.url, options)
+            await _run_youtube_request(
+                callback.message,
+                callback.message,
+                interaction.url,
+                options,
+                interaction=interaction,
+                callback=callback,
+            )
 
 
 def _mode_keyboard(

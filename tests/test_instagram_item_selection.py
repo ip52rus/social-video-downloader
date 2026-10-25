@@ -226,7 +226,7 @@ def ui(monkeypatch, items=None):
     owner = InstagramReelHandler(ydl_factory=runtime.factory)
     bot = AsyncMock()
     prompt = response(17).as_(bot)
-    monkeypatch.setattr(Message, "edit_reply_markup", AsyncMock())
+    monkeypatch.setattr(Message, "edit_text", AsyncMock())
     message = MagicMock(
         text=URL + "?img_index=3", from_user=SimpleNamespace(id=7), chat=SimpleNamespace(id=1)
     )
@@ -314,7 +314,7 @@ async def test_busy_or_api_failure_is_safe(monkeypatch, failure):
     elif failure == "ack":
         cb.answer.side_effect = TimeoutError
     else:
-        monkeypatch.setattr(Message, "edit_reply_markup", AsyncMock(side_effect=TimeoutError))
+        monkeypatch.setattr(Message, "edit_text", AsyncMock(side_effect=TimeoutError))
     await owner._post_handler.handle_callback(cb)
     if failure != "edit":
         send.assert_not_awaited()

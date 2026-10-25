@@ -429,9 +429,16 @@ E3 implements safe YouTube pre-binding and reuses choice messages as durable
 request receipts. It adds one edit to interactive publication, without new user
 actions, worker stages, media retries or terminal delivery claims. See
 [E3 verification](TESTING.md#phase-8-e3-pre-binding-and-status-cards).
-Independent review, merge, deployment and LIVE acceptance of E3 remain separate
-gates. E4 terminal outcome cards/comprehensive obsolete-message cleanup and E5
-acceptance are outside E3; no new phase starts automatically.
+E3 merged in PR #78 at bbfdf85; post-merge CI #40123097002 SUCCESS. The owner
+reported E3 LIVE PASS with E4 authorization, without case counts, latency or client/
+language coverage. This is separate owner evidence and does not close Phase 9.
+E4 implements one localized /start, evidence-based YouTube terminal cards and
+retirement of validated consumed selection prompts. Unknown delivery stays unknown
+and never triggers a retry. See
+[E4 verification](TESTING.md#phase-8-e4-terminal-ux-and-start).
+E4 independent review, merge, deployment and LIVE acceptance remain separate gates.
+E5 comprehensive client acceptance and durable crash/restart UI recovery remain
+open; E5 is not started.
 See [internationalization contract](INTERNATIONALIZATION.md), [review matrix](TRANSLATIONS.md)
 and [E1b verification](TESTING.md#phase-8-e1b-telegram-interface-localization).
 Neither localization nor Phase 9B's narrow smoke closes Phase 9 reliability.

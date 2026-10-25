@@ -290,6 +290,59 @@ Exact-head CI must be checked on the separate Draft PR. No LIVE Telegram/platfor
 Docker build or deployment is claimed. YouTube pre-binding and mode-to-quality prompt
 text synchronization remain unchanged for E3/E2. Phase 9 reliability remains OPEN.
 
+## Phase 8 E4 terminal UX and start
+
+Base: E3 merge bbfdf85; post-merge CI #40123097002 SUCCESS. E3 LIVE PASS is
+owner-confirmed with E4 authorization, not reproduced here. Exact case counts,
+latencies, languages and clients were not supplied. The earlier Phase 9B LIVE
+concurrency result remains INCONCLUSIVE; no reliability gate is closed.
+
+107 new offline cases in `test_terminal_ux.py` use actual handlers and the YouTube
+media pipeline with synthetic files and fake Bot API responses. They cover exact
+EN/RU/ES greeting copy, enabled platforms/per-user availability, positive video/audio
+acknowledgements, missing media fields, explicit rejection, response lost before/after
+apply, server/timeout failures, post-ack cleanup failure, terminal edit errors,
+repeated/concurrent/stale/foreign callbacks, UI ordering and cancellation/repeated
+cancellation with failed interruption notices. Worker completion and workspace deletion
+precede terminal rendering. Instagram cases verify prompt retirement and safe known
+bind-failure cleanup, retaining original source positions and one-shot delivery.
+
+Existing E1b/E2/E3 tests retain ownership, binding, TTL, quality-options, locale,
+API/media count and worker-cleanup assertions. Fake transports model concurrent
+updates while a response is pending, rather than synchronously awaiting a callback
+inside its own publication edit. Extended regression includes Instagram selection,
+wheel/catalog resources and metadata integration.
+
+Verification: focused **833 passed**; full offline pytest
+**2658 passed, 1 skipped**. Ruff lint/format, deterministic PO/MO compilation, diff, 99 relative
+Markdown links/anchors, privacy and file-scope checks passed. The
+socket/DNS-denial guard is verified and inherited by child Python processes.
+Exact-head CI is a separate publication gate after the Draft PR opens.
+No E4 Docker/deployment/LIVE calls.
+
+/start has one send for all configured-platform combinations. Healthy YouTube flows
+add one terminal edit, without a separate success message; pre-upload error copy
+replaces its separate error send. Instagram retains the post-consume edit within its
+existing timeout. There is no media retry, worker timeout change or extra user action.
+
+Limits: failed/ambiguous edits may leave the receipt or stale buttons visible.
+Unvalidated stale/foreign messages cannot safely be edited from someone else's
+callback. Existing UI timeouts may delay the same card's queued edit; other cards
+and the event loop remain independent. A remote late apply or process crash cannot
+guarantee the final visual state. E5 client acceptance and Phase 9 remain open.
+
+### Preservation prerequisite
+
+The owner authorized a bounded snapshot of five newly damaged historical TikTok
+worktrees and E4 resumption. A private archive preserves six physical files, Git
+administrative metadata and a self-contained bundle of five branch heads; empty-repo
+bundle verification and object fsck passed. Existing archives were unchanged. Cause
+and historical unstaged/untracked/ignored loss remain UNKNOWN. No worktree was
+restored, removed, repaired or relocated. New worktrees must use permanent storage
+under the standing [agent rule](../AGENTS.md) and
+[development guidance](DEVELOPMENT.md#permanent-worktrees). Private archive paths,
+raw evidence and personal data are not published in Git.
+
 ## Phase 8 E3 pre-binding and status cards
 
 Base: E2 merge b7462f8; post-merge CI #40110968231 SUCCESS, verified on that SHA.

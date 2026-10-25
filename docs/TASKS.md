@@ -753,8 +753,8 @@ Do not promise universal platform support or hard-code a long unsupported platfo
 
 E1a was merged in PR #75; E1b interface localization merged in PR #76.
 E2 YouTube choice text/keyboard synchronization merged in PR #77. E3 safe
-pre-binding and minimal YouTube request cards are separately authorized; E4–E5
-still require owner decisions. Phase 9 remains OPEN.
+pre-binding and minimal request cards merged in PR #78. E4 terminal UX and
+the single-message /start are authorized; E5 is unstarted. Phase 9 remains OPEN.
 
 - [x] Implement and verify inactive E1a: safe EN/RU/ES resolver, ContextVar middleware, compiled package
   catalogs and backward-compatible presentation locale in pending records. Telegram
@@ -784,10 +784,22 @@ still require owner decisions. Phase 9 remains OPEN.
   UI/packaging subset PASS; extended metadata/cache/parity/cancellation focused
   set: 702 passed; full offline: 2551 passed / 1 skipped. See
   [E3 verification](TESTING.md#phase-8-e3-pre-binding-and-status-cards).
-- [ ] Independently review E3 after exact-head CI; merge/deployment require separate
-  authorization. E4 terminal cards, delivery-outcome presentation, stale-message
-  cleanup and E5 acceptance are not implemented. Live progress beyond durable
-  request receipts needs an explicit UI lifecycle decision.
+- [x] Merge E3 PR #78 at bbfdf85; post-merge CI #40123097002 SUCCESS.
+- [x] Record owner-confirmed E3 LIVE PASS, supplied with E4 authorization. Exact
+  case counts, timings and language/client coverage were not supplied. This is
+  separate owner evidence and does not close Phase 9 reliability.
+- [x] Preserve five newly damaged historical TikTok worktrees in a verified private
+  checkpoint; resume E4 by owner authorization, without restoration. Cause and
+  historical untracked/ignored loss remain UNKNOWN. Add the permanent worktree
+  rule to AGENTS.md and development guidance for all future tasks.
+- [x] Complete E4 offline acceptance: one localized /start, typed YouTube terminal
+  outcomes, best-effort existing-card edits, serialized UI updates and minimal
+  Instagram prompt retirement. See
+  [E4 verification](TESTING.md#phase-8-e4-terminal-ux-and-start).
+- [ ] Independently review E4 after exact-head CI; merge/deployment require separate
+  owner decisions. E5 multi-client/LIVE acceptance is not started. Crash/restart UI
+  recovery and retirement without validated ownership remain outside this change.
+
 
 - [ ] Review the complete multi-provider Telegram UI.
 - [ ] Standardize inline keyboards.

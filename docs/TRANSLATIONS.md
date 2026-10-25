@@ -86,3 +86,23 @@ The same pinned locale is used throughout a valid callback interaction.
 |---|---|---|---|
 | YouTube link recognized. If no buttons appear, send the link again. | Ссылка на YouTube распознана. Если кнопки не появятся, отправь ссылку ещё раз. | Enlace de YouTube reconocido. Si no aparecen botones, envía el enlace de nuevo. | Noninteractive receipt before binding; recovery guidance if publication cannot be confirmed. No automatic resend. |
 | Download request accepted. Results appear in separate messages. | Запрос на скачивание принят. Результат — отдельным сообщением. | Solicitud de descarga aceptada. El resultado se envía en un mensaje aparte. | Replaces the choice prompt after consume, or the direct-download starting status. Acceptance does not mean upload confirmation, continued activity or a guaranteed terminal notification after cancellation. |
+
+## E4 greeting and terminal results
+
+Nine E4 entries supplement the retained historical rows. /start uses one trusted
+platform-list template; disabled platforms are omitted. Legacy greeting strings
+remain in catalogs but are not emitted. Terminal success means a positive media
+acknowledgement, not verified client playback. Unknown delivery never asserts sent/
+not-sent and never promises retry. All valid callbacks keep the request locale.
+
+| EN source | RU | ES | Context / constraint |
+|---|---|---|---|
+| 👋 Hi! I can help you download videos from {platforms}.<br><br>🔗 Just send a video link.<br><br>If buttons appear, choose the format or quality you want — and I'll send the file right here. | 👋 Привет! Я помогу скачать видео из {platforms}.<br><br>🔗 Просто отправь ссылку на видео.<br><br>Если появятся кнопки, выбери нужный формат или качество — и я пришлю файл прямо сюда. | 👋 ¡Hola! Te ayudo a descargar vídeos de {platforms}.<br><br>🔗 Solo envía un enlace a un vídeo.<br><br>Si aparecen botones, elige el formato o la calidad que quieras y te enviaré el archivo aquí mismo. | E4 presentation only; no media or callback-policy change. |
+| YouTube, Instagram and TikTok | YouTube, Instagram и TikTok | YouTube, Instagram y TikTok | E4 presentation only; no media or callback-policy change. |
+| YouTube and Instagram | YouTube и Instagram | YouTube e Instagram | E4 presentation only; no media or callback-policy change. |
+| YouTube and TikTok | YouTube и TikTok | YouTube y TikTok | E4 presentation only; no media or callback-policy change. |
+| ✅ File sent. | ✅ Файл отправлен. | ✅ Archivo enviado. | E4 presentation only; no media or callback-policy change. |
+| Telegram delivery wasn't confirmed. The file may have arrived. There will be no automatic retry. | Доставка в Telegram не подтверждена. Возможно, файл уже пришёл. Автоматического повтора не будет. | No se ha confirmado la entrega en Telegram. Puede que el archivo haya llegado. No habrá un reintento automático. | E4 presentation only; no media or callback-policy change. |
+| Request interrupted. Delivery isn't confirmed. There will be no automatic retry. | Запрос прерван. Доставка не подтверждена. Автоматического повтора не будет. | Solicitud interrumpida. La entrega no está confirmada. No habrá un reintento automático. | E4 presentation only; no media or callback-policy change. |
+| File sent. An error occurred while finishing the request; there will be no automatic retry. | Файл отправлен. При завершении запроса произошла ошибка; автоматического повтора не будет. | Archivo enviado. Se produjo un error al finalizar la solicitud; no habrá un reintento automático. | E4 presentation only; no media or callback-policy change. |
+| Instagram selection accepted. Results appear in separate messages. | Выбор для Instagram принят. Результат — отдельным сообщением. | Selección de Instagram aceptada. El resultado se envía en un mensaje aparte. | E4 presentation only; no media or callback-policy change. |

@@ -425,7 +425,9 @@ async def test_start_copy_uses_active_context(locale):
     msg = SimpleNamespace(from_user=user(locale), answer=AsyncMock())
     with get_i18n().use_locale(locale):
         await handlers.handle_start(msg)
-        msg.answer.assert_awaited_once_with(get_i18n().gettext(handlers._START_MESSAGE))
+        msg.answer.assert_awaited_once_with(
+            get_i18n().gettext(handlers._START_MESSAGE).format(platforms="YouTube")
+        )
 
 
 def test_dispatcher_installs_localization():

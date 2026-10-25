@@ -138,6 +138,11 @@ class InstagramPostHandler:
                 or not self._choices.bind(choice.token, sent.message_id)
             ):
                 self._choices.remove(choice.token)
+                if isinstance(sent, Message) and sent.chat.id == message.chat.id:
+                    with suppress(TelegramAPIError, TimeoutError):
+                        await sent.edit_text(
+                            tr("This choice has expired. Send the link again."), reply_markup=None
+                        )
         except BaseException:
             self._choices.remove(choice.token)
             raise
@@ -178,7 +183,13 @@ class InstagramPostHandler:
                         return
                     with suppress(TelegramAPIError, TimeoutError):
                         async with asyncio.timeout(10):
-                            await message.edit_reply_markup(reply_markup=None)
+                            await message.edit_text(
+                                tr(
+                                    "Instagram selection accepted. Results appear "
+                                    "in separate messages."
+                                ),
+                                reply_markup=None,
+                            )
                     await self._send_carousel(message, selected.plan, guard, operation)
                 except DownloadCleanupError as error:
                     owner._blocked = True
