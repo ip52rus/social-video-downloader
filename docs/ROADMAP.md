@@ -436,9 +436,20 @@ E4 implements one localized /start, evidence-based YouTube terminal cards and
 retirement of validated consumed selection prompts. Unknown delivery stays unknown
 and never triggers a retry. See
 [E4 verification](TESTING.md#phase-8-e4-terminal-ux-and-start).
-E4 independent review, merge, deployment and LIVE acceptance remain separate gates.
-E5 comprehensive client acceptance and durable crash/restart UI recovery remain
-open; E5 is not started.
+E4 merged in PR #79 at 177f11e; post-merge CI #40178485535 SUCCESS.
+A separately authorized bot-only deployment completed. The owner reported narrow
+E4 LIVE PASS for one short greeting, correct platform list, YouTube delivery and
+the sent card without old buttons. This does not cover all languages/platforms/clients.
+
+E5 reviews the existing journeys and adds only two concrete copy fixes: errors list
+available platforms, and the Instagram stale refusal gives a next action. Offline
+tests cover state loss, fresh/repeated requests and localization without changing
+selection, workers or delivery. See [E5 acceptance](PHASE8_UX_ACCEPTANCE.md).
+E5 independent review/merge and final bounded manual acceptance remain separate
+gates. Unqualified Phase 8 closure is BLOCKED until the owner completes or explicitly
+accepts/defers the remaining manual matrix. Durable restart-card retirement is a
+separate UX design question; no persistence/recovery is implemented. No E5 deployment
+or LIVE test is performed.
 See [internationalization contract](INTERNATIONALIZATION.md), [review matrix](TRANSLATIONS.md)
 and [E1b verification](TESTING.md#phase-8-e1b-telegram-interface-localization).
 Neither localization nor Phase 9B's narrow smoke closes Phase 9 reliability.

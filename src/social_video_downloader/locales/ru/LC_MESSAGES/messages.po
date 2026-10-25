@@ -384,3 +384,11 @@ msgstr "Файл отправлен. При завершении запроса 
 
 msgid "Instagram selection accepted. Results appear in separate messages."
 msgstr "Выбор для Instagram принят. Результат — отдельным сообщением."
+
+#, python-brace-format
+msgid "Couldn't recognize the link. Send a video link from {platforms}."
+msgstr "Не удалось распознать ссылку. Отправь ссылку на видео из {platforms}."
+
+#, python-brace-format
+msgid "This platform isn't supported here. Send a video link from {platforms}."
+msgstr "Эта платформа здесь не поддерживается. Отправь ссылку на видео из {platforms}."

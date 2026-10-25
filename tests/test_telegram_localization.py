@@ -241,17 +241,9 @@ async def test_youtube_messages_are_rendered_by_dispatcher(app, monkeypatch, loc
         "unexpected": RuntimeError(),
     }
     sources = {
-        "space": (
-            "Couldn't recognize the link. Send a full HTTP or HTTPS link to "
-            "YouTube, Instagram or TikTok."
-        ),
-        "invalid": (
-            "Couldn't recognize the link. Send a full HTTP or HTTPS link to "
-            "YouTube, Instagram or TikTok."
-        ),
-        "unsupported": (
-            "This platform isn't supported yet. Send a YouTube, Instagram or TikTok link."
-        ),
+        "space": ("Couldn't recognize the link. Send a video link from {platforms}."),
+        "invalid": ("Couldn't recognize the link. Send a video link from {platforms}."),
+        "unsupported": ("This platform isn't supported here. Send a video link from {platforms}."),
         "disabled": (
             "Recognized a {platform_label} link, but downloads from this "
             "platform aren't enabled yet."
@@ -283,7 +275,9 @@ async def test_youtube_messages_are_rendered_by_dispatcher(app, monkeypatch, loc
     )
     monkeypatch.setattr(handlers, "download_service", service)
     await dp.feed_update(bot, message_update(text, locale))
-    assert session.calls[0].text == translated(sources[case], locale, platform_label="Instagram")
+    assert session.calls[0].text == translated(
+        sources[case], locale, platform_label="Instagram", platforms="YouTube"
+    )
     assert len(session.calls) == (2 if case == "direct" else 1)
     if case == "direct":
         assert isinstance(session.calls[-1], EditMessageText)
@@ -466,7 +460,7 @@ async def test_instagram_atomic_locale_ownership_and_admission(
         await dp.feed_update(bot, callback_update(prompt, data, current))
         assert len(sent) == 1
         assert session.calls[-1].text == translated(
-            "This choice has expired or belongs to another user.", current
+            "This choice is no longer available. Send the link again.", current
         )
     elif case == "busy":
         assert session.calls[-1].text == translated("The bot is busy. Try again later.", original)
@@ -480,7 +474,7 @@ async def test_instagram_atomic_locale_ownership_and_admission(
         source = (
             "This choice has expired. Send the link again."
             if case == "malformed"
-            else "This choice has expired or belongs to another user."
+            else "This choice is no longer available. Send the link again."
         )
         assert session.calls[-1].text == translated(source, current)
         assert not sent
@@ -622,7 +616,7 @@ def test_complete_catalog_and_public_literal_inventory(locale):
         catalog = read_po(stream, locale=locale)
     assert not catalog.fuzzy and not list(catalog.check())
     messages = [m for m in catalog if m.id]
-    assert len(messages) == 81
+    assert len(messages) == 83
     for message in messages:
         assert not message.fuzzy
         variants = message.string if isinstance(message.string, tuple) else (message.string,)

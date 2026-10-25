@@ -389,3 +389,11 @@ msgstr "Archivo enviado. Se produjo un error al finalizar la solicitud; no habr�
 
 msgid "Instagram selection accepted. Results appear in separate messages."
 msgstr "Selección de Instagram aceptada. El resultado se envía en un mensaje aparte."
+
+#, python-brace-format
+msgid "Couldn't recognize the link. Send a video link from {platforms}."
+msgstr "No se reconoció el enlace. Envía un enlace a un vídeo de {platforms}."
+
+#, python-brace-format
+msgid "This platform isn't supported here. Send a video link from {platforms}."
+msgstr "Esta plataforma no está disponible aquí. Envía un enlace a un vídeo de {platforms}."

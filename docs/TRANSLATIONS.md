@@ -106,3 +106,20 @@ not-sent and never promises retry. All valid callbacks keep the request locale.
 | Request interrupted. Delivery isn't confirmed. There will be no automatic retry. | Запрос прерван. Доставка не подтверждена. Автоматического повтора не будет. | Solicitud interrumpida. La entrega no está confirmada. No habrá un reintento automático. | E4 presentation only; no media or callback-policy change. |
 | File sent. An error occurred while finishing the request; there will be no automatic retry. | Файл отправлен. При завершении запроса произошла ошибка; автоматического повтора не будет. | Archivo enviado. Se produjo un error al finalizar la solicitud; no habrá un reintento automático. | E4 presentation only; no media or callback-policy change. |
 | Instagram selection accepted. Results appear in separate messages. | Выбор для Instagram принят. Результат — отдельным сообщением. | Selección de Instagram aceptada. El resultado se envía en un mensaje aparte. | E4 presentation only; no media or callback-policy change. |
+
+
+## E5 actionable guidance
+
+Two new entries; old guidance above remains historical catalog copy. The platform
+list is localized using the same existing EN/RU/ES entries as /start and omits
+disabled/unavailable handlers. URL acceptance and media behavior are unchanged.
+
+| EN source | RU | ES | Context / constraint |
+|---|---|---|---|
+| Couldn't recognize the link. Send a video link from {platforms}. | Не удалось распознать ссылку. Отправь ссылку на видео из {platforms}. | No se reconoció el enlace. Envía un enlace a un vídeo de {platforms}. | Malformed/whitespace input; only available platforms, no extraction. |
+| This platform isn't supported here. Send a video link from {platforms}. | Эта платформа здесь не поддерживается. Отправь ссылку на видео из {platforms}. | Esta plataforma no está disponible aquí. Envía un enlace a un vídeo de {platforms}. | Unsupported host; no change to URL/platform policy. |
+| This choice is no longer available. Send the link again. | Выбор больше недоступен. Отправь ссылку ещё раз. | Esta opción ya no está disponible. Envía el enlace de nuevo. | Existing entry now also used for Instagram unknown/expired/foreign callbacks; current sender locale, no unsafe lookup or media retry. |
+
+Valid callbacks still use pinned request language. The stale instruction is an
+explicit new-submission action, not an automatic retry or a non-delivery claim.
+After an uncertain result the prior media may already be in the chat.
