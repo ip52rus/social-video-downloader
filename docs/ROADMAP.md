@@ -384,6 +384,16 @@ Use the same gated process as Instagram:
 5. deterministic and external validation;
 6. Telegram UX integration.
 
+### Targeted TikTok refusal observability
+
+A separate bounded diagnostic change preserves fixed native refusal reasons/stages
+and available counters in ordinary bot logs. It changes neither acquisition nor
+availability policy and adds no network request, retry or fallback. The five
+2026-10-25 metadata failures remain internally UNKNOWN; a future LIVE attempt and
+deployment require separate authorization. Offline verification and Draft PR/CI are
+separate from that unresolved external-platform question. See
+[diagnostic contract](TIKTOK_METADATA_DIAGNOSTICS.md).
+
 ## Phase 7 - Additional Social Platforms
 Evaluate other popular services one by one. Do not promise universal platform support.
 

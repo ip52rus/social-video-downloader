@@ -739,6 +739,24 @@ coverage, high-load behavior and general TikTok reliability remain unverified;
 historical HTTP 429/403 are not universally resolved. This documentation branch
 requires exact-head CI and a separate merge decision; it does not redeploy the bot.
 
+### Targeted TikTok metadata refusal diagnostics (2026-10-25)
+
+- [x] Preserve native refusal detail through one fixed, allowlisted WARNING event
+  per failed export; keep the existing domain error and user copy unchanged.
+- [x] Record observed failure stage and bounded metadata HTTP status/body counters,
+  with missing worker reports/counters explicitly unknown; no extra HTTP requests.
+- [x] Verify offline regression: 46 new tests, 379 focused passed, full suite
+  2783 passed / 1 skipped; Ruff lint/format, diff, privacy and new-link checks pass.
+  Exact-head GitHub CI is a publication gate, reported on the Draft PR.
+- [ ] Obtain independent review and separately authorized merge/deployment.
+- [ ] Diagnose the five historical LIVE failures: original internal codes remain
+  UNKNOWN. A new bounded LIVE attempt requires separate owner authorization and
+  deployment; neither is performed here. No TikTok availability fix is claimed.
+
+See [diagnostic contract](TIKTOK_METADATA_DIAGNOSTICS.md) and
+[offline evidence](TESTING.md#tiktok-metadata-refusal-diagnostics).
+This targeted change does not close Phase 8 manual acceptance or Phase 9 reliability.
+
 ## Phase 7 - Additional Social Platforms
 - [ ] Select candidate platforms based on user demand, feasibility, legal/platform restrictions, extraction reliability, and maintenance burden.
 - [ ] Run a technical spike for each candidate platform.

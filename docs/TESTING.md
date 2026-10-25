@@ -2213,3 +2213,38 @@ Still open: other publication shapes, mixed PHOTO/VIDEO Telegram delivery, large
 multi-batch albums, other clients/devices, file-size boundaries, failure/recovery and
 load behavior, broad Instagram availability and production capacity. Item selectors
 remain blocked; defaults, product limits and the production-mode guard are unchanged.
+
+## TikTok metadata refusal diagnostics
+
+This targeted observability change uses synthetic HTTP responses, owned native
+workers and fake Telegram objects. It performs no real TikTok/Telegram request,
+Docker operation, polling or deployment. The socket/DNS-denial guard is inherited
+by Python workers; generated local media and FFmpeg remain offline.
+
+`tests/test_tiktok_diagnostics.py` adds **46 tests**: fixed refusal/stage mapping for
+HTTP 403/429, content type, missing state, malformed JSON/schema, identity mismatch,
+unavailable/private and unsupported photo/video states, ambiguous state; real
+worker IPC; short redirects and shared request counts; media-phase separation;
+unknown transport text suppression; supervisor override unknowns; pre-cancellation;
+unchanged handler copy/no upload/admission release; bounded numeric fields, dropped
+extra fields/tracebacks, failed logger, and no diagnostic on success.
+
+Focused TikTok/provider/worker/short-link/handler and private-logging regression:
+**379 passed** in 97.49 s. Existing tests cover repeated cancellation, process-group
+reap, quarantine, retained reservations, cleanup and original resource budgets.
+Full offline pytest: **2783 passed / 1 skipped** in 464.09 s (wrapper 466.26 s).
+The skip is the opt-in real YouTube matrix. Ruff lint/format and `git diff --check`
+pass; all 9 added documentation links/anchors resolve locally. Sensitive-pattern
+scan and manual scope review pass. Dependencies, catalogs, handlers and provider
+mapping are unchanged. Exact-head GitHub CI is checked after publication and
+reported on the Draft PR; these local results do not assert CI success.
+
+No headers, UA, cookies, destination validation, deadlines, limits, attempts,
+fallback, media policy, provider mapping or delivery semantics are changed.
+One failed export adds at most one WARNING event and no HTTP/Telegram API call.
+The sink accepts only its exact dedicated schema; the general operation-event
+schema remains unchanged. See [diagnostic contract](TIKTOK_METADATA_DIAGNOSTICS.md).
+The original native codes of the five historical LIVE failures remain UNKNOWN;
+synthetic classifications cannot retrospectively establish them or prove a remote
+anti-bot/schema-change cause. A future deployment/LIVE attempt needs separate
+owner authorization. This does not close Phase 8 manual or Phase 9 reliability gates.

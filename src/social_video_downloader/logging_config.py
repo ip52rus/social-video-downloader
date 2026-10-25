@@ -3,6 +3,7 @@
 import json
 import logging
 
+from social_video_downloader import tiktok_diagnostics
 from social_video_downloader.config import Settings
 from social_video_downloader.operation_logging import LOGGER_NAME, error_category, safe_payload
 
@@ -26,6 +27,11 @@ class SafeEventFilter(logging.Filter):
                 elapsed_ms=None,
             )
             return True
+        if record.name == tiktok_diagnostics.LOGGER_NAME:
+            return (
+                tiktok_diagnostics.safe_payload(getattr(record, "safe_tiktok_event", None))
+                is not None
+            )
         return (
             record.name == LOGGER_NAME
             and safe_payload(getattr(record, "safe_event", None)) is not None
@@ -35,7 +41,11 @@ class SafeEventFilter(logging.Filter):
 class SafeEventFormatter(logging.Formatter):
     def format(self, record):
         # Do not call getMessage/formatException: even a library traceback may contain secrets.
-        return json.dumps(safe_payload(getattr(record, "safe_event", None)), sort_keys=True)
+        if record.name == tiktok_diagnostics.LOGGER_NAME:
+            payload = tiktok_diagnostics.safe_payload(getattr(record, "safe_tiktok_event", None))
+        else:
+            payload = safe_payload(getattr(record, "safe_event", None))
+        return json.dumps(payload, sort_keys=True)
 
 
 class SafeEventHandler(logging.StreamHandler):

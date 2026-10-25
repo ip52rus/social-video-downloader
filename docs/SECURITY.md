@@ -146,8 +146,22 @@ and Telegram prompt message, have a 15-minute TTL and consume atomically once.
 Callbacks contain no publication/media/account identifiers or locators. Admission
 reserves the shared Instagram slot before acknowledgement/consume; failed ack/busy
 requests retain their choice, while early/foreign/expired/replayed callbacks cannot
-start media work. Existing fixed event fields remain the only logging contract.
+start media work. Existing fixed operation-event fields remain the Instagram
+logging contract.
 If worker reap or owned cleanup is unconfirmed, opt-in quarantine keeps files and
 the Instagram slot until operator investigation. Quarantine is not permission to
 force-delete files or retry uncertain uploads. No transport, cookie, authentication,
 proxy, allowlist or dependency changes are introduced by this feature.
+
+## TikTok native refusal event
+
+The exact `social_video_downloader.tiktok_diagnostics` logger is an additional narrow
+sink allowlist, separate from the unchanged general operation-event schema. Each
+failed native export emits at most one WARNING containing fixed reason/stage values,
+a bounded metadata HTTP status and body/request counters. The formatter reconstructs
+this schema again and discards arbitrary fields/exception text. Unknown values are
+not serialized as external strings. There are no URLs, video/user IDs, cookies,
+headers, bodies, signed locators, request identifiers or traceback output. Missing
+worker reports and inexact counters stay unknown. Sink failure does not change the
+refusal, retry, deadline or worker cleanup. See
+[diagnostic boundaries](TIKTOK_METADATA_DIAGNOSTICS.md).

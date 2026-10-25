@@ -173,6 +173,14 @@ media/verification/export, supervisor and handler ownership are reused. Only int
 public-page export opts in; embed, benchmark and diagnostic CLI behavior stays intact.
 See [Phase 6I design and live gate](PHASE6I_TIKTOK_SHORT_LINKS.md).
 
+TikTok native failure reports also retain the observed stage and last metadata
+HTTP status. Only the existing failed `download_video()` export boundary emits a
+single best-effort allowlisted diagnostic; it does not change provider/domain
+mapping or handler orchestration. The private logging sink accepts this exact
+additional schema without broadening general operation events. Supervisor overrides
+cannot reuse unrelated worker stage/status. See
+[refusal diagnostics](TIKTOK_METADATA_DIAGNOSTICS.md).
+
 ### Historical Reel-only opt-in MVP design
 
 The original Reel-only stage reused `InstagramProvider`, `DownloadedMedia` and the
