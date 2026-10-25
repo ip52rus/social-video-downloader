@@ -325,6 +325,8 @@ class Session:
                     diagnostic["cookie_sent"] = bool(req.get_header("Cookie"))
                 response = conn.getresponse()
                 try:
+                    if phase == "metadata":
+                        self.observed["metadata_http_status"] = response.status
                     if diagnostic is not None:
                         diagnostic["status"] = response.status
                     if sum(len(k) + len(v) for k, v in response.headers.items()) > 65536:
@@ -538,6 +540,7 @@ def _execute(
         if benchmark and (stop_reason := _series_limit(budget, deadline)):
             break
         error, path = None, None
+        stage = "admission"
         entry = {"case": index + 1, "success": False}
         if detailed:
             entry.update(metadata=False, source_identity=None, decoded=None, preparation=None)
@@ -555,6 +558,7 @@ def _execute(
                 )
 
                 if is_short(url):
+                    stage = "short_link"
                     session = ShortLinkSession(deadline, budget)
                     url = session.resolve(url)
                     short_jar = session.jar
@@ -568,10 +572,18 @@ def _execute(
                 session = _PublicPageMediaSession(post_id, canonical, deadline, budget)
                 if short_jar is not None:
                     session.jar = short_jar
-                resolved = resolve_public_page(session.metadata(), canonical)
+                stage = "metadata_fetch"
+                body = session.metadata()
+                stage = "metadata_parse"
+                resolved = resolve_public_page(body, canonical)
+                del body
             else:
                 session = Session(post_id, canonical, deadline, budget)
-                resolved = resolve(session.metadata(), post_id)
+                stage = "metadata_fetch"
+                body = session.metadata()
+                stage = "metadata_parse"
+                resolved = resolve(body, post_id)
+                del body
             entry.update(
                 metadata=True,
                 candidates=resolved.candidates,
@@ -583,11 +595,13 @@ def _execute(
             if public_page and resolved.separate_audio:
                 raise Refusal("separate_streams_unsupported")
             path = workspace / f"case-{index + 1}.mp4"
+            stage = "media_acquire"
             session.acquire(resolved, path)
             if detailed:
                 entry.update(bytes=path.stat().st_size, http_complete=True)
             if sum(p.stat().st_size for p in workspace.rglob("*") if p.is_file()) > WORKSPACE_BYTES:
                 raise Refusal("workspace_limit")
+            stage = "media_verify"
             require_audio = (
                 False if public_page else expectations[index] if benchmark else index == 0
             )
@@ -612,9 +626,11 @@ def _execute(
                 try:
                     path.unlink(missing_ok=True)
                 except OSError:
+                    stage = "cleanup"
                     error = stop_reason = "case_cleanup_failed"
             entry["counts"] = {name: budget[name] - previous[name] for name in budget}
         if error:
+            entry["failure_stage"] = stage
             entry["error"] = error
             first_error = first_error or error
             if detailed:
@@ -912,6 +928,9 @@ def download_video(url, output_dir, *, cancelled=None, public_page=False, short_
         **({"short_links": True} if short_links else {}),
     )
     if not result.get("success"):
+        from social_video_downloader.tiktok_diagnostics import emit_refusal
+
+        emit_refusal(result)
         raise Refusal(result.get("error", "worker_failed"))
     report = result["results"][0]
     parameters = {
