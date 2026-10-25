@@ -490,7 +490,9 @@ async def test_text_handler_rejects_unsupported_platform(message):
 
     await handle_text(message)
 
-    assert "пока не поддерживается" in message.answer.await_args.args[0]
+    assert message.answer.await_args.args[0] == (
+        "Эта платформа здесь не поддерживается. Отправь ссылку на видео из YouTube."
+    )
 
 
 @pytest.mark.asyncio

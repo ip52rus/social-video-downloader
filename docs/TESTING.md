@@ -290,6 +290,41 @@ Exact-head CI must be checked on the separate Draft PR. No LIVE Telegram/platfor
 Docker build or deployment is claimed. YouTube pre-binding and mode-to-quality prompt
 text synchronization remain unchanged for E3/E2. Phase 9 reliability remains OPEN.
 
+## Phase 8 E5 final UX acceptance
+
+Base: E4 merge 177f11e; post-merge CI #40178485535 SUCCESS, verified on that SHA.
+The [journey review and evidence ledger](PHASE8_UX_ACCEPTANCE.md) distinguish source
+review, synthetic dispatcher tests, CI and owner LIVE observations.
+
+Two concrete fixes only: available-platform guidance for invalid/unsupported links,
+and an actionable generic Instagram stale/foreign refusal. Existing tests retain
+their strict media/ownership/locale/API assertions; expected changed copy and catalog
+count (83) are updated, not weakened. The 79 new cases in test_ux_acceptance.py cover
+EN/RU/ES plus unsupported/missing language, all configured-platform combinations,
+existing TikTok user availability, and fresh-dispatcher/store-loss journeys. Old
+callbacks produce only localized answers, without edits or media work. Two deliberate
+new submissions each permit one selection; concurrent/repeated old selections cannot
+revive previous requests. Valid callbacks retain the new request's pinned locale.
+
+Focused UI/localization/catalog/wheel checks: **693 passed**. Full inherited
+socket/DNS-denied offline pytest: **2737 passed, 1 skipped**. Ruff, reproducible PO/MO,
+diff, 91 relative Markdown links/anchors and privacy/scope checks passed.
+Installed-wheel resources are exercised outside the checkout. Exact-head CI is a
+separate Draft PR gate. No E5 Docker, polling, platform API or device checks occur.
+
+Owner E4 LIVE PASS is recorded separately: one short /start, correct available
+platforms, YouTube video received and “✅ Файл отправлен.” without old buttons.
+The owner did not specify client, sample count, EN/ES, all platform cases or timing.
+E3's less specific owner LIVE PASS and historical provider acceptances remain intact.
+These reports do not establish E5's remaining
+[manual acceptance](PHASE8_UX_ACCEPTANCE.md#remaining-manual-acceptance-matrix).
+
+State-loss tests simulate new stores/dispatchers with a fake Bot API; they do not
+measure restart recovery on a device. Visually stale cards may remain; unknown
+ownership forbids editing them. No persistence, operation replay or background
+cleanup is added. Phase 8 final acceptance remains OPEN/BLOCKED pending the bounded
+owner decision, while the E5 code can proceed to independent review after checks.
+
 ## Phase 8 E4 terminal UX and start
 
 Base: E3 merge bbfdf85; post-merge CI #40123097002 SUCCESS. E3 LIVE PASS is
@@ -317,8 +352,10 @@ Verification: focused **833 passed**; full offline pytest
 **2658 passed, 1 skipped**. Ruff lint/format, deterministic PO/MO compilation, diff, 99 relative
 Markdown links/anchors, privacy and file-scope checks passed. The
 socket/DNS-denial guard is verified and inherited by child Python processes.
-Exact-head CI is a separate publication gate after the Draft PR opens.
-No E4 Docker/deployment/LIVE calls.
+E4 exact-head CI #40139859877 succeeded; PR #79 subsequently merged at 177f11e
+with post-merge CI #40178485535 SUCCESS. The implementation verification above made
+no Docker/deployment/LIVE calls. Later separately authorized deployment and owner
+LIVE evidence are recorded in the [E5 ledger](PHASE8_UX_ACCEPTANCE.md#owner-live-evidence-ledger).
 
 /start has one send for all configured-platform combinations. Healthy YouTube flows
 add one terminal edit, without a separate success message; pre-upload error copy

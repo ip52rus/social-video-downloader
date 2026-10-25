@@ -149,8 +149,8 @@ async def _notify_download_error(message: Message, error: DownloaderError) -> No
         report_failure("youtube", "notification", notification_error)
 
 
-async def handle_start(message: Message, instagram_reels=None, tiktok_videos=None) -> None:
-    """Explain current capabilities and how to submit a link."""
+def _available_platforms(message: Message, instagram_reels=None, tiktok_videos=None) -> str:
+    """Describe availability using the existing handler flags and user policy."""
     instagram = instagram_reels is not None
     tiktok = tiktok_videos is not None and tiktok_videos.allows(message)
     if instagram and tiktok:
@@ -161,6 +161,12 @@ async def handle_start(message: Message, instagram_reels=None, tiktok_videos=Non
         platforms = tr("YouTube and TikTok")
     else:
         platforms = "YouTube"
+    return platforms
+
+
+async def handle_start(message: Message, instagram_reels=None, tiktok_videos=None) -> None:
+    """Explain current capabilities and how to submit a link."""
+    platforms = _available_platforms(message, instagram_reels, tiktok_videos)
     await message.answer(tr(_START_MESSAGE, platforms=platforms))
 
 
@@ -171,8 +177,8 @@ async def handle_text(message: Message, instagram_reels=None, tiktok_videos=None
     if any(character.isspace() for character in submitted_text):
         await message.answer(
             tr(
-                "Couldn't recognize the link. Send a full HTTP or HTTPS link to "
-                "YouTube, Instagram or TikTok."
+                "Couldn't recognize the link. Send a video link from {platforms}.",
+                platforms=_available_platforms(message, instagram_reels, tiktok_videos),
             )
         )
         return
@@ -183,14 +189,17 @@ async def handle_text(message: Message, instagram_reels=None, tiktok_videos=None
     except InvalidMediaURLError:
         await message.answer(
             tr(
-                "Couldn't recognize the link. Send a full HTTP or HTTPS link to "
-                "YouTube, Instagram or TikTok."
+                "Couldn't recognize the link. Send a video link from {platforms}.",
+                platforms=_available_platforms(message, instagram_reels, tiktok_videos),
             )
         )
         return
     except UnsupportedPlatformError:
         await message.answer(
-            tr("This platform isn't supported yet. Send a YouTube, Instagram or TikTok link.")
+            tr(
+                "This platform isn't supported here. Send a video link from {platforms}.",
+                platforms=_available_platforms(message, instagram_reels, tiktok_videos),
+            )
         )
         return
 

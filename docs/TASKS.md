@@ -753,8 +753,9 @@ Do not promise universal platform support or hard-code a long unsupported platfo
 
 E1a was merged in PR #75; E1b interface localization merged in PR #76.
 E2 YouTube choice text/keyboard synchronization merged in PR #77. E3 safe
-pre-binding and minimal request cards merged in PR #78. E4 terminal UX and
-the single-message /start are authorized; E5 is unstarted. Phase 9 remains OPEN.
+pre-binding and minimal request cards merged in PR #78. E4 merged in PR #79 at
+177f11e and was separately deployed. E5 offline review and targeted copy fixes are
+verified; final owner UX acceptance remains OPEN. Phase 9 remains OPEN.
 
 - [x] Implement and verify inactive E1a: safe EN/RU/ES resolver, ContextVar middleware, compiled package
   catalogs and backward-compatible presentation locale in pending records. Telegram
@@ -796,23 +797,43 @@ the single-message /start are authorized; E5 is unstarted. Phase 9 remains OPEN.
   outcomes, best-effort existing-card edits, serialized UI updates and minimal
   Instagram prompt retirement. See
   [E4 verification](TESTING.md#phase-8-e4-terminal-ux-and-start).
-- [ ] Independently review E4 after exact-head CI; merge/deployment require separate
-  owner decisions. E5 multi-client/LIVE acceptance is not started. Crash/restart UI
-  recovery and retirement without validated ownership remain outside this change.
+- [x] Merge E4 PR #79 at 177f11e; exact-head CI #40139859877 and post-merge
+  CI #40178485535 SUCCESS. A separate authorized bot-only deployment succeeded;
+  E5 does not redeploy the application.
+- [x] Record owner E4 LIVE PASS: one short /start, correct available-platform list,
+  YouTube video delivery and “✅ Файл отправлен.” without old buttons. Client,
+  sample count, EN/ES and other platform coverage were not supplied. See the
+  [evidence ledger](PHASE8_UX_ACCEPTANCE.md#owner-live-evidence-ledger).
+- [x] Complete E5 offline acceptance: final handler/localization review, available-
+  platform error guidance, actionable Instagram stale refusal and restart/new-request
+  regression. 79 new cases; focused 693 passed; full offline 2737 passed / 1 skipped. See
+  [E5 verification](TESTING.md#phase-8-e5-final-ux-acceptance).
+- [ ] Independently review E5 after exact-head CI; merge requires a separate decision.
+- [ ] Complete or explicitly accept/defer the bounded
+  [remaining manual matrix](PHASE8_UX_ACCEPTANCE.md#remaining-manual-acceptance-matrix).
+  Unqualified Phase 8 closure is BLOCKED by this acceptance gap; no existing LIVE
+  PASS is revoked. No E5 deployment or new LIVE test is performed.
+- [ ] Separately decide whether durable ownership/message binding for visual cleanup
+  after restart is required. No persistence, recovery or background cleanup is
+  implemented; stale callbacks are safely refused without another download.
 
 
-- [ ] Review the complete multi-provider Telegram UI.
+The high-level UX goals below remain subject to the final owner acceptance/disposition
+of the reviewed provider-specific behavior; E5 does not claim universal client coverage.
+
+- [x] Review the complete multi-provider Telegram UI offline; see the E5 journey review.
 - [ ] Standardize inline keyboards.
 - [ ] Present modes and quality options consistently across providers.
-- [ ] Review all bot messages, including removing or updating obsolete video/audio choice
-  prompts after selection; disappearing buttons must not leave an irrelevant instruction.
+- [x] Review all bot messages, including removing or updating obsolete video/audio choice
+  prompts after selection; known consumed prompts are retired. Unvalidated restart
+  cards remain the documented separate design limit.
 - [ ] Standardize loading and waiting messages.
 - [ ] Standardize success messages.
 - [ ] Standardize unsupported-content messages.
 - [ ] Standardize retry and error states.
 - [ ] Keep provider-specific exceptions only where necessary.
 - [ ] Finalize consistent naming and button copy.
-- [ ] Perform a final interaction-flow review.
+- [x] Perform the E5 interaction-flow review offline; final manual acceptance stays open.
 
 ## Phase 9 - Production Reliability
 

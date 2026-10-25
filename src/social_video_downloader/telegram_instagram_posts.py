@@ -159,7 +159,9 @@ class InstagramPostHandler:
         selection = self._choices.resolve_selection(*args)
         if selection is None:
             with suppress(TelegramAPIError, TimeoutError):
-                await callback.answer(tr("This choice has expired or belongs to another user."))
+                await callback.answer(
+                    tr("This choice is no longer available. Send the link again.")
+                )
             return
         with get_i18n().use_locale(selection.locale):
             owner = self._reel_handler

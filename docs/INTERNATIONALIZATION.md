@@ -1,4 +1,4 @@
-# Telegram internationalization (Phase 8 E1a / E1b / E2 / E3 / E4)
+# Telegram internationalization (Phase 8 E1a / E1b / E2 / E3 / E4 / E5)
 
 ## Scope and decision
 
@@ -44,7 +44,7 @@ technical diagnostics, worker IPC and media selection are not translated.
 ## Catalogs and packaging
 
 [Review matrix](TRANSLATIONS.md) retains the 68 E1b user-facing entries and adds
-two E3 receipt strings and nine E4 entries. Catalogs now contain 81 entries,
+two E3 receipt strings, nine E4 entries and two E5 guidance entries. Catalogs now contain 83 entries,
 including two infrastructure entries and retained historical copy. E4 uses one
 trusted platforms placeholder in /start; plural rules remain unchanged. English
 msgids are trusted application copy. Translate first, then substitute plain named
@@ -77,7 +77,8 @@ cards. E3 addresses publication and durable request receipts as specified below;
 E3 excluded terminal cleanup, which E4 adds below. A failed or ambiguous
 quality edit retains the transitioned state: no automatic retry or download is added;
 a repeated old mode callback can render the same quality step while still valid.
-E4 is authorized below; E5 and manual preferences require separate authorization. Phase 9 reliability remains OPEN.
+E4 is described below; E5 copy review is authorized separately. Manual preferences
+remain outside scope. Phase 9 reliability remains OPEN.
 
 ## E3 publication and status-card decision
 
@@ -167,3 +168,26 @@ a known publisher bind failure may add one cleanup edit within the existing oper
 window. Partial/uncertain carousel delivery copy remains unchanged. Invalid foreign/
 expired/unknown callbacks receive their existing toast and cannot erase another
 user's valid prompt.
+
+
+## E5 acceptance and localized guidance
+
+The final [journey review](PHASE8_UX_ACCEPTANCE.md) found two presentation gaps.
+Invalid/unsupported-link errors now use the same available-platform list as /start,
+including existing TikTok per-user availability. Two trusted English msgids use
+plain named platforms substitution after translation; callback IDs and URL policy
+remain unchanged. Instagram empty-store/stale/foreign refusal reuses the existing
+generic unavailable-choice instruction, without exposing another request's locale.
+
+79 new offline cases test EN/RU/ES, missing/unsupported sender language and subsequent
+requests after simulated state loss. Existing regional-code, malformed-code,
+parallel ContextVar, plural, quality, partial/uncertain-delivery and caption tests
+remain authoritative. Telegram User.language_code is user metadata, not guaranteed
+to match the setting of the particular client used. No /language, preferences,
+command/profile publication or translation service is added.
+
+Owner E4 LIVE PASS is narrow: greeting/platform list, YouTube video and the Russian
+sent card without old buttons. EN/ES and all client/platform combinations are not
+claimed verified. Final owner manual acceptance remains open; no E5 LIVE request
+or deployment occurs. Unknown old messages after a restart cannot be safely
+retired without a separate ownership/persistence design.
