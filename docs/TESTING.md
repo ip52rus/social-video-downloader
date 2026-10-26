@@ -310,20 +310,35 @@ Focused UI/localization/catalog/wheel checks: **693 passed**. Full inherited
 socket/DNS-denied offline pytest: **2737 passed, 1 skipped**. Ruff, reproducible PO/MO,
 diff, 91 relative Markdown links/anchors and privacy/scope checks passed.
 Installed-wheel resources are exercised outside the checkout. Exact-head CI is a
-separate Draft PR gate. No E5 Docker, polling, platform API or device checks occur.
+separate Draft PR gate at that implementation stage. No Docker, polling, platform
+API or device checks occurred in that offline verification; later deployment and
+owner observations are separate evidence below.
 
 Owner E4 LIVE PASS is recorded separately: one short /start, correct available
 platforms, YouTube video received and “✅ Файл отправлен.” without old buttons.
 The owner did not specify client, sample count, EN/ES, all platform cases or timing.
 E3's less specific owner LIVE PASS and historical provider acceptances remain intact.
-These reports do not establish E5's remaining
-[manual acceptance](PHASE8_UX_ACCEPTANCE.md#remaining-manual-acceptance-matrix).
+Those earlier reports alone did not establish E5 manual acceptance. The later
+owner decision on 2026-10-26 is **PHASE 8 MVP — ACCEPTED WITH DOCUMENTED LIMITATIONS**:
+YouTube link recognition, Video/Audio/quality selection, video delivery and terminal
+card PASS; one checked Instagram Reel recognition/start notice/delivery PASS; common
+/start platform list and unsupported-link guidance PASS. RU is LIVE-checked. EN/ES
+remain automated-only, without separate manual language_code=en/es acceptance.
+The owner explicitly accepts that gap. Historical Instagram posts/carousels and
+Item Selection results are retained separately, not presented as repeated on E5.
+TikTok's later network-dependent PASS follows the retained refusal evidence
+[below](#subsequent-deployment-and-live-observations). The
+[acceptance ledger and retained matrix](PHASE8_UX_ACCEPTANCE.md#remaining-manual-acceptance-matrix)
+define the limits. Confirmed journeys require no repeat without a concrete regression.
 
 State-loss tests simulate new stores/dispatchers with a fake Bot API; they do not
 measure restart recovery on a device. Visually stale cards may remain; unknown
 ownership forbids editing them. No persistence, operation replay or background
-cleanup is added. Phase 8 final acceptance remains OPEN/BLOCKED pending the bounded
-owner decision, while the E5 code can proceed to independent review after checks.
+cleanup is added. These visual/restart limits are accepted for the MVP; other
+client/carousel combinations, future VPS TikTok egress, load and failure recovery
+remain unverified. This is not general platform reliability or Phase 9 acceptance.
+E5 later merged in PR #80 at 082986e (post-merge CI #40184267688 SUCCESS) and was
+separately deployed; this docs-only closure runs no local pytest, Docker or LIVE test.
 
 ## Phase 8 E4 terminal UX and start
 
@@ -2246,5 +2261,47 @@ The sink accepts only its exact dedicated schema; the general operation-event
 schema remains unchanged. See [diagnostic contract](TIKTOK_METADATA_DIAGNOSTICS.md).
 The original native codes of the five historical LIVE failures remain UNKNOWN;
 synthetic classifications cannot retrospectively establish them or prove a remote
-anti-bot/schema-change cause. A future deployment/LIVE attempt needs separate
-owner authorization. This does not close Phase 8 manual or Phase 9 reliability gates.
+anti-bot/schema-change cause. At that offline stage no deployment/LIVE attempt was
+performed. Subsequent events below are separate evidence; the diagnostic code does
+not itself establish Phase 8 acceptance or close Phase 9 reliability gates.
+
+### Subsequent deployment and LIVE observations
+
+PR #81 merged at `b55a019b9943d75e7ed715f1b64cefc57f1e2dbc`;
+[post-merge CI #40231655683](https://github.com/ip52rus/social-video-downloader/actions/runs/40231655683)
+SUCCESS. A separately authorized local bot-only deployment succeeded. Diagnostics
+are retained; no TikTok acquisition/parser/header/cookie policy fix was applied.
+
+The earlier five generic metadata failures remain historical; their original native
+codes cannot be recovered. After deployment, three owner attempts on 2026-10-25
+all logged `missing_public_state`, `metadata_parse`, HTTP 200 and 1522 / 1524 / 1521
+metadata body bytes. Counts were exact: metadata requests 1 / 1 / 2, media requests
+0 / 0 / 0. Each occurred in a separate chronological start/refusal/failure interval,
+with general `download_prepare / metadata_unavailable`; no correlation ID exists.
+The expected completed state block was unavailable before JSON-state parsing,
+media acquisition, FFmpeg or upload. This is not evidence of a defective parser.
+
+One separately authorized metadata-only experiment on 2026-10-26 reused the pinned
+transport locally on macOS, outside Docker. Its isolated classifier passed 44
+synthetic checks before the one LIVE request. HTTP 200, category html, 1522 body
+bytes, one metadata request, zero media requests; no retry or additional page.
+Expected metadata and the tested challenge/verification, login/access and redirect/
+intermediate markers were absent. Page type and underlying cause remained UNKNOWN:
+absence of those markers does not rule out protection or an unfamiliar response.
+The body stayed in memory; the isolated script/directory were removed. No raw page,
+URL, IDs, cookies or actual exit IPs are published. The experiment did not record
+its exit location and does not prove identity with the Docker responses.
+
+For final acceptance the owner reports that repeated failures occurred through a
+Kazakhstan VPN exit, then confirms a successful TikTok video download after switching
+to a Netherlands VPN exit. This is narrow **TikTok LIVE PASS in the working network
+environment** and evidence of network-egress/IP dependence in those observations.
+The exact cause of the difference, all Netherlands IPs, and a future VPS exit remain
+unverified. The later success does not erase failures, identify the UNKNOWN HTML,
+or establish that the original parser is broken or universally reliable.
+
+These are prior diagnostic results and later owner observations, not tests performed
+by this documentation change. The owner accepts the scoped Phase 8 MVP with the
+[documented limitations](PHASE8_UX_ACCEPTANCE.md); EN/ES LIVE, other Instagram/client
+combinations, restart visuals, load and recovery remain outside verified coverage.
+Phase 9 stays OPEN; no new LIVE requests or deployment are authorized by this record.

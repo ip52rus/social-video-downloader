@@ -389,10 +389,12 @@ Use the same gated process as Instagram:
 A separate bounded diagnostic change preserves fixed native refusal reasons/stages
 and available counters in ordinary bot logs. It changes neither acquisition nor
 availability policy and adds no network request, retry or fallback. The five
-2026-10-25 metadata failures remain internally UNKNOWN; a future LIVE attempt and
-deployment require separate authorization. Offline verification and Draft PR/CI are
-separate from that unresolved external-platform question. See
-[diagnostic contract](TIKTOK_METADATA_DIAGNOSTICS.md).
+2026-10-25 pre-diagnostic failures remain internally UNKNOWN. PR #81 merged at
+`b55a019`; post-merge CI #40231655683 succeeded and a separately authorized bot-only
+deployment followed. Later missing-state refusals and the owner's subsequent
+network-dependent success are recorded separately in the
+[TikTok chronology](TESTING.md#subsequent-deployment-and-live-observations).
+The [diagnostic contract](TIKTOK_METADATA_DIAGNOSTICS.md) is retained.
 
 ## Phase 7 - Additional Social Platforms
 Evaluate other popular services one by one. Do not promise universal platform support.
@@ -408,6 +410,10 @@ Candidates should be selected later based on:
 Each platform requires its own technical spike and Go/No-Go gate before implementation. Do not hard-code a long unsupported platform list into product claims.
 
 ## Phase 8 - Unified Product UX
+
+Status (owner decision, 2026-10-26): **PHASE 8 MVP — ACCEPTED WITH DOCUMENTED LIMITATIONS**.
+See [final owner acceptance](PHASE8_UX_ACCEPTANCE.md#final-mvp-owner-acceptance--2026-10-26).
+
 Polish the complete downloader experience after multiple providers exist.
 
 Include:
@@ -455,11 +461,20 @@ E5 reviews the existing journeys and adds only two concrete copy fixes: errors l
 available platforms, and the Instagram stale refusal gives a next action. Offline
 tests cover state loss, fresh/repeated requests and localization without changing
 selection, workers or delivery. See [E5 acceptance](PHASE8_UX_ACCEPTANCE.md).
-E5 independent review/merge and final bounded manual acceptance remain separate
-gates. Unqualified Phase 8 closure is BLOCKED until the owner completes or explicitly
-accepts/defers the remaining manual matrix. Durable restart-card retirement is a
-separate UX design question; no persistence/recovery is implemented. No E5 deployment
-or LIVE test is performed.
+E5 merged in PR #80 at `082986e`; post-merge CI #40184267688 succeeded and a
+separately authorized deployment followed. At the implementation handoff, closure
+was blocked pending owner acceptance/disposition. The owner now accepts the checked
+YouTube journey, one Instagram Reel, common UX and TikTok in the working network
+exit. RU is LIVE-checked; EN/ES have automated coverage only. TikTok failed through
+the owner-reported Kazakhstan VPN exit and succeeded after switching to the
+Netherlands; exact cause, all Netherlands IPs and future VPS egress are not verified.
+Earlier Instagram post/carousel results remain historical, not a repeated E5 matrix.
+
+Accepted MVP limits include EN/ES LIVE, other carousel/client combinations, load and
+failure recovery, and visually stale post-restart keyboards. No persistence/recovery
+is implemented. Accepted cases need no repeat without a concrete regression.
+This closes the scoped Phase 8 MVP, not general platform reliability; Phase 9 remains
+OPEN and is not started here.
 See [internationalization contract](INTERNATIONALIZATION.md), [review matrix](TRANSLATIONS.md)
 and [E1b verification](TESTING.md#phase-8-e1b-telegram-interface-localization).
 Neither localization nor Phase 9B's narrow smoke closes Phase 9 reliability.

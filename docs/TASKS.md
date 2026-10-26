@@ -748,14 +748,18 @@ requires exact-head CI and a separate merge decision; it does not redeploy the b
 - [x] Verify offline regression: 46 new tests, 379 focused passed, full suite
   2783 passed / 1 skipped; Ruff lint/format, diff, privacy and new-link checks pass.
   Exact-head GitHub CI is a publication gate, reported on the Draft PR.
-- [ ] Obtain independent review and separately authorized merge/deployment.
+- [x] Record PR #81 merge at b55a019, post-merge CI #40231655683 SUCCESS and
+  separately authorized bot-only deployment. Diagnostics remain enabled.
 - [ ] Diagnose the five historical LIVE failures: original internal codes remain
-  UNKNOWN. A new bounded LIVE attempt requires separate owner authorization and
-  deployment; neither is performed here. No TikTok availability fix is claimed.
+  UNKNOWN. Later three missing-state refusals, one metadata-only UNKNOWN result and
+  the owner-confirmed network-dependent success are recorded in the
+  [chronology](TESTING.md#subsequent-deployment-and-live-observations). No parser or
+  universal TikTok availability fix is claimed.
 
 See [diagnostic contract](TIKTOK_METADATA_DIAGNOSTICS.md) and
 [offline evidence](TESTING.md#tiktok-metadata-refusal-diagnostics).
-This targeted change does not close Phase 8 manual acceptance or Phase 9 reliability.
+This diagnostic change does not itself close acceptance; the separate Phase 8
+owner decision is recorded below. Phase 9 reliability remains OPEN.
 
 ## Phase 7 - Additional Social Platforms
 - [ ] Select candidate platforms based on user demand, feasibility, legal/platform restrictions, extraction reliability, and maintenance burden.
@@ -772,8 +776,11 @@ Do not promise universal platform support or hard-code a long unsupported platfo
 E1a was merged in PR #75; E1b interface localization merged in PR #76.
 E2 YouTube choice text/keyboard synchronization merged in PR #77. E3 safe
 pre-binding and minimal request cards merged in PR #78. E4 merged in PR #79 at
-177f11e and was separately deployed. E5 offline review and targeted copy fixes are
-verified; final owner UX acceptance remains OPEN. Phase 9 remains OPEN.
+177f11e and was separately deployed. E5 merged in PR #80 at 082986e and was
+separately deployed; post-merge CI #40184267688 SUCCESS. The owner decision on
+2026-10-26 is **PHASE 8 MVP — ACCEPTED WITH DOCUMENTED LIMITATIONS**.
+See [final acceptance](PHASE8_UX_ACCEPTANCE.md#final-mvp-owner-acceptance--2026-10-26).
+Phase 9 remains OPEN and is not started by this documentation change.
 
 - [x] Implement and verify inactive E1a: safe EN/RU/ES resolver, ContextVar middleware, compiled package
   catalogs and backward-compatible presentation locale in pending records. Telegram
@@ -796,7 +803,8 @@ verified; final owner UX acceptance remains OPEN. Phase 9 remains OPEN.
   [E2 verification](TESTING.md#phase-8-e2-youtube-choice-ux).
 - [x] Merge E2 PR #77 at b7462f8 after the separate owner decision;
   post-merge CI #40110968231 SUCCESS. This does not establish LIVE acceptance.
-- [ ] Record separately authorized E2 LIVE acceptance if performed; not tested by E3.
+- [x] Record final owner confirmation of Video/Audio and quality selection on the
+  deployed MVP; this is later LIVE evidence, not a test performed by E3.
 - [x] Complete E3 offline acceptance: fail-closed message binding; noninteractive
   receipt → confirmed binding → prompt/keyboard edit; durable accepted-request
   text on terminal selection and direct download. 58 new offline cases, 583
@@ -817,7 +825,7 @@ verified; final owner UX acceptance remains OPEN. Phase 9 remains OPEN.
   [E4 verification](TESTING.md#phase-8-e4-terminal-ux-and-start).
 - [x] Merge E4 PR #79 at 177f11e; exact-head CI #40139859877 and post-merge
   CI #40178485535 SUCCESS. A separate authorized bot-only deployment succeeded;
-  E5 does not redeploy the application.
+  the later E5 deployment is recorded separately below.
 - [x] Record owner E4 LIVE PASS: one short /start, correct available-platform list,
   YouTube video delivery and “✅ Файл отправлен.” without old buttons. Client,
   sample count, EN/ES and other platform coverage were not supplied. See the
@@ -826,18 +834,26 @@ verified; final owner UX acceptance remains OPEN. Phase 9 remains OPEN.
   platform error guidance, actionable Instagram stale refusal and restart/new-request
   regression. 79 new cases; focused 693 passed; full offline 2737 passed / 1 skipped. See
   [E5 verification](TESTING.md#phase-8-e5-final-ux-acceptance).
-- [ ] Independently review E5 after exact-head CI; merge requires a separate decision.
-- [ ] Complete or explicitly accept/defer the bounded
-  [remaining manual matrix](PHASE8_UX_ACCEPTANCE.md#remaining-manual-acceptance-matrix).
-  Unqualified Phase 8 closure is BLOCKED by this acceptance gap; no existing LIVE
-  PASS is revoked. No E5 deployment or new LIVE test is performed.
+- [x] Record E5 merge PR #80 at 082986e, post-merge CI #40184267688 SUCCESS and
+  separately authorized bot-only deployment; offline evidence stays separate.
+- [x] Record final owner LIVE PASS for YouTube selection/delivery/terminal card,
+  one Instagram Reel and common greeting/unsupported-link UX; RU is LIVE-checked.
+- [x] Record owner TikTok PASS after changing VPN exit to the Netherlands, following
+  missing-state failures through the reported Kazakhstan exit; retain failures and
+  diagnostics. Network-egress dependence is observed, exact cause is not proven.
+- [x] Explicitly accept/defer the bounded
+  [remaining manual matrix](PHASE8_UX_ACCEPTANCE.md#remaining-manual-acceptance-matrix)
+  as MVP limitations: EN/ES LIVE, future VPS TikTok egress, other carousel/client
+  combinations, load/recovery and stale post-restart cards. Do not repeat confirmed
+  journeys without a concrete regression or relabel untested cases as LIVE PASS.
 - [ ] Separately decide whether durable ownership/message binding for visual cleanup
   after restart is required. No persistence, recovery or background cleanup is
   implemented; stale callbacks are safely refused without another download.
 
 
-The high-level UX goals below remain subject to the final owner acceptance/disposition
-of the reviewed provider-specific behavior; E5 does not claim universal client coverage.
+The unchecked UX ideas below remain deferred backlog beyond the owner-accepted
+MVP. They do not block its scoped acceptance or imply universal client coverage;
+provider-specific capabilities are intentionally preserved.
 
 - [x] Review the complete multi-provider Telegram UI offline; see the E5 journey review.
 - [ ] Standardize inline keyboards.
@@ -851,7 +867,8 @@ of the reviewed provider-specific behavior; E5 does not claim universal client c
 - [ ] Standardize retry and error states.
 - [ ] Keep provider-specific exceptions only where necessary.
 - [ ] Finalize consistent naming and button copy.
-- [x] Perform the E5 interaction-flow review offline; final manual acceptance stays open.
+- [x] Perform the E5 interaction-flow review offline; the later owner MVP acceptance
+  and its retained manual gaps are recorded above.
 
 ## Phase 9 - Production Reliability
 

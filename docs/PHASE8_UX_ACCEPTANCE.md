@@ -1,12 +1,18 @@
 # Phase 8 E5 UX acceptance
 
+Current owner disposition (2026-10-26): **PHASE 8 MVP — ACCEPTED WITH DOCUMENTED LIMITATIONS**.
+Acceptance baseline: E5 plus TikTok diagnostics, main `b55a019b9943d75e7ed715f1b64cefc57f1e2dbc`.
+This accepts the verified MVP; it does not establish universal platform reliability.
+
 ## Scope and evidence
 
-Baseline: E4 merge [177f11e](https://github.com/ip52rus/social-video-downloader/commit/177f11ef7e8ad17a0993f7083b23ede15d2e7a70);
+E5 implementation-review baseline: E4 merge [177f11e](https://github.com/ip52rus/social-video-downloader/commit/177f11ef7e8ad17a0993f7083b23ede15d2e7a70);
 [post-merge CI #40178485535](https://github.com/ip52rus/social-video-downloader/actions/runs/40178485535)
 SUCCESS. E5 reviews existing Telegram presentation offline, with targeted copy fixes.
 Media policies, callback payloads, stores, deadlines, admission, workers and delivery
-are unchanged. No Docker, polling, platform requests or device checks run in E5.
+are unchanged. No Docker, polling, platform requests or device checks ran during
+that implementation/offline stage. Later deployment and owner LIVE evidence are
+recorded separately below.
 
 Evidence classes are separate: source review; deterministic dispatcher/fake-transport
 tests; GitHub CI; prior deployment checks; owner-reported LIVE observations.
@@ -90,12 +96,36 @@ permission to add a database/background worker.
 - Historical Instagram Item Selection [accepted cases](TESTING.md#instagram-item-selection--live-acceptance-2026-10-22)
   remain valid historical delivery evidence. They do not establish the later
   EN/RU/ES interface or all client behavior. Existing results are not overwritten.
-- E4 deployment checks and CI are separate from these human observations. E5 adds
-  no LIVE evidence. No numerical callback latency is inferred.
+- E4 deployment checks and CI are separate from these human observations. The E5
+  implementation/offline stage added no LIVE evidence. No numerical callback
+  latency is inferred. Later observations follow; earlier results remain intact.
+
+### Final MVP owner acceptance — 2026-10-26
+
+| Scope | Owner-confirmed result and boundary |
+|---|---|
+| YouTube | PASS: link recognition, Video/Audio and quality selection, video delivery and a terminal request card after successful sending. This does not assert a new audio-file delivery test or numerical latency. |
+| Instagram | PASS for the checked Reel: recognition, starting notice and successful video delivery. Earlier [post/carousel](TESTING.md#instagram-live-acceptance-2026-10-18) and Item Selection results above remain historical, not a fresh E5 matrix. |
+| TikTok | PASS in the working network environment: the owner confirmed a successful video download after switching the VPN exit from Kazakhstan to the Netherlands. Earlier failures are retained in the [TikTok chronology](TESTING.md#subsequent-deployment-and-live-observations). |
+| Common UX | PASS: /start lists available platforms; an unsupported link gives actionable guidance listing YouTube, Instagram and TikTok in the tested configuration. |
+| Language | RU is LIVE-checked. EN/ES have automated coverage, with no separate manual Telegram language_code=en/es acceptance. The owner explicitly accepts this residual gap. |
+
+The failed Kazakhstan-exit attempts and later Netherlands-exit success support
+network-egress/IP dependence in these observations. The precise cause is not
+proven: neither a defective original parser nor all Netherlands IPs being usable
+is established. PR #81 diagnostics are retained. Actual IPs, submitted links and
+response bodies are not published. Future VPS egress remains untested.
+
+This is owner-reported LIVE evidence, not new agent-executed tests or general
+load/recovery acceptance. Confirmed journeys require no repeat LIVE test without
+a concrete regression. Client names and exact successful sample counts were not
+supplied; do not infer coverage.
 
 ## Remaining manual acceptance matrix
 
-Plan only; a new LIVE operation requires an owner decision. Record actual Telegram
+Retained as the disposition of the original plan: the owner accepted the remaining
+gaps below as limitations of the MVP. They do not block this scoped acceptance.
+Any new LIVE operation still requires an owner decision. Record actual Telegram
 User.language_code where safely available, observed language and client name, without
 publishing user identifiers or source URLs. A changed client setting alone is not
 proof of the value sent by Telegram. No forced restart, induced send failure,
@@ -103,12 +133,12 @@ automatic repeat, mass matrix or universal client coverage is requested.
 
 | Scope | Existing acceptance / remaining action |
 |---|---|
-| E4 greeting + YouTube sent card | Owner PASS above; do not repeat without a specific regression. |
-| EN and ES UI / fallback | Remaining: /start, invalid text and unsupported link in existing clients. No media request. Existing resolver tests cover missing/unsupported codes; do not fabricate real updates. |
-| Format → quality / pinned language | Remaining LIVE coverage not specified by E3/E4 report. If separately authorized, use one known interactive video; inspect translated step text and valid callback language. Terminal audio/video buttons can download and require explicit media authorization. |
-| Instagram Item Selection | Historical all/one delivery PASS is retained. Remaining current localized labels/source-position display and stale/foreign instruction need bounded owner approval. No demand to repeat historical media delivery without a concrete reason. |
-| TikTok | Existing functional delivery evidence remains historical. Current localized status/caption in one full or supported short-link case remains unverified; real acquisition/send needs separate approval. Do not test every language × URL type. |
-| Old callbacks / client rendering | If an existing pre-restart card is available, one safe stale click may confirm localized refusal and no download. Do not restart production or use a valid terminal button merely to create this condition. Record the client actually used; other clients remain unverified. |
+| Greeting + YouTube sent card | E4 and final owner PASS above; do not repeat without a specific regression. |
+| EN and ES UI / fallback | Manual LIVE en/es remains unverified and explicitly accepted as a residual gap. Automated EN/RU/ES and missing/unsupported-code coverage is separate evidence. |
+| Format → quality / pinned language | Final owner PASS covers selection. LIVE language-switching/pinned-locale behavior remains unverified; automated coverage is retained. No repeat of accepted downloads is required. |
+| Instagram Item Selection | Historical all/one delivery PASS is retained. Current full carousel/item/client matrix was not repeated on E5 and remains a documented limit; the fresh Reel PASS does not expand it. |
+| TikTok | Final owner PASS is limited to the working VPN exit and checked video. Network dependence, future VPS egress and broader publication/client/language coverage remain unverified. Earlier HTTP and missing-state failures are not erased. |
+| Old callbacks / client rendering | In-memory state loss safely refuses old tokens, while visually stale keyboards can remain. No durable cleanup/recovery is implemented; other client combinations remain unverified. No forced restart is required for closure. |
 | Failure / partial / uncertain delivery | Offline evidence only; do not induce Telegram faults, interrupt owned workers or retry ambiguous delivery for acceptance. |
 
 ## Verification and disposition
@@ -117,12 +147,22 @@ automatic repeat, mass matrix or universal client coverage is requested.
 **693 passed**. Full inherited socket/DNS-denied offline pytest:
 **2737 passed, 1 skipped**. Ruff, PO/MO reproducibility, installed-wheel resources,
 diff, 91 relative links/anchors, privacy and exact file-scope checks passed.
-Exact-head CI is a separate Draft PR check; no merge or deployment is performed.
+At that implementation handoff, exact-head CI was a separate Draft PR check;
+no merge or deployment was performed by that stage. E5 later merged in PR #80
+at `082986e`; post-merge CI #40184267688 succeeded and a separately authorized
+bot-only deployment followed. TikTok diagnostics later merged/deployed from
+PR #81 at `b55a019`; post-merge CI #40231655683 succeeded. These are separate
+from human LIVE acceptance and from this docs-only closure PR.
 
-E5 implementation/offline readiness and final owner acceptance are separate.
-Unqualified Phase 8 closure is BLOCKED by outstanding owner manual acceptance
-of the scoped matrix (especially EN/ES and current Instagram/TikTok presentation).
-This is an evidence gap, not a confirmed downloader regression or a requirement to
-prove every platform/language/client combination. The owner may complete the bounded
-checks or explicitly accept/defer remaining limits. No existing LIVE PASS is revoked.
-Durable restart-card retirement remains a documented separate design question.
+At the E5 implementation handoff, unqualified closure was BLOCKED pending owner
+manual acceptance/disposition. On 2026-10-26 the owner accepted the scoped results
+and explicitly accepted the remaining limitations: **PHASE 8 MVP — ACCEPTED WITH
+DOCUMENTED LIMITATIONS**. Earlier failures and unverified checks are not relabelled
+as successes. This is MVP acceptance, not universal reliability of all platforms.
+
+Accepted limits: TikTok network dependence and untested future VPS IP; no separate
+EN/ES LIVE acceptance; incomplete Instagram carousel/client combinations; no load,
+failure-recovery or broad operational reliability acceptance; and visually stale
+post-restart cards with no durable retirement/recovery. Phase 9 remains OPEN and
+is not started by this closure. Durable restart-card retirement remains a separate
+design question. No code, deployment or LIVE operation occurs in this docs-only PR.
