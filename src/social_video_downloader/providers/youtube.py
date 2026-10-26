@@ -75,8 +75,13 @@ class YouTubeProvider:
         }
 
     def _new_ydl(self, options: dict[str, Any]) -> Any:
+        from social_video_downloader.infrastructure.youtube_write_budget import (
+            guard_ydl,
+            guarded_options,
+        )
+
         factory = self._ydl_factory or yt_dlp.YoutubeDL
-        return factory(options)
+        return guard_ydl(factory(guarded_options(options)))
 
     @staticmethod
     def _normalize_youtube_url(url: str) -> str:

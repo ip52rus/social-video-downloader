@@ -108,3 +108,40 @@ def test_settings_are_immutable():
 
     with pytest.raises(AttributeError):
         settings.app_env = "production"
+
+
+@pytest.mark.parametrize(
+    "name,value",
+    [
+        ("DOWNLOAD_MAX_PENDING_REQUESTS", "0"),
+        ("DOWNLOAD_MAX_PENDING_REQUESTS", "1025"),
+        ("DOWNLOAD_NOTICE_INTERVAL_SECONDS", "0"),
+        ("DOWNLOAD_NOTICE_INTERVAL_SECONDS", "301"),
+        ("YOUTUBE_MAX_FILE_BYTES", "2000000001"),
+        ("YOUTUBE_MAX_REQUEST_BYTES", "100"),
+        ("YOUTUBE_MAX_WORKSPACE_BYTES", "4294967296"),
+        ("YOUTUBE_MAX_FILE_BYTES", "not-a-number"),
+    ],
+)
+def test_review_correction_settings_reject_invalid_budgets(name, value):
+    with pytest.raises(ConfigurationError):
+        Settings.from_env({"TELEGRAM_BOT_TOKEN": "synthetic", name: value})
+
+
+def test_review_correction_settings_from_environment():
+    settings = Settings.from_env(
+        {
+            "TELEGRAM_BOT_TOKEN": "synthetic",
+            "TELEGRAM_API_BASE_URL": "http://local.invalid",
+            "DOWNLOAD_MAX_PENDING_REQUESTS": "200",
+            "DOWNLOAD_NOTICE_INTERVAL_SECONDS": "10",
+            "YOUTUBE_MAX_FILE_BYTES": "1000000000",
+            "YOUTUBE_MAX_REQUEST_BYTES": "2000000000",
+            "YOUTUBE_MAX_WORKSPACE_BYTES": "4000000000",
+        }
+    )
+    assert settings.download_max_pending_requests == 200
+    assert settings.download_notice_interval_seconds == 10
+    assert settings.youtube_limits.max_file_bytes == 1_000_000_000
+    assert settings.youtube_limits.max_request_bytes == 2_000_000_000
+    assert settings.youtube_limits.max_workspace_bytes == 4_000_000_000

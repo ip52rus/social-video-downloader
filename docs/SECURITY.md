@@ -169,8 +169,10 @@ refusal, retry, deadline or worker cleanup. See
 ## Phase 9C admission and resource boundary
 
 Shared request leases and bounded rate bookkeeping keep Telegram user identifiers
-only in process memory, never in logs or persistent storage. Global reservations
-include pending choices and quarantined cleanup; there is no queue. `/cancel` cannot
+only in process memory, never in logs or persistent storage. Bounded user leases
+include pending choices; separate global work reservations include quarantined
+cleanup but exclude idle choices. Link-refusal notices are throttled; no queue.
+`/cancel` cannot
 interrupt workers/uploads, bypass ownership or revive a consumed callback.
 
 Instagram byte guards account actual bodies independently of Content-Length and
@@ -178,6 +180,13 @@ retain format/identity, output-size, workspace and cleanup checks. Configuration
 an absolute 2,000,000,000-byte individual file ceiling and a smaller cloud endpoint
 cap; aggregate budgets are finite. Admission/free-space checks are conservative
 accounting, not OS disk quotas, RSS isolation or guarantees against unrelated disk
-writers. Legacy YouTube streaming remains an explicit limitation. No new HTTP calls,
-headers, cookies, retry/fallback or production activation bypass are introduced.
+writers. YouTube acquisition reuses the existing engine in a short-lived owned
+POSIX child. Write interception is child-local; preparation uses capped/reaped
+FFmpeg processes. Private bounded IPC carries the original snapshot; response
+bodies/URLs are not logged or persisted by the guard. Policy-only control files
+remain in the owned temporary workspace. Failed group cleanup preserves that root
+and quarantines both slots; it never deletes a potentially live writer workspace.
+This targets native yt-dlp writes/current FFmpeg outputs, not arbitrary external
+programs or RSS. No new HTTP calls, headers, cookies, retry/fallback or production
+activation bypass are introduced.
 See [limits and lifecycle](PHASE9C_DOWNLOAD_PROTECTION.md).

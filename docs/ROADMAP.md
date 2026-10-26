@@ -487,10 +487,14 @@ Status: OPEN. Phase 4 functional acceptance does not satisfy this reliability ga
 Phase 9C is an owner-authorized scoped implementation: replace the historical
 Instagram 25 MiB Telegram gates with common configurable file/collection/workspace
 and free-space bounds; add process-local cross-platform user leases, link cooldown
-and bounded global admission without a queue. Pending choices reserve capacity for
-up to their original 15 minutes and may be cancelled with `/cancel`; executing or
+and bounded global admission without a queue. Pending choices reserve a user slot,
+not worker capacity, for up to their original 15 minutes and may be cancelled with
+`/cancel`; executing or
 quarantined work cannot be released by that command. Existing platform gates,
 formats, HTTP policy, count limits and delivery/no-retry contracts remain in force.
+Review corrections add endpoint-aware YouTube limits enforced during acquisition,
+merge and preparation, plus throttled repeated link refusals. Busy callbacks preserve
+the pending choice; quarantine retains work capacity.
 See [design and limits](PHASE9C_DOWNLOAD_PROTECTION.md). Independent review,
 exact-head CI and separately authorized deployment/LIVE checks remain gates;
 this implementation does not close general Phase 9 reliability/load/recovery.

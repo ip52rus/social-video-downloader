@@ -108,7 +108,10 @@ async def test_restart_refusal_then_fresh_and_repeated_request(
     monkeypatch.setattr(handlers, "pending_interaction_store", InMemoryPendingInteractionStore())
     clock = [0.0]
     dp, bot, session, _, _, downloads = app(
-        instagram=instagram, download_admission=DownloadAdmission(clock=lambda: clock[0])
+        instagram=instagram,
+        download_admission=DownloadAdmission(
+            clock=lambda: clock[0], free_bytes=lambda: 100 * 1024**3
+        ),
     )
     locale = resolve_locale(current)
     await asyncio.gather(

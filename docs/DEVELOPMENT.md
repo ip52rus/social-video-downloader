@@ -375,16 +375,26 @@ candidate next direction only after a separate owner decision, not an automatic 
 budgets, without changing activation rules or currently running services. Configure
 `DOWNLOAD_MAX_FILE_BYTES`, `DOWNLOAD_MAX_REQUEST_BYTES`,
 `DOWNLOAD_MAX_WORKSPACE_BYTES`, `DOWNLOAD_MIN_FREE_BYTES`,
-`DOWNLOAD_MAX_ACTIVE_REQUESTS` and `DOWNLOAD_LINK_INTERVAL_SECONDS` through the
-existing environment mechanism; defaults and consistency checks are in the design.
+`DOWNLOAD_MAX_ACTIVE_REQUESTS`, `DOWNLOAD_LINK_INTERVAL_SECONDS`,
+`DOWNLOAD_MAX_PENDING_REQUESTS`, `DOWNLOAD_NOTICE_INTERVAL_SECONDS`, and
+`YOUTUBE_MAX_FILE_BYTES` / `YOUTUBE_MAX_REQUEST_BYTES` / `YOUTUBE_MAX_WORKSPACE_BYTES`
+through the existing environment mechanism; defaults and consistency checks are in
+the design.
 No real `.env` changes, Docker operations or LIVE downloads are part of implementation.
 
 The router's localization middleware surrounds the new message/callback admission
 middleware. Admission reserves synchronously before metadata; validated callbacks
-reuse the original lease and locale, never a new slot. Waiting choices also occupy
-global capacity. `/cancel` invalidates only idle pending choices; it leaves the short
+reuse the original user lease and locale, acquiring a separate worker atomically
+when available. Busy preserves pending choices without extraction or consume.
+Waiting choices occupy only the bounded user-lease map, not global work capacity.
+`/cancel` invalidates only idle pending choices; it leaves the short
 link cooldown intact. Lazy expiry cannot release a running callback or owned worker.
 Quarantined cleanup retains both its user's slot and global capacity. Investigate
 worker ownership and workspace safety before any separately authorized operational
-recovery; restarting is not itself proof of cleanup. A permanently stuck legacy
-YouTube thread can retain a lease indefinitely. This is intentionally fail-closed.
+recovery; restarting is not itself proof of cleanup. An unconfirmed worker/process-group
+stop or cleanup can retain a lease indefinitely
+and preserves its workspace. This is intentionally fail-closed. YouTube acquisition
+uses an owned POSIX child with scoped write interception, not global file hooks in
+the polling process. Preparation retains its existing drain-on-cancel thread ownership.
+See the design for the additional settings not forwarded by source Compose and
+for conservative disk reservations. No Docker/configuration changes are applied.

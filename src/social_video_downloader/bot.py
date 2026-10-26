@@ -46,6 +46,9 @@ def create_dispatcher(
                 "limits": settings.download_limits,
                 "max_active": settings.download_max_active_requests,
                 "link_interval": settings.download_link_interval_seconds,
+                "max_pending": settings.download_max_pending_requests,
+                "notice_interval": settings.download_notice_interval_seconds,
+                "youtube_limits": settings.youtube_limits,
             }
             if settings
             else {}

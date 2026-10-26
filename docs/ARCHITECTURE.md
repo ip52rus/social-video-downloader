@@ -25,10 +25,15 @@ Environment-based settings are validated before starting the application. The Te
 Phase 9C adds a process-local admission middleware around the existing transport
 handlers: one unfinished request per Telegram user across platforms, acquired before
 metadata and retained through pending choices, delivery and safe cleanup. A bounded
-number of leases includes waiting and quarantined operations; no queue or new
-infrastructure. Existing typed stores remain authoritative for callback validation
+user-lease map includes waiting and quarantined operations; a separate worker
+budget excludes waiting choices. Callbacks acquire work atomically before consume;
+Busy preserves the choice. No queue or persistent infrastructure. Existing typed
+stores remain authoritative for callback validation
 and consumption. `/cancel` removes only an idle pending choice. Resource policy is
-shared and validated independently of providers. See
+validated independently of providers. YouTube acquisition uses the existing engine
+in an owned POSIX child so write guards cannot mutate the polling process or other
+platform threads. Native HTTP bytes, partials and current FFmpeg outputs are bounded;
+owned-group drain precedes cleanup, uncertainty retains quarantine. See
 [Phase 9C lifecycle and technical limits](PHASE9C_DOWNLOAD_PROTECTION.md).
 
 

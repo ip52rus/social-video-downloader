@@ -87,6 +87,9 @@ class FakeDownloadService:
     async def create_choice_plan_async(self, url: str) -> ChoicePlan:
         return self.create_choice_plan(url)
 
+    async def download_bounded(self, url, output_dir, options, limits):
+        return await handlers._run_workspace_thread(self.download, url, output_dir, options)
+
     def download(
         self,
         url: str,

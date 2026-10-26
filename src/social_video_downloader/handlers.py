@@ -43,6 +43,7 @@ from social_video_downloader.domain.urls import detect_platform, normalize_media
 from social_video_downloader.download_protection import (
     check_delivery_file,
     consume_choice,
+    current_limits,
     hold_choice,
     protected_cleanup,
     retain_current_request,
@@ -52,6 +53,10 @@ from social_video_downloader.infrastructure.telegram_media import (
     inspect_telegram_video,
     prepare_telegram_video,
     telegram_video_upload_parameters,
+)
+from social_video_downloader.infrastructure.youtube_write_budget import (
+    BudgetExceeded,
+    YouTubeWriteBudget,
 )
 from social_video_downloader.operation_logging import Operation, report_failure
 from social_video_downloader.services.choice_model import (
@@ -348,12 +353,17 @@ async def _download_and_deliver_media(
                 TemporaryDirectory(prefix="social-video-downloader-")
             ) as temporary_directory:
                 try:
-                    downloaded = await _run_workspace_thread(
-                        download_service.download,
-                        url,
-                        Path(temporary_directory),
-                        options,
-                    )
+                    limits = current_limits()
+                    budget = None
+                    if limits is not None:
+                        downloaded = await download_service.download_bounded(
+                            url, Path(temporary_directory), options, limits
+                        )
+                        budget = YouTubeWriteBudget(Path(temporary_directory), limits)
+                    else:
+                        downloaded = await _run_workspace_thread(
+                            download_service.download, url, Path(temporary_directory), options
+                        )
                     if not downloaded.file_path.is_file():
                         raise MediaProcessingError("The downloader returned a missing output file.")
 
@@ -364,6 +374,7 @@ async def _download_and_deliver_media(
                             prepare_telegram_audio,
                             downloaded.file_path,
                             downloaded.metadata.duration_seconds,
+                            **({"runner": budget.run} if budget is not None else {}),
                         )
                         audio_parameters = (
                             {"duration": audio.duration} if audio.duration is not None else {}
@@ -387,12 +398,15 @@ async def _download_and_deliver_media(
                     telegram_video = await _run_workspace_thread(
                         prepare_telegram_video,
                         downloaded.file_path,
+                        **({"runner": budget.run} if budget is not None else {}),
                     )
                     upload_parameters: dict[str, int] = {}
 
                     try:
                         probe_data = await _run_workspace_thread(
-                            inspect_telegram_video, telegram_video
+                            inspect_telegram_video,
+                            telegram_video,
+                            **({"runner": budget.run} if budget is not None else {}),
                         )
                         upload_parameters = telegram_video_upload_parameters(probe_data)
                     except Exception as error:
@@ -423,7 +437,15 @@ async def _download_and_deliver_media(
                 finally:
                     operation.phase = "cleanup"
 
+        except BudgetExceeded:
+            operation.fail(category="refused")
+            return YouTubeDeliveryResult(
+                YouTubeDeliveryState.FAILED,
+                _download_error_message(MediaProcessingError("YouTube resource budget exhausted.")),
+            )
         except Exception as error:
+            if isinstance(error, DownloadCleanupError):
+                retain_current_request()
             operation.fail(error)
             if confirmed:
                 return YouTubeDeliveryResult(

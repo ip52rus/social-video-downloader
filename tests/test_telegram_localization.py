@@ -34,6 +34,7 @@ from social_video_downloader.domain.errors import (
     MetadataExtractionError,
     UnsupportedPlatformError,
 )
+from social_video_downloader.download_protection import DownloadAdmission
 from social_video_downloader.services.instagram_carousel import InstagramCarouselService
 from social_video_downloader.telegram_i18n import get_i18n, resolve_locale, trn
 from social_video_downloader.telegram_instagram import InstagramReelHandler
@@ -168,10 +169,18 @@ async def app(monkeypatch):
         bot = Bot("123456:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi", session=session)
         owner = InstagramReelHandler()
         tt = TelegramTikTokHandler(provider=FixtureProvider())
+        settings = Settings(
+            "synthetic", instagram_telegram_enabled=instagram, tiktok_telegram_enabled=tiktok
+        )
+        # Presentation concurrency must not depend on the runner's free disk.
+        if download_admission is None:
+            download_admission = DownloadAdmission(
+                limits=settings.download_limits,
+                youtube_limits=settings.youtube_limits,
+                free_bytes=lambda: 100 * 1024**3,
+            )
         dispatcher = create_dispatcher(
-            Settings(
-                "synthetic", instagram_telegram_enabled=instagram, tiktok_telegram_enabled=tiktok
-            ),
+            settings,
             instagram_reels=owner,
             tiktok_videos=tt,
             download_admission=download_admission,
@@ -990,19 +999,19 @@ async def test_actual_youtube_delivery_messages_counts_and_source_caption(
     monkeypatch.setattr(handlers, "download_service", service)
     monkeypatch.setattr(handlers, "_download_and_deliver_media", REAL_DELIVERY)
 
-    def prepare(path):
+    def prepare(path, **kw):
         if case == "prepare":
             raise MediaProcessingError()
         return path
 
     monkeypatch.setattr(handlers, "prepare_telegram_video", prepare)
     monkeypatch.setattr(
-        handlers, "prepare_telegram_audio", lambda path, duration: PreparedAudio(path, None)
+        handlers, "prepare_telegram_audio", lambda path, duration, **kw: PreparedAudio(path, None)
     )
     monkeypatch.setattr(
         handlers,
         "inspect_telegram_video",
-        lambda path: {"streams": [{"codec_type": "video", "width": 64, "height": 96}]},
+        lambda path, **kw: {"streams": [{"codec_type": "video", "width": 64, "height": 96}]},
     )
     if case in {"uncertain", "oversize"}:
         session.fail = SendVideo

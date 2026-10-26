@@ -41,6 +41,7 @@ class RequestLease:
     pending: WaitingChoice | None = None
     callback_active: bool = False
     quarantined: bool = False
+    working: bool = True
 
 
 _current: ContextVar[RequestLease | None] = ContextVar("download_request", default=None)
@@ -66,6 +67,11 @@ def consume_choice(platform, token):
         lease.pending = None
 
 
+def current_limits():
+    lease = _current.get()
+    return lease.limits if lease is not None else None
+
+
 def check_delivery_file(path):
     if (lease := _current.get()) is not None:
         lease.limits.check_file(path)
@@ -73,21 +79,31 @@ def check_delivery_file(path):
 
 @contextmanager
 def protected_cleanup(manager):
-    """Keep the lease if __exit__ fails, preserving the original context semantics."""
-    failure = None
-    entered = False
+    """Never delete an uncertain owned worker's workspace; retain failed cleanup."""
+    directory = manager.__enter__()
     try:
-        with manager as directory:
-            entered = True
-            try:
-                yield directory
-            except BaseException as error:
-                failure = error
-                raise
-    except BaseException as error:
-        if entered and error is not failure:
-            retain_current_request()
+        yield directory
+    except DownloadCleanupError:
+        retain_current_request()
+        finalizer = getattr(manager, "_finalizer", None)
+        if finalizer is not None:
+            finalizer.detach()
         raise
+    except BaseException as error:
+        try:
+            suppressed = manager.__exit__(type(error), error, error.__traceback__)
+        except BaseException as cleanup_error:
+            if cleanup_error is not error:
+                retain_current_request()
+            raise
+        if not suppressed:
+            raise
+    else:
+        try:
+            manager.__exit__(None, None, None)
+        except BaseException:
+            retain_current_request()
+            raise
 
 
 class DownloadAdmission:
@@ -98,6 +114,9 @@ class DownloadAdmission:
         *,
         limits=None,
         max_active=4,
+        max_pending=128,
+        youtube_limits=None,
+        notice_interval=5,
         link_interval=3,
         clock=monotonic,
         utc_clock=lambda: datetime.now(UTC),
@@ -107,6 +126,13 @@ class DownloadAdmission:
             raise ValueError("Global admission must be from 1 to 8.")
         if not 0 <= link_interval <= 300:
             raise ValueError("Invalid link interval.")
+        if type(max_pending) is not int or not 1 <= max_pending <= 1024:
+            raise ValueError("Pending admission must be from 1 to 1024.")
+        if type(notice_interval) is not int or not 1 <= notice_interval <= 300:
+            raise ValueError("Invalid refusal notice interval.")
+        self.max_pending = max_pending
+        self.youtube_limits = youtube_limits or self._default_youtube_limits()
+        self.notice_interval = notice_interval
         self.limits = limits or DownloadLimits()
         self.max_active = max_active
         self.link_interval = link_interval
@@ -114,6 +140,35 @@ class DownloadAdmission:
         self._free_bytes = free_bytes or (lambda: shutil.disk_usage(gettempdir()).free)
         self._leases: dict[int, RequestLease] = {}
         self._attempts: dict[int, float] = {}
+        self._notices: dict[int, float] = {}
+
+    @staticmethod
+    def _default_youtube_limits():
+        return DownloadLimits(2_000_000_000, 4 * 1024**3, 8 * 1024**3, 512 * 1024**2)
+
+    def should_notify(self, user_id):
+        now = self._clock()
+        self._notices = {k: v for k, v in self._notices.items() if now - v < self.notice_interval}
+        if user_id in self._notices:
+            return False
+        if len(self._notices) >= 4096:
+            del self._notices[next(iter(self._notices))]
+        self._notices[user_id] = now
+        return True
+
+    def _work_available(self, limits):
+        working = [lease for lease in self._leases.values() if lease.working]
+        if len(working) >= self.max_active:
+            return False
+        required = (
+            limits.min_free_bytes
+            + limits.max_workspace_bytes
+            + sum(lease.limits.max_workspace_bytes for lease in working)
+        )
+        try:
+            return self._free_bytes() >= required
+        except OSError:
+            return False
 
     def _expire(self):
         now = self._utc_clock()
@@ -127,7 +182,7 @@ class DownloadAdmission:
                 lease.pending.invalidate()
                 del self._leases[user]
 
-    def admit(self, user_id):
+    def admit(self, user_id, *, platform=None):
         self._expire()
         if user_id in self._leases:
             return None, ACTIVE_MESSAGE
@@ -138,18 +193,10 @@ class DownloadAdmission:
         if len(self._attempts) >= 4096:
             return None, BUSY_MESSAGE
         self._attempts[user_id] = now
-        if len(self._leases) >= self.max_active:
+        limits = self.youtube_limits if platform == "youtube" else self.limits
+        if len(self._leases) >= self.max_pending or not self._work_available(limits):
             return None, BUSY_MESSAGE
-        # Conservative reservation includes waiting choices and already used space.
-        required = (
-            self.limits.min_free_bytes + (len(self._leases) + 1) * self.limits.max_workspace_bytes
-        )
-        try:
-            if self._free_bytes() < required:
-                return None, BUSY_MESSAGE
-        except OSError:
-            return None, BUSY_MESSAGE
-        lease = RequestLease(user_id, self.limits)
+        lease = RequestLease(user_id, limits)
         self._leases[user_id] = lease
         return lease, None
 
@@ -160,6 +207,10 @@ class DownloadAdmission:
             return None, STALE_MESSAGE
         if lease.quarantined or lease.callback_active:
             return None, BUSY_MESSAGE
+        if not lease.working:
+            if not self._work_available(lease.limits):
+                return None, BUSY_MESSAGE
+            lease.working = True
         lease.contexts += 1
         lease.callback_active = True
         return lease, None
@@ -168,6 +219,8 @@ class DownloadAdmission:
         lease.contexts -= 1
         if callback:
             lease.callback_active = False
+        if lease.contexts == 0 and not lease.quarantined:
+            lease.working = False
         if (
             lease.contexts == 0
             and lease.pending is None
@@ -215,14 +268,15 @@ class DownloadProtectionMiddleware(BaseMiddleware):
             if any(c.isspace() for c in text):
                 return await handler(event, data)
             try:
-                detect_platform(normalize_media_url(text))
+                platform = detect_platform(normalize_media_url(text))
             except DownloaderError:
                 return await handler(event, data)
             if event.from_user is None:
                 return
-            lease, refusal = self.admission.admit(event.from_user.id)
+            lease, refusal = self.admission.admit(event.from_user.id, platform=platform.value)
             if refusal:
-                await event.answer(tr(refusal))
+                if self.admission.should_notify(event.from_user.id):
+                    await event.answer(tr(refusal))
                 return
         else:
             return await handler(event, data)

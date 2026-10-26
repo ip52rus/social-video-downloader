@@ -118,14 +118,12 @@ async def test_gate_is_reserved_before_metadata_and_accepts_other_users(app):
 
 
 @pytest.mark.asyncio
-async def test_global_capacity_includes_waiting_choices_and_has_no_queue(app):
-    for user in range(1, 5):
+async def test_waiting_choices_do_not_occupy_work_capacity(app):
+    for user in range(1, 7):
         await send(app, user=user)
-    assert len(app.service.plan_calls) == 4
-    await send(app, user=5)
-    assert text(app) == protection.BUSY_MESSAGE
-    assert len(app.service.plan_calls) == 4
-    assert len(app.gate._leases) == 4
+    assert len(app.service.plan_calls) == 6
+    assert len(app.gate._leases) == 6
+    assert not any(lease.working for lease in app.gate._leases.values())
 
 
 @pytest.mark.asyncio
@@ -562,8 +560,8 @@ async def test_actual_workspace_cleanup_failure_keeps_shared_lease(app, monkeypa
         app.service.plan = direct_plan()
         monkeypatch.setattr(handlers, "_download_and_deliver_media", REAL_DELIVERY)
         monkeypatch.setattr(handlers, "TemporaryDirectory", FailedCleanup)
-        monkeypatch.setattr(handlers, "prepare_telegram_video", lambda p: p)
-        monkeypatch.setattr(handlers, "inspect_telegram_video", lambda p: {})
+        monkeypatch.setattr(handlers, "prepare_telegram_video", lambda p, **kw: p)
+        monkeypatch.setattr(handlers, "inspect_telegram_video", lambda p, **kw: {})
         await send(app)
     else:
         monkeypatch.setattr(
@@ -631,3 +629,159 @@ async def test_instagram_waiting_expiry_uses_original_store_deadline(app, monkey
     post._send_carousel.assert_not_awaited()
     assert not app.gate._leases
     assert not post._choices._choices
+
+
+@pytest.mark.asyncio
+async def test_pending_capacity_is_separate_from_workers(app):
+    app.gate.max_pending = 2
+    await send(app, user=1)
+    await send(app, user=2)
+    assert not any(lease.working for lease in app.gate._leases.values())
+    await send(app, user=3)
+    assert text(app) == protection.BUSY_MESSAGE
+    assert len(app.service.plan_calls) == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("locale", ["en", "ru", "es"])
+async def test_busy_callback_preserves_choice_without_extraction(app, locale):
+    app.gate.max_active = 1
+    await send(app, code=locale)
+    card = prompt(app)
+    payload = card.reply_markup.inline_keyboard[1][0].callback_data
+    entered, release = asyncio.Event(), asyncio.Event()
+
+    async def planning(url):
+        entered.set()
+        await release.wait()
+        return choose_mode_plan()
+
+    app.service.create_choice_plan_async = planning
+    other = asyncio.create_task(send(app, user=8))
+    await entered.wait()
+    try:
+        await app.dp.feed_update(app.bot, callback_update(card, payload, code="es"))
+        assert text(app) == get_i18n().gettext(protection.BUSY_MESSAGE, locale=locale)
+        lease = app.gate._leases[7]
+        assert lease.pending is not None and not lease.working and lease.contexts == 0
+        app.download.assert_not_awaited()
+        assert len(app.service.plan_calls) == 1
+    finally:
+        release.set()
+        await other
+    await app.dp.feed_update(app.bot, callback_update(card, payload, code="es"))
+    app.download.assert_awaited_once()
+    assert len(app.service.plan_calls) == 1
+    assert 7 not in app.gate._leases
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("locale", ["en", "ru", "es"])
+@pytest.mark.parametrize("reason", ["active", "workers", "rate", "pending"])
+async def test_link_refusal_first_reply_then_spam_throttle(app, locale, reason):
+    if reason == "active":
+        await send(app, code=locale)
+        expected = protection.ACTIVE_MESSAGE
+    elif reason == "rate":
+        await send(app, TT, code=locale)
+        expected = protection.RATE_MESSAGE
+    elif reason == "pending":
+        app.gate.max_pending = 1
+        await send(app, user=8)
+        expected = protection.BUSY_MESSAGE
+    else:
+        app.gate.max_active = 1
+        assert app.gate.admit(8)[0].working
+        expected = protection.BUSY_MESSAGE
+    before = len(app.session.calls)
+    plans, tt_calls = len(app.service.plan_calls), app.tt.handle.await_count
+    await send(app, code=locale)
+    assert len(app.session.calls) == before + 1
+    assert text(app) == get_i18n().gettext(expected, locale=locale)
+    for _ in range(25):
+        await send(app, code=locale)
+    assert len(app.session.calls) == before + 1
+    assert len(app.service.plan_calls) == plans and app.tt.handle.await_count == tt_calls
+    if reason != "rate":
+        app.now[0] = 5
+        await send(app, code=locale)
+        assert len(app.session.calls) == before + 2
+
+
+def test_refusal_bookkeeping_bounded():
+    admission = gate()
+    for user in range(5000):
+        assert admission.should_notify(user)
+    assert len(admission._notices) == 4096
+    assert not admission.should_notify(4999)
+
+
+def test_unknown_worker_keeps_workspace_and_work_capacity(tmp_path):
+    from tempfile import TemporaryDirectory
+
+    admission = gate(max_active=1)
+    lease, _ = admission.admit(7, platform="youtube")
+    token = protection._current.set(lease)
+    directory = TemporaryDirectory(dir=tmp_path)
+    root = type(tmp_path)(directory.name)
+    (root / "partial.mp4").write_bytes(b"synthetic incomplete operation")
+    try:
+        with pytest.raises(DownloadCleanupError), protection.protected_cleanup(directory):
+            raise DownloadCleanupError("synthetic live-writer uncertainty")
+    finally:
+        protection._current.reset(token)
+        admission.leave(lease)
+    assert root.exists() and (root / "partial.mp4").exists()
+    assert lease.working and lease.quarantined and not lease.contexts
+    assert admission.admit(8)[0] is None
+    assert "already running" in admission.cancel_waiting(7)
+    assert root.exists()
+    # Only this isolated synthetic test is known not to have a writer.
+    directory.cleanup()
+
+
+@pytest.mark.asyncio
+async def test_instagram_busy_callback_keeps_original_plan_and_one_shot(app, monkeypatch, tmp_path):
+    _, plan = collection(tmp_path, 2)
+    post = app.ig._post_handler = InstagramPostHandler(app.ig)
+    post._choices._clock = lambda: app.utc[0]
+
+    async def offer(message, raw):
+        await post._offer_choice(message, plan, 1)
+
+    monkeypatch.setattr(app.ig, "handle", offer)
+    delivered = AsyncMock()
+    monkeypatch.setattr(post, "_send_carousel", delivered)
+    await send(app, IG, code="ru")
+    card = prompt(app)
+    payload = card.reply_markup.inline_keyboard[1][0].callback_data
+    app.gate.max_active = 1
+    other, _ = app.gate.admit(8)
+    assert other is not None
+    await app.dp.feed_update(app.bot, callback_update(card, payload, code="es"))
+    assert text(app) == get_i18n().gettext(protection.BUSY_MESSAGE, locale="ru")
+    delivered.assert_not_awaited()
+    assert app.gate._leases[7].pending is not None
+    app.gate.leave(other)
+    await app.dp.feed_update(app.bot, callback_update(card, payload, code="es"))
+    delivered.assert_awaited_once()
+    await app.dp.feed_update(app.bot, callback_update(card, payload, code="es"))
+    delivered.assert_awaited_once()
+    assert not app.gate._leases
+
+
+def test_callback_rechecks_disk_without_consuming_pending():
+    free = [100 * 1024**3]
+    admission = protection.DownloadAdmission(free_bytes=lambda: free[0])
+    lease, _ = admission.admit(7)
+    invalidated = Mock()
+    lease.pending = protection.WaitingChoice(
+        ("youtube", "synthetic"), datetime.now(UTC) + timedelta(minutes=15), invalidated
+    )
+    admission.leave(lease)
+    free[0] = 0
+    assert admission.enter_callback(7, lease.pending.key) == (None, protection.BUSY_MESSAGE)
+    invalidated.assert_not_called()
+    assert lease.pending is not None and not lease.working
+    free[0] = 100 * 1024**3
+    assert admission.enter_callback(7, lease.pending.key) == (lease, None)

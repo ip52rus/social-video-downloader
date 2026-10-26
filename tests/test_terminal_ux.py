@@ -52,9 +52,9 @@ def real_pipeline(monkeypatch, plan=None):
     service = FakeDownloadService(plan=plan or direct_plan())
     monkeypatch.setattr(handlers, "download_service", service)
     monkeypatch.setattr(handlers, "_download_and_deliver_media", REAL_DELIVERY)
-    monkeypatch.setattr(handlers, "prepare_telegram_video", lambda path: path)
+    monkeypatch.setattr(handlers, "prepare_telegram_video", lambda path, **kw: path)
     monkeypatch.setattr(
-        handlers, "prepare_telegram_audio", lambda path, _: PreparedAudio(path, None)
+        handlers, "prepare_telegram_audio", lambda path, _, **kw: PreparedAudio(path, None)
     )
     monkeypatch.setattr(
         handlers,

@@ -5,7 +5,11 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
-from social_video_downloader.resource_limits import CLOUD_API_FILE_BYTES, DownloadLimits
+from social_video_downloader.resource_limits import (
+    CLOUD_API_FILE_BYTES,
+    LOCAL_API_FILE_BYTES,
+    DownloadLimits,
+)
 
 
 class ConfigurationError(ValueError):
@@ -31,6 +35,11 @@ class Settings:
     download_min_free_bytes: int = 512 * 1024**2
     download_max_active_requests: int = 4
     download_link_interval_seconds: int = 3
+    download_max_pending_requests: int = 128
+    download_notice_interval_seconds: int = 5
+    youtube_max_file_bytes: int = LOCAL_API_FILE_BYTES
+    youtube_max_request_bytes: int = 4 * 1024**3
+    youtube_max_workspace_bytes: int = 8 * 1024**3
 
     @property
     def download_limits(self) -> DownloadLimits:
@@ -44,6 +53,18 @@ class Settings:
             self.download_min_free_bytes,
         )
 
+    @property
+    def youtube_limits(self) -> DownloadLimits:
+        cap = self.youtube_max_file_bytes
+        if self.telegram_api_base_url is None:
+            cap = min(cap, CLOUD_API_FILE_BYTES)
+        return DownloadLimits(
+            cap,
+            self.youtube_max_request_bytes,
+            self.youtube_max_workspace_bytes,
+            self.download_min_free_bytes,
+        )
+
     def __post_init__(self) -> None:
         try:
             DownloadLimits(
@@ -52,8 +73,24 @@ class Settings:
                 self.download_max_workspace_bytes,
                 self.download_min_free_bytes,
             )
+            DownloadLimits(
+                self.youtube_max_file_bytes,
+                self.youtube_max_request_bytes,
+                self.youtube_max_workspace_bytes,
+                self.download_min_free_bytes,
+            )
         except ValueError as error:
             raise ConfigurationError(str(error)) from error
+        if (
+            type(self.download_max_pending_requests) is not int
+            or not 1 <= self.download_max_pending_requests <= 1024
+        ):
+            raise ConfigurationError("DOWNLOAD_MAX_PENDING_REQUESTS must be from 1 to 1024.")
+        if (
+            type(self.download_notice_interval_seconds) is not int
+            or not 1 <= self.download_notice_interval_seconds <= 300
+        ):
+            raise ConfigurationError("DOWNLOAD_NOTICE_INTERVAL_SECONDS must be from 1 to 300.")
         if (
             type(self.download_max_active_requests) is not int
             or not 1 <= self.download_max_active_requests <= 8
@@ -155,6 +192,11 @@ class Settings:
             ("DOWNLOAD_MIN_FREE_BYTES", 512 * 1024**2),
             ("DOWNLOAD_MAX_ACTIVE_REQUESTS", 4),
             ("DOWNLOAD_LINK_INTERVAL_SECONDS", 3),
+            ("DOWNLOAD_MAX_PENDING_REQUESTS", 128),
+            ("DOWNLOAD_NOTICE_INTERVAL_SECONDS", 5),
+            ("YOUTUBE_MAX_FILE_BYTES", LOCAL_API_FILE_BYTES),
+            ("YOUTUBE_MAX_REQUEST_BYTES", 4 * 1024**3),
+            ("YOUTUBE_MAX_WORKSPACE_BYTES", 8 * 1024**3),
         ):
             raw = source.get(name, str(default)).strip()
             if not raw.isascii() or not raw.isdecimal() or len(raw) > 11:
