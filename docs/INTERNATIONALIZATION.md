@@ -191,3 +191,12 @@ sent card without old buttons. EN/ES and all client/platform combinations are no
 claimed verified. Final owner manual acceptance remains open; no E5 LIVE request
 or deployment occurs. Unknown old messages after a restart cannot be safely
 retired without a separate ownership/persistence design.
+
+## Phase 9C admission copy
+
+Five new EN-source messages have EN/RU/ES translations for active-request refusal,
+link cooldown and waiting-choice cancellation. New messages use the update sender's
+locale; a concurrently refused valid callback uses its validated interaction's pinned
+locale. Invalid callbacks retain the existing sender-locale policy. `/cancel` adds no
+language setting, preferences or changes to callback payloads. The catalogs now have
+88 entries each; compilation and installed-wheel checks remain required.

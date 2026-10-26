@@ -874,6 +874,32 @@ provider-specific capabilities are intentionally preserved.
 
 Status: OPEN; not closed by Phase 4 functional acceptance.
 
+### Phase 9C — shared limits and download protection
+
+Implementation branch; no deployment or new LIVE download. General Phase 9 stays OPEN.
+
+- [x] Replace Telegram Instagram's historical 25 MiB/file gates with shared validated
+  file/request/workspace/free-disk budgets and endpoint-aware upload ceiling; retain
+  ten-video count, identity/format guards, deadlines and retry prohibition.
+- [x] Count actual streamed bytes without trusting Content-Length; propagate budgets
+  through Reel, single-post, carousel acquisition/preparation/delivery.
+- [x] Reserve one unfinished request per user across YouTube/Instagram/TikTok before
+  metadata, including waiting choices, delivery, worker drain and safe cleanup.
+- [x] Add bounded global admission without a queue, short per-user link cooldown,
+  localized refusals and `/cancel` for idle waiting choices only; preserve original
+  15-minute expiry, ownership/binding, pinned locale and one-shot consumption.
+- [x] Retain shared reservations on cleanup quarantine, including repeated cancellation
+  and overlapping publication/callback contexts; no automatic recovery/retry.
+- [ ] Complete exact-head CI and independent review; no merge/deployment authorized.
+- [ ] Separately authorize deployment and any justified larger-file LIVE acceptance.
+
+See [design, defaults and limits](PHASE9C_DOWNLOAD_PROTECTION.md) and
+[offline verification](TESTING.md#phase-9c-shared-limits-and-admission-offline).
+Historical smaller-file and platform LIVE evidence below is unchanged. The source
+policy removes the old byte gates; it does not claim real 2 GB delivery support,
+universal resource protection for legacy YouTube streaming or load/recovery acceptance.
+
+
 - [x] Phase 9A read-only baseline: inspect current main/worktrees and unchanged running
   Docker services, restart/OOM, one-shot CPU/RAM/disk and logging-driver settings.
   Record legacy sensitive log markers without exposing payloads; see

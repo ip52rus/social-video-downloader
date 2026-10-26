@@ -6,7 +6,12 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
 
+from social_video_downloader import handlers
 from social_video_downloader.config import Settings
+from social_video_downloader.download_protection import (
+    DownloadAdmission,
+    DownloadProtectionMiddleware,
+)
 from social_video_downloader.handlers import create_router
 from social_video_downloader.logging_config import configure_logging
 from social_video_downloader.operation_logging import Operation, report_failure
@@ -27,10 +32,25 @@ def create_bot(settings: Settings) -> Bot:
 
 
 def create_dispatcher(
-    settings: Settings | None = None, *, instagram_reels=None, tiktok_videos=None
+    settings: Settings | None = None,
+    *,
+    instagram_reels=None,
+    tiktok_videos=None,
+    download_admission=None,
 ) -> Dispatcher:
     """Create the root dispatcher and register Telegram handlers."""
     dispatcher = Dispatcher()
+    admission = download_admission or DownloadAdmission(
+        **(
+            {
+                "limits": settings.download_limits,
+                "max_active": settings.download_max_active_requests,
+                "link_interval": settings.download_link_interval_seconds,
+            }
+            if settings
+            else {}
+        )
+    )
     if settings is not None and settings.tiktok_telegram_enabled:
         from social_video_downloader.telegram_tiktok import TelegramTikTokHandler
 
@@ -43,11 +63,19 @@ def create_dispatcher(
         from social_video_downloader.telegram_instagram import InstagramReelHandler
 
         dispatcher["instagram_reels"] = (
-            instagram_reels if instagram_reels is not None else InstagramReelHandler()
+            instagram_reels
+            if instagram_reels is not None
+            else InstagramReelHandler(limits=admission.limits)
         )
     router = create_router()
     localization = RequestLocaleMiddleware(get_i18n())
     localization.setup(router, exclude={"update"})
+    protection = DownloadProtectionMiddleware(
+        admission,
+        handlers.validated_download_callback,
+    )
+    router.message.middleware(protection)
+    router.callback_query.middleware(protection)
     dispatcher.include_router(router)
     return dispatcher
 

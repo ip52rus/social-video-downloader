@@ -123,3 +123,16 @@ disabled/unavailable handlers. URL acceptance and media behavior are unchanged.
 Valid callbacks still use pinned request language. The stale instruction is an
 explicit new-submission action, not an automatic retry or a non-delivery claim.
 After an uncertain result the prior media may already be in the chat.
+
+## Phase 9C shared protection additions
+
+| EN source | RU | ES | Context |
+| --- | --- | --- | --- |
+| You already have an active request. Wait for it to finish, or use /cancel while choosing. | У тебя уже есть активный запрос. Дождись завершения или используй /cancel, если ещё выбираешь. | Ya tienes una solicitud activa. Espera a que termine o usa /cancel si aún estás eligiendo. | New link while another request is unfinished |
+| Please wait a few seconds before sending another link. | Подожди несколько секунд перед отправкой следующей ссылки. | Espera unos segundos antes de enviar otro enlace. | Link cooldown before metadata |
+| There is no waiting choice to cancel. | Нет ожидающего выбора для отмены. | No hay ninguna selección pendiente que cancelar. | `/cancel` with no pending request |
+| This request is already running. Wait for it to finish; /cancel only cancels a waiting choice. | Запрос уже выполняется. Дождись завершения: /cancel отменяет только ожидающий выбор. | Esta solicitud ya está en curso. Espera a que termine; /cancel solo cancela una selección pendiente. | Never cancels running/quarantined work |
+| Choice cancelled. You can send another link. | Выбор отменён. Можешь отправить другую ссылку. | Selección cancelada. Ya puedes enviar otro enlace. | Store invalidated; short link cooldown still applies |
+
+The existing localized Busy and stale-choice messages are reused. No mandatory
+extra user action or API call is added to accepted download paths.

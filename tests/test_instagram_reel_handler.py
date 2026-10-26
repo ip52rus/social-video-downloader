@@ -131,6 +131,7 @@ async def test_dispatcher_injects_enabled_reel_handler_without_network():
                 "date": 0,
                 "chat": {"id": 1, "type": "private"},
                 "text": URL,
+                "from": {"id": 1, "is_bot": False, "first_name": "Synthetic"},
             },
         }
     )

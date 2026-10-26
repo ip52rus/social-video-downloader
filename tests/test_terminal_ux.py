@@ -8,6 +8,7 @@ from threading import Event
 import pytest
 from aiogram.exceptions import TelegramBadRequest, TelegramNetworkError, TelegramServerError
 from aiogram.methods import AnswerCallbackQuery, EditMessageText, SendAudio, SendMessage, SendVideo
+from aiogram.types import Update
 
 from social_video_downloader import handlers
 from social_video_downloader.domain.errors import DownloadFailedError
@@ -413,12 +414,21 @@ async def test_late_quality_edits_cannot_repaint_a_consumed_card(app, monkeypatc
         return await original(bot, method, timeout)
 
     monkeypatch.setattr(session, "make_request", transport)
-    tasks = [asyncio.create_task(dp.feed_update(bot, callback_update(card, mode, "es")))]
+
+    async def direct_callback(data, code):
+        # Exercise the underlying E4 presentation lock under forced overlap.
+        # Phase 9C's separately tested dispatcher gate now refuses that overlap.
+        update = Update.model_validate(
+            callback_update(card, data, code).model_dump(), context={"bot": bot}
+        )
+        await handlers.handle_choice_callback(update.callback_query)
+
+    tasks = [asyncio.create_task(direct_callback(mode, "es"))]
     try:
         await asyncio.wait_for(entered.wait(), 3)
-        tasks.append(asyncio.create_task(dp.feed_update(bot, callback_update(card, mode, "en"))))
+        tasks.append(asyncio.create_task(direct_callback(mode, "en")))
         await asyncio.wait_for(two_modes.wait(), 3)
-        tasks.append(asyncio.create_task(dp.feed_update(bot, callback_update(card, audio, "es"))))
+        tasks.append(asyncio.create_task(direct_callback(audio, "es")))
         await asyncio.wait_for(terminal.wait(), 3)
         assert not downloads
         release.set()

@@ -19,7 +19,7 @@ from aiogram.exceptions import (
     TelegramRetryAfter,
     TelegramUnauthorizedError,
 )
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
 from aiogram.types import (
     CallbackQuery,
     FSInputFile,
@@ -29,6 +29,7 @@ from aiogram.types import (
 )
 
 from social_video_downloader.domain.errors import (
+    DownloadCleanupError,
     DownloaderError,
     DownloadFailedError,
     InvalidMediaURLError,
@@ -39,6 +40,13 @@ from social_video_downloader.domain.errors import (
 )
 from social_video_downloader.domain.models import DownloadMode, DownloadOptions, Platform
 from social_video_downloader.domain.urls import detect_platform, normalize_media_url
+from social_video_downloader.download_protection import (
+    check_delivery_file,
+    consume_choice,
+    hold_choice,
+    protected_cleanup,
+    retain_current_request,
+)
 from social_video_downloader.infrastructure.telegram_audio import prepare_telegram_audio
 from social_video_downloader.infrastructure.telegram_media import (
     inspect_telegram_video,
@@ -225,7 +233,15 @@ async def handle_text(message: Message, instagram_reels=None, tiktok_videos=None
     try:
         with Operation("youtube", "metadata"):
             plan = await download_service.create_choice_plan_async(normalized_url)
+    except asyncio.CancelledError:
+        # Only this admitted metadata owner can be cancelled at a worker await.
+        # A rejected MetadataBusyError must never quarantine an unrelated user.
+        if getattr(getattr(download_service, "_youtube_metadata", None), "blocked", False):
+            retain_current_request()
+        raise
     except DownloaderError as error:
+        if isinstance(error, DownloadCleanupError):
+            retain_current_request()
         await _notify_download_error(message, error)
         return
     except Exception:
@@ -328,7 +344,9 @@ async def _download_and_deliver_media(
     confirmed = False
     with Operation("youtube", "download") as operation:
         try:
-            with TemporaryDirectory(prefix="social-video-downloader-") as temporary_directory:
+            with protected_cleanup(
+                TemporaryDirectory(prefix="social-video-downloader-")
+            ) as temporary_directory:
                 try:
                     downloaded = await _run_workspace_thread(
                         download_service.download,
@@ -339,6 +357,7 @@ async def _download_and_deliver_media(
                     if not downloaded.file_path.is_file():
                         raise MediaProcessingError("The downloader returned a missing output file.")
 
+                    check_delivery_file(downloaded.file_path)
                     operation.phase = "prepare"
                     if options.mode is DownloadMode.AUDIO_ONLY:
                         audio = await _run_workspace_thread(
@@ -349,6 +368,7 @@ async def _download_and_deliver_media(
                         audio_parameters = (
                             {"duration": audio.duration} if audio.duration is not None else {}
                         )
+                        check_delivery_file(audio.file_path)
                         operation.phase = "upload"
                         sending = True
                         sent_message = await message.answer_audio(
@@ -379,6 +399,7 @@ async def _download_and_deliver_media(
                         # Preserve the existing best-effort inspection behavior.
                         report_failure("youtube", "prepare", error)
 
+                    check_delivery_file(telegram_video)
                     operation.phase = "upload"
                     sending = True
                     sent_message = await message.answer_video(
@@ -538,6 +559,12 @@ async def _publish_choices(
         # Expiry/removal while sendMessage was pending must not publish a keyboard.
         pending_interaction_store.remove(interaction.interaction_id)
         return
+    hold_choice(
+        "youtube",
+        interaction.interaction_id,
+        interaction.expires_at,
+        lambda: pending_interaction_store.remove(interaction.interaction_id),
+    )
     if step is PendingInteractionStep.MODE:
         text = tr("Choose a format:")
         keyboard = _mode_keyboard(interaction.interaction_id, plan.mode_choices)
@@ -643,6 +670,7 @@ async def _consume_and_download(
 
     with get_i18n().use_locale(interaction.locale):
         pending_interaction_store.remove(interaction.interaction_id)
+        consume_choice("youtube", interaction.interaction_id)
         if callback.message is not None:
             await _run_youtube_request(
                 callback.message,
@@ -709,10 +737,47 @@ def _callback_status_message(status: PendingInteractionStatus) -> str:
     return tr(_STALE_CALLBACK_MESSAGE)
 
 
+async def handle_cancel(message: Message, download_admission) -> None:
+    if message.from_user is not None:
+        await message.answer(tr(download_admission.cancel_waiting(message.from_user.id)))
+
+
+def validated_download_callback(callback: CallbackQuery, instagram_reels=None):
+    """Read only through each store's existing validated public interface."""
+    message = callback.message
+    if not isinstance(message, Message):
+        return None
+    from social_video_downloader.telegram_instagram_interactions import parse_instagram_callback
+
+    parsed_ig = parse_instagram_callback(callback.data)
+    if parsed_ig is not None:
+        post = getattr(instagram_reels, "_post_handler", None)
+        if post is None:
+            return None
+        token, index = parsed_ig
+        selection = post._choices.resolve_selection(
+            token, index, callback.from_user.id, message.chat.id, message.message_id
+        )
+        return (("instagram", token), selection.locale) if selection is not None else None
+    parsed = parse_callback_data(callback.data or "")
+    if parsed.status is not CallbackParseStatus.VALID or parsed.callback is None:
+        return None
+    result = pending_interaction_store.lookup(
+        parsed.callback.interaction_id,
+        owner_user_id=callback.from_user.id,
+        chat_id=message.chat.id,
+        message_id=message.message_id,
+    )
+    if result.status is PendingInteractionStatus.FOUND and result.interaction is not None:
+        return ("youtube", result.interaction.interaction_id), result.interaction.locale
+    return None
+
+
 def create_router() -> Router:
     """Fresh registration state for each dispatcher; callback behavior is unchanged."""
     router = Router(name="telegram-handlers")
     router.message.register(handle_start, CommandStart())
+    router.message.register(handle_cancel, Command("cancel"))
     router.message.register(handle_text, F.text)
     router.callback_query.register(handle_instagram_callback, F.data.startswith("ig:"))
     router.callback_query.register(handle_choice_callback, F.data)

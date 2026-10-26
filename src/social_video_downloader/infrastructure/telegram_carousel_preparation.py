@@ -115,16 +115,22 @@ def prepare_collection(payload, *, prepare=prepare_telegram_video):
     paths, fingerprints = _input_paths(
         payload["inputs"], workspace, private, payload["total_bytes"], limits
     )
+
+    def check_free():
+        if shutil.disk_usage(workspace).free < limits.min_free_bytes:
+            raise _PreparationStopped
+
+    check_free()
     used = _usage(workspace, limits)
-    if (
-        shutil.disk_usage(workspace).free
-        < min(limits.max_upload_total_bytes, limits.max_workspace_bytes - used) + 1024**2
-    ):
+    if shutil.disk_usage(workspace).free < min(
+        limits.max_upload_total_bytes, limits.max_workspace_bytes - used
+    ) + max(1024**2, limits.min_free_bytes):
         raise MediaProcessingError("Insufficient carousel preparation disk space.")
     result = []
     upload_bytes = 0
 
     def runner(command, **kwargs):
+        check_free()
         remaining_time = limits.max_prepare_seconds - (monotonic() - started)
         if remaining_time <= 0:
             raise _PreparationStopped
@@ -162,6 +168,7 @@ def prepare_collection(payload, *, prepare=prepare_telegram_video):
             raise _PreparationStopped
         if process.stderr.strip():
             raise MediaProcessingError("Carousel preparation reported media errors.")
+        check_free()
         _usage(workspace, limits)
         return process
 

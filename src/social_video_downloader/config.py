@@ -5,6 +5,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from urllib.parse import urlsplit
 
+from social_video_downloader.resource_limits import CLOUD_API_FILE_BYTES, DownloadLimits
+
 
 class ConfigurationError(ValueError):
     """Raised when required or invalid application configuration is encountered."""
@@ -23,7 +25,45 @@ class Settings:
     tiktok_telegram_enabled: bool = False
     tiktok_max_concurrent_operations: int = 2
 
+    download_max_file_bytes: int = 512 * 1024**2
+    download_max_request_bytes: int = 1024 * 1024**2
+    download_max_workspace_bytes: int = 3072 * 1024**2
+    download_min_free_bytes: int = 512 * 1024**2
+    download_max_active_requests: int = 4
+    download_link_interval_seconds: int = 3
+
+    @property
+    def download_limits(self) -> DownloadLimits:
+        cap = self.download_max_file_bytes
+        if self.telegram_api_base_url is None:
+            cap = min(cap, CLOUD_API_FILE_BYTES)
+        return DownloadLimits(
+            cap,
+            self.download_max_request_bytes,
+            self.download_max_workspace_bytes,
+            self.download_min_free_bytes,
+        )
+
     def __post_init__(self) -> None:
+        try:
+            DownloadLimits(
+                self.download_max_file_bytes,
+                self.download_max_request_bytes,
+                self.download_max_workspace_bytes,
+                self.download_min_free_bytes,
+            )
+        except ValueError as error:
+            raise ConfigurationError(str(error)) from error
+        if (
+            type(self.download_max_active_requests) is not int
+            or not 1 <= self.download_max_active_requests <= 8
+        ):
+            raise ConfigurationError("DOWNLOAD_MAX_ACTIVE_REQUESTS must be from 1 to 8.")
+        if (
+            type(self.download_link_interval_seconds) is not int
+            or not 1 <= self.download_link_interval_seconds <= 300
+        ):
+            raise ConfigurationError("DOWNLOAD_LINK_INTERVAL_SECONDS must be from 1 to 300.")
         if type(self.instagram_telegram_enabled) is not bool:
             raise ConfigurationError("INSTAGRAM_TELEGRAM_ENABLED must be true or false.")
         if type(self.tiktok_telegram_enabled) is not bool:
@@ -107,7 +147,21 @@ class Settings:
             raise ConfigurationError(
                 "TIKTOK_MAX_CONCURRENT_OPERATIONS must be an integer from 1 to 8."
             )
+        protection = {}
+        for name, default in (
+            ("DOWNLOAD_MAX_FILE_BYTES", 512 * 1024**2),
+            ("DOWNLOAD_MAX_REQUEST_BYTES", 1024 * 1024**2),
+            ("DOWNLOAD_MAX_WORKSPACE_BYTES", 3072 * 1024**2),
+            ("DOWNLOAD_MIN_FREE_BYTES", 512 * 1024**2),
+            ("DOWNLOAD_MAX_ACTIVE_REQUESTS", 4),
+            ("DOWNLOAD_LINK_INTERVAL_SECONDS", 3),
+        ):
+            raw = source.get(name, str(default)).strip()
+            if not raw.isascii() or not raw.isdecimal() or len(raw) > 11:
+                raise ConfigurationError(f"{name} must be a positive bounded integer.")
+            protection[name.lower()] = int(raw)
         return cls(
+            **protection,
             telegram_bot_token=token,
             app_env=source.get("APP_ENV", "development").strip().lower(),
             log_level=source.get("LOG_LEVEL", "INFO").strip(),

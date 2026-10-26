@@ -484,6 +484,18 @@ Complete the operational and reliability work that is intentionally not part of 
 
 Status: OPEN. Phase 4 functional acceptance does not satisfy this reliability gate.
 
+Phase 9C is an owner-authorized scoped implementation: replace the historical
+Instagram 25 MiB Telegram gates with common configurable file/collection/workspace
+and free-space bounds; add process-local cross-platform user leases, link cooldown
+and bounded global admission without a queue. Pending choices reserve capacity for
+up to their original 15 minutes and may be cancelled with `/cancel`; executing or
+quarantined work cannot be released by that command. Existing platform gates,
+formats, HTTP policy, count limits and delivery/no-retry contracts remain in force.
+See [design and limits](PHASE9C_DOWNLOAD_PROTECTION.md). Independent review,
+exact-head CI and separately authorized deployment/LIVE checks remain gates;
+this implementation does not close general Phase 9 reliability/load/recovery.
+
+
 Phase 9A adds minimal safe standard-library events after a read-only deployed
 baseline audit: fixed platform/event/phase/category, monotonic observed duration,
 service lifecycle and typed polling errors, without user identifiers, arbitrary

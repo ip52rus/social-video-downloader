@@ -165,3 +165,19 @@ headers, bodies, signed locators, request identifiers or traceback output. Missi
 worker reports and inexact counters stay unknown. Sink failure does not change the
 refusal, retry, deadline or worker cleanup. See
 [diagnostic boundaries](TIKTOK_METADATA_DIAGNOSTICS.md).
+
+## Phase 9C admission and resource boundary
+
+Shared request leases and bounded rate bookkeeping keep Telegram user identifiers
+only in process memory, never in logs or persistent storage. Global reservations
+include pending choices and quarantined cleanup; there is no queue. `/cancel` cannot
+interrupt workers/uploads, bypass ownership or revive a consumed callback.
+
+Instagram byte guards account actual bodies independently of Content-Length and
+retain format/identity, output-size, workspace and cleanup checks. Configuration has
+an absolute 2,000,000,000-byte individual file ceiling and a smaller cloud endpoint
+cap; aggregate budgets are finite. Admission/free-space checks are conservative
+accounting, not OS disk quotas, RSS isolation or guarantees against unrelated disk
+writers. Legacy YouTube streaming remains an explicit limitation. No new HTTP calls,
+headers, cookies, retry/fallback or production activation bypass are introduced.
+See [limits and lifecycle](PHASE9C_DOWNLOAD_PROTECTION.md).

@@ -2305,3 +2305,40 @@ by this documentation change. The owner accepts the scoped Phase 8 MVP with the
 [documented limitations](PHASE8_UX_ACCEPTANCE.md); EN/ES LIVE, other Instagram/client
 combinations, restart visuals, load and recovery remain outside verified coverage.
 Phase 9 stays OPEN; no new LIVE requests or deployment are authorized by this record.
+
+## Phase 9C shared limits and admission (offline)
+
+Source implementation from main `aa5ecf955398df70bde09f5f56849ecd4e20faa9`.
+86 new focused cases exercise common API-aware limits/configuration, synthetic
+26 MiB Instagram reads and preparation, missing/lying Content-Length, actual byte
+and aggregate/workspace/free-disk refusal, and cross-platform user admission before
+metadata. Synthetic real-dispatcher updates cover RU/EN/ES, pinned callback locale,
+foreign/wrong-message/repeated callbacks, mode → quality, busy/no queue, `/cancel`,
+original 15-minute expiry, restart-stale behavior, cooldown and bounded bookkeeping.
+Owned-worker tests cover repeated cancellation, cleanup quarantine and a callback
+arriving before its originating publication coroutine returns. Real transport cleanup
+hooks are tested for YouTube, Reel/single post, carousel and TikTok with synthetic work.
+
+Final post-fix focused runs: **661 passed** (77.00 s) and **79 passed** (8.90 s),
+including all 86 new cases, under inherited socket/DNS denial. Earlier adjacent
+pipeline/cancellation/catalog/installed-wheel checks passed within a wider focused
+run (1514 passed, four obsolete concurrency expectations failed). Those four cases
+were addressed and passed in the final runs. Ruff lint/format, diff/privacy checks,
+deterministic PO/MO compilation and 133 local documentation links/anchors passed.
+No local full suite was run: standard GitHub PR CI runs the full suite; its exact-head
+result is reported on the PR, separately from local and LIVE evidence.
+
+Fixture changes add the required synthetic sender and five new catalog entries;
+concurrent callbacks now assert deterministic Busy rather than another queued edit.
+The same-user two-card test now requires a single card and one download; the
+cross-user binding/replay assertions are unchanged. E5 repeat journeys advance an
+injected monotonic clock across the three-second cooldown without sleep. The E4
+presentation-lock stress case invokes the existing handler directly to retain all
+its forced-overlap assertions; the real dispatcher now refuses that overlap and is
+tested separately. No media-count/identity, binding or one-shot assertion is weakened.
+
+No new LIVE platform request, Telegram call, download, deployment or physical-client
+acceptance is performed. Sparse synthetic 26 MiB files and in-memory body fixtures do
+not establish real-world larger-file playback, near-2 GB delivery, disk/RAM isolation,
+load capacity or crash recovery. Historical LIVE results and Phase 8 MVP acceptance
+remain separate. See [design and residual limits](PHASE9C_DOWNLOAD_PROTECTION.md).
