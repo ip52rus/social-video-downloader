@@ -2305,3 +2305,89 @@ by this documentation change. The owner accepts the scoped Phase 8 MVP with the
 [documented limitations](PHASE8_UX_ACCEPTANCE.md); EN/ES LIVE, other Instagram/client
 combinations, restart visuals, load and recovery remain outside verified coverage.
 Phase 9 stays OPEN; no new LIVE requests or deployment are authorized by this record.
+
+## Phase 9C shared limits and admission (offline)
+
+Source implementation from main `aa5ecf955398df70bde09f5f56849ecd4e20faa9`.
+86 new focused cases exercise common API-aware limits/configuration, synthetic
+26 MiB Instagram reads and preparation, missing/lying Content-Length, actual byte
+and aggregate/workspace/free-disk refusal, and cross-platform user admission before
+metadata. Synthetic real-dispatcher updates cover RU/EN/ES, pinned callback locale,
+foreign/wrong-message/repeated callbacks, mode → quality, busy/no queue, `/cancel`,
+original 15-minute expiry, restart-stale behavior, cooldown and bounded bookkeeping.
+Owned-worker tests cover repeated cancellation, cleanup quarantine and a callback
+arriving before its originating publication coroutine returns. Real transport cleanup
+hooks are tested for YouTube, Reel/single post, carousel and TikTok with synthetic work.
+
+Final post-fix focused runs: **661 passed** (77.00 s) and **79 passed** (8.90 s),
+including all 86 new cases, under inherited socket/DNS denial. Earlier adjacent
+pipeline/cancellation/catalog/installed-wheel checks passed within a wider focused
+run (1514 passed, four obsolete concurrency expectations failed). Those four cases
+were addressed and passed in the final runs. Ruff lint/format, diff/privacy checks,
+deterministic PO/MO compilation and 133 local documentation links/anchors passed.
+No local full suite was run: standard GitHub PR CI runs the full suite; its exact-head
+result is reported on the PR, separately from local and LIVE evidence.
+
+Fixture changes add the required synthetic sender and five new catalog entries;
+concurrent callbacks now assert deterministic Busy rather than another queued edit.
+The same-user two-card test now requires a single card and one download; the
+cross-user binding/replay assertions are unchanged. E5 repeat journeys advance an
+injected monotonic clock across the three-second cooldown without sleep. The E4
+presentation-lock stress case invokes the existing handler directly to retain all
+its forced-overlap assertions; the real dispatcher now refuses that overlap and is
+tested separately. No media-count/identity, binding or one-shot assertion is weakened.
+
+No new LIVE platform request, Telegram call, download, deployment or physical-client
+acceptance is performed. Sparse synthetic 26 MiB files and in-memory body fixtures do
+not establish real-world larger-file playback, near-2 GB delivery, disk/RAM isolation,
+load capacity or crash recovery. Historical LIVE results and Phase 8 MVP acceptance
+remain separate. See [design and residual limits](PHASE9C_DOWNLOAD_PROTECTION.md).
+
+
+### PR 83 independent-review corrections
+
+The original evidence above belongs to reviewed head `56222a9`. Its three review
+gaps were corrected in the same branch: YouTube's post-download 512 MiB refusal,
+choices holding global workers, and repeated link-refusal notification spam.
+
+Focused regression under inherited socket/DNS denial: **1420 passed** (118.61 s),
+covering providers, handlers, choice/cache/snapshot/cancellation/status cards,
+EN/RU/ES, Instagram carousel/delivery, TikTok and technical limits/configuration.
+Follow-up admission/guard checks after added assertions: **90 passed** (61.25 s).
+Final YouTube write/merge/resource tests: **23 passed** (62.68 s).
+Final UI/locale/status/restart regression after deterministic disk fixtures:
+**536 passed** (17.87 s).
+No full local pytest is repeated; the final pushed HEAD uses one normal full PR CI.
+CI results and the exact new source HEAD are recorded on PR 83, not inferred from
+its previous successful run.
+
+New deterministic evidence includes:
+
+- A synthetic sparse 600 MiB output passes YouTube's independent endpoint-aware
+  policy. It is not a playable larger-file LIVE acceptance.
+- Installed yt-dlp downloads in-memory synthetic HTTP bodies under actual write
+  caps, including missing Content-Length; refusal records one request, no second
+  extraction/download. Actual split-stream acquisition issues two synthetic media
+  requests and uses real local FFmpeg merge; the output probes as H.264/AAC.
+- Buffered/raw/append/truncate/seek writes and aggregate partial/fragment copies
+  stop before their configured budgets. FFmpeg's OS cap protects file/workspace
+  exhaustion; sticky stops prevent further HTTP or remux-to-transcode fallback.
+- Process spawn failure, repeated cancellation/reaping, unconfirmed group cleanup,
+  preserved uncertain workspace and retained worker capacity are tested offline.
+- Waiting choices exceed the worker count without exhausting it. Separate user
+  capacity remains bounded. YouTube and Instagram Busy callbacks retain the
+  original choice and pinned locale, then consume exactly once when admitted.
+  Callback admission rechecks disk and does not re-extract on Busy.
+- First active/rate/capacity link refusal is localized in EN/RU/ES; repeated links
+  receive no extra notices/metadata/download until the notice interval passes.
+  Notification bookkeeping is bounded. Configuration validates the new limits.
+
+Presentation/restart fixtures inject sufficient synthetic free disk, so concurrent
+locale assertions do not depend on a CI runner having 24+ GiB free. Actual low-disk
+and conservative reservation refusals remain separate admission/guard assertions.
+
+Synthetic errno tests use platform constants (including EDQUOT) rather than Linux
+numeric values on macOS. The installed yt-dlp response `read(amt=None)` contract is
+preserved. These checks do not establish an arbitrary external-downloader sandbox,
+RSS isolation, near-2 GB delivery, load capacity, crash recovery or new LIVE results.
+Ruff/diff/privacy and local documentation links are checked before publication.

@@ -34,6 +34,7 @@ from social_video_downloader.domain.errors import (
     MetadataExtractionError,
     UnsupportedPlatformError,
 )
+from social_video_downloader.download_protection import DownloadAdmission
 from social_video_downloader.services.instagram_carousel import InstagramCarouselService
 from social_video_downloader.telegram_i18n import get_i18n, resolve_locale, trn
 from social_video_downloader.telegram_instagram import InstagramReelHandler
@@ -163,17 +164,26 @@ async def app(monkeypatch):
 
     monkeypatch.setattr(handlers, "_download_and_deliver_media", selected)
 
-    def create(*, instagram=False, tiktok=False):
+    def create(*, instagram=False, tiktok=False, download_admission=None):
         session = Session()
         bot = Bot("123456:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi", session=session)
         owner = InstagramReelHandler()
         tt = TelegramTikTokHandler(provider=FixtureProvider())
+        settings = Settings(
+            "synthetic", instagram_telegram_enabled=instagram, tiktok_telegram_enabled=tiktok
+        )
+        # Presentation concurrency must not depend on the runner's free disk.
+        if download_admission is None:
+            download_admission = DownloadAdmission(
+                limits=settings.download_limits,
+                youtube_limits=settings.youtube_limits,
+                free_bytes=lambda: 100 * 1024**3,
+            )
         dispatcher = create_dispatcher(
-            Settings(
-                "synthetic", instagram_telegram_enabled=instagram, tiktok_telegram_enabled=tiktok
-            ),
+            settings,
             instagram_reels=owner,
             tiktok_videos=tt,
+            download_admission=download_admission,
         )
         sessions.append(session)
         return dispatcher, bot, session, owner, tt, downloads
@@ -616,7 +626,7 @@ def test_complete_catalog_and_public_literal_inventory(locale):
         catalog = read_po(stream, locale=locale)
     assert not catalog.fuzzy and not list(catalog.check())
     messages = [m for m in catalog if m.id]
-    assert len(messages) == 83
+    assert len(messages) == 88
     for message in messages:
         assert not message.fuzzy
         variants = message.string if isinstance(message.string, tuple) else (message.string,)
@@ -989,19 +999,19 @@ async def test_actual_youtube_delivery_messages_counts_and_source_caption(
     monkeypatch.setattr(handlers, "download_service", service)
     monkeypatch.setattr(handlers, "_download_and_deliver_media", REAL_DELIVERY)
 
-    def prepare(path):
+    def prepare(path, **kw):
         if case == "prepare":
             raise MediaProcessingError()
         return path
 
     monkeypatch.setattr(handlers, "prepare_telegram_video", prepare)
     monkeypatch.setattr(
-        handlers, "prepare_telegram_audio", lambda path, duration: PreparedAudio(path, None)
+        handlers, "prepare_telegram_audio", lambda path, duration, **kw: PreparedAudio(path, None)
     )
     monkeypatch.setattr(
         handlers,
         "inspect_telegram_video",
-        lambda path: {"streams": [{"codec_type": "video", "width": 64, "height": 96}]},
+        lambda path, **kw: {"streams": [{"codec_type": "video", "width": 64, "height": 96}]},
     )
     if case in {"uncertain", "oversize"}:
         session.fail = SendVideo
@@ -1128,9 +1138,14 @@ async def test_concurrent_mode_callbacks_keep_one_quality_prompt_and_one_downloa
     assert len(publication_edits) == 1
     entered, release = asyncio.Event(), asyncio.Event()
     edits_entered = 0
+    busy_seen = asyncio.Event()
 
     async def overlapping_edit(bot, method, timeout=None):
         nonlocal edits_entered
+        if isinstance(method, AnswerCallbackQuery) and method.text == translated(
+            "The bot is busy. Try again later.", locale
+        ):
+            busy_seen.set()
         if isinstance(method, EditMessageText):
             edits_entered += 1
             if edits_entered == 1:
@@ -1146,14 +1161,15 @@ async def test_concurrent_mode_callbacks_keep_one_quality_prompt_and_one_downloa
     try:
         await asyncio.wait_for(entered.wait(), 3)
         assert not downloads
-        assert edits_entered == 1  # The other presentation waits; media admission is unchanged.
+        await asyncio.wait_for(busy_seen.wait(), 3)
+        assert edits_entered == 1  # A concurrent callback is refused without a queue.
         release.set()
         await asyncio.gather(*tasks)
     finally:
         release.set()
         await asyncio.gather(*tasks, return_exceptions=True)
     edits = [c for c in session.calls if isinstance(c, EditMessageText)][1:]
-    assert len(edits) == 2
+    assert len(edits) == 1
     assert all(
         c.text == translated("Choose the quality:", locale)
         and c.message_id == prompt.message_id

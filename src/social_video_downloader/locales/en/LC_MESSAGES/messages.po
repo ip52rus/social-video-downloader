@@ -380,3 +380,23 @@ msgstr "Couldn't recognize the link. Send a video link from {platforms}."
 #, python-brace-format
 msgid "This platform isn't supported here. Send a video link from {platforms}."
 msgstr "This platform isn't supported here. Send a video link from {platforms}."
+
+#. Phase 9C shared admission and waiting-choice cancellation.
+msgid "You already have an active request. Wait for it to finish, or use /cancel while choosing."
+msgstr "You already have an active request. Wait for it to finish, or use /cancel while choosing."
+
+#. Phase 9C shared admission and waiting-choice cancellation.
+msgid "Please wait a few seconds before sending another link."
+msgstr "Please wait a few seconds before sending another link."
+
+#. Phase 9C shared admission and waiting-choice cancellation.
+msgid "There is no waiting choice to cancel."
+msgstr "There is no waiting choice to cancel."
+
+#. Phase 9C shared admission and waiting-choice cancellation.
+msgid "This request is already running. Wait for it to finish; /cancel only cancels a waiting choice."
+msgstr "This request is already running. Wait for it to finish; /cancel only cancels a waiting choice."
+
+#. Phase 9C shared admission and waiting-choice cancellation.
+msgid "Choice cancelled. You can send another link."
+msgstr "Choice cancelled. You can send another link."

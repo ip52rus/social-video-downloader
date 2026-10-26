@@ -22,6 +22,21 @@ Environment-based settings are validated before starting the application. The Te
 
 ## Telegram layer
 
+Phase 9C adds a process-local admission middleware around the existing transport
+handlers: one unfinished request per Telegram user across platforms, acquired before
+metadata and retained through pending choices, delivery and safe cleanup. A bounded
+user-lease map includes waiting and quarantined operations; a separate worker
+budget excludes waiting choices. Callbacks acquire work atomically before consume;
+Busy preserves the choice. No queue or persistent infrastructure. Existing typed
+stores remain authoritative for callback validation
+and consumption. `/cancel` removes only an idle pending choice. Resource policy is
+validated independently of providers. YouTube acquisition uses the existing engine
+in an owned POSIX child so write guards cannot mutate the polling process or other
+platform threads. Native HTTP bytes, partials and current FFmpeg outputs are bounded;
+owned-group drain precedes cleanup, uncertainty retains quarantine. See
+[Phase 9C lifecycle and technical limits](PHASE9C_DOWNLOAD_PROTECTION.md).
+
+
 The aiogram router owns commands and text intake, user-facing validation responses, and result delivery. It does not contain provider-specific download logic. Membership/access control is deferred to a future monetization or business-model layer and is not part of the current implementation. The /start response describes current platform support. Text messages are validated against supported platform domains. By default, YouTube URLs are passed to the application service; Instagram and TikTok URLs receive an explicit not-connected response. Merged PR #56 adds an explicit Instagram opt-in delegating `/reel/` to the established Reel flow and `/p/` to positively inspected single-video or complete video-carousel flows. Both share one admission slot. PR #57 subsequently aligned share-link admission and was separately deployed only to bot. On 2026-10-18 the owner confirmed normal playback for one full-link single-video post and one ordered three-video silent album. This is narrow client evidence, not broad reliability or capacity validation; see [the acceptance record](TESTING.md#instagram-live-acceptance-2026-10-18).
 
 The implemented option UX is capability-driven. Telegram shows only meaningful choices for

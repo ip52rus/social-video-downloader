@@ -25,6 +25,12 @@ from social_video_downloader.domain.errors import (
 )
 from social_video_downloader.domain.models import MediaMetadata
 from social_video_downloader.domain.urls import instagram_item_position
+from social_video_downloader.download_protection import (
+    consume_choice,
+    hold_choice,
+    protected_cleanup,
+    retain_current_request,
+)
 from social_video_downloader.infrastructure.telegram_carousel import (
     CarouselDeliveryCancelled,
     CarouselDeliveryError,
@@ -34,6 +40,7 @@ from social_video_downloader.infrastructure.telegram_carousel import (
 from social_video_downloader.infrastructure.workspace import quarantinable_workspace
 from social_video_downloader.operation_logging import Operation
 from social_video_downloader.providers.instagram import InstagramProvider
+from social_video_downloader.resource_limits import DownloadLimits
 from social_video_downloader.services.instagram_acquisition import (
     CarouselAcquisitionLimits,
     InstagramCarouselAcquisition,
@@ -52,22 +59,25 @@ from social_video_downloader.telegram_instagram_interactions import (
     parse_instagram_callback,
 )
 
-# Conservative initial opt-in gate. Refuse an oversized publication; never truncate it.
+# Shared technical defaults; retain the ten-video opt-in gate and existing deadlines.
+_DEFAULT_LIMITS = DownloadLimits()
 _ACQUISITION_LIMITS = CarouselAcquisitionLimits(
     max_videos=10,
-    max_file_bytes=25 * 1024**2,
-    max_total_bytes=100 * 1024**2,
-    max_temp_bytes=130 * 1024**2,
+    max_file_bytes=_DEFAULT_LIMITS.max_file_bytes,
+    max_total_bytes=_DEFAULT_LIMITS.max_request_bytes,
+    max_temp_bytes=_DEFAULT_LIMITS.max_request_bytes,
     max_seconds=300,
+    min_free_bytes=_DEFAULT_LIMITS.min_free_bytes,
 )
 _DELIVERY_LIMITS = CarouselDeliveryLimits(
     max_videos=10,
-    max_upload_file_bytes=25 * 1024**2,
-    max_upload_total_bytes=100 * 1024**2,
-    max_workspace_bytes=400 * 1024**2,
+    max_upload_file_bytes=_DEFAULT_LIMITS.max_file_bytes,
+    max_upload_total_bytes=_DEFAULT_LIMITS.max_request_bytes,
+    max_workspace_bytes=_DEFAULT_LIMITS.max_workspace_bytes,
     max_workspace_entries=256,
     max_prepare_seconds=180,
     max_send_seconds=120,
+    min_free_bytes=_DEFAULT_LIMITS.min_free_bytes,
 )
 
 
@@ -82,9 +92,24 @@ class InstagramPostHandler:
     def __init__(self, reel_handler):
         self._reel_handler = reel_handler
         self._choices = InstagramChoiceStore()
+        limits = reel_handler._limits
+        self._acquisition_limits = replace(
+            _ACQUISITION_LIMITS,
+            max_file_bytes=limits.max_file_bytes,
+            max_total_bytes=limits.max_request_bytes,
+            max_temp_bytes=limits.max_request_bytes,
+            min_free_bytes=limits.min_free_bytes,
+        )
+        self._delivery_limits = replace(
+            _DELIVERY_LIMITS,
+            max_upload_file_bytes=limits.max_file_bytes,
+            max_upload_total_bytes=limits.max_request_bytes,
+            max_workspace_bytes=limits.max_workspace_bytes,
+            min_free_bytes=limits.min_free_bytes,
+        )
 
     async def _offer_choice(self, message, plan, position):
-        validate_plan(plan, _ACQUISITION_LIMITS)
+        validate_plan(plan, self._acquisition_limits)
         if position > len(plan.items):
             await message.answer(
                 tr("There is no such item in this post. Check the number in the link.")
@@ -143,6 +168,13 @@ class InstagramPostHandler:
                         await sent.edit_text(
                             tr("This choice has expired. Send the link again."), reply_markup=None
                         )
+            else:
+                hold_choice(
+                    "instagram",
+                    choice.token,
+                    choice.expires_at,
+                    lambda: self._choices.remove(choice.token),
+                )
         except BaseException:
             self._choices.remove(choice.token)
             raise
@@ -172,7 +204,11 @@ class InstagramPostHandler:
             owner._active = True  # No await between admission check and reservation.
             with Operation("instagram", "download") as operation:
                 try:
-                    guard = _Guard(Event(), seconds=_ACQUISITION_LIMITS.max_seconds)
+                    guard = _Guard(
+                        Event(),
+                        seconds=self._acquisition_limits.max_seconds,
+                        limits=self._reel_handler._limits,
+                    )
                     try:
                         async with asyncio.timeout(10):
                             await callback.answer(tr("Starting download…"))
@@ -183,6 +219,7 @@ class InstagramPostHandler:
                     if selected is None:
                         operation.fail(category="refused")
                         return
+                    consume_choice("instagram", token)
                     with suppress(TelegramAPIError, TimeoutError):
                         async with asyncio.timeout(10):
                             await message.edit_text(
@@ -194,6 +231,7 @@ class InstagramPostHandler:
                             )
                     await self._send_carousel(message, selected.plan, guard, operation)
                 except DownloadCleanupError as error:
+                    retain_current_request()
                     owner._blocked = True
                     operation.fail(error)
                     with suppress(TelegramAPIError):
@@ -231,7 +269,7 @@ class InstagramPostHandler:
             async with asyncio.timeout(_remaining(guard)):
                 await message.answer(tr("Single Instagram video recognized. Starting download…"))
             guard.check()
-            with TemporaryDirectory(prefix="instagram-post-") as directory:
+            with protected_cleanup(TemporaryDirectory(prefix="instagram-post-")) as directory:
                 try:
                     async with asyncio.timeout(_remaining(guard)):
                         task = asyncio.get_running_loop().run_in_executor(
@@ -280,13 +318,13 @@ class InstagramPostHandler:
             workspace = directory.resolve()
             try:
                 async with asyncio.timeout(_remaining(guard)):
-                    limits = replace(_ACQUISITION_LIMITS, max_seconds=_remaining(guard))
+                    limits = replace(self._acquisition_limits, max_seconds=_remaining(guard))
                     collection = await InstagramCarouselAcquisition(limits).acquire(plan, workspace)
                     guard.check()
                     operation.phase = "prepare_upload"
                     try:
                         progress = await TelegramCarouselDelivery(
-                            message.bot, _DELIVERY_LIMITS
+                            message.bot, self._delivery_limits
                         ).deliver(
                             collection, plan=plan, workspace=workspace, chat_id=message.chat.id
                         )
@@ -329,7 +367,11 @@ class InstagramPostHandler:
             return
         owner._active = True
         with Operation("instagram", "metadata") as operation:
-            guard = _Guard(Event(), seconds=_ACQUISITION_LIMITS.max_seconds)
+            guard = _Guard(
+                Event(),
+                seconds=self._acquisition_limits.max_seconds,
+                limits=self._reel_handler._limits,
+            )
             try:
                 # The service validates the RAW query and fragment before using canonical identity.
                 # The metadata extractor runs outside the event loop; cancellation waits for it.
@@ -379,7 +421,7 @@ class InstagramPostHandler:
                         await self._offer_choice(message, plan, position)
                     return
 
-                if len(plan.selected_videos) > _ACQUISITION_LIMITS.max_videos:
+                if len(plan.selected_videos) > self._acquisition_limits.max_videos:
                     operation.fail(category="refused")
                     await message.answer(
                         trn(
@@ -392,7 +434,7 @@ class InstagramPostHandler:
                                 " be skipped."
                             ),
                             count=len(plan.selected_videos),
-                            limit=_ACQUISITION_LIMITS.max_videos,
+                            limit=self._acquisition_limits.max_videos,
                         )
                     )
                     return
@@ -404,6 +446,7 @@ class InstagramPostHandler:
                 operation.phase = "download"
                 await self._send_carousel(message, plan, guard, operation)
             except DownloadCleanupError as error:
+                retain_current_request()
                 owner._blocked = True
                 operation.fail(error)
                 with suppress(TelegramAPIError):

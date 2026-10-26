@@ -43,8 +43,11 @@ class CarouselAcquisitionLimits:
     max_total_bytes: int = 500 * 1024**2
     max_temp_bytes: int = 512 * 1024**2
     max_seconds: float = 600
+    min_free_bytes: int = 0
 
     def __post_init__(self):
+        if type(self.min_free_bytes) is not int or self.min_free_bytes < 0:
+            raise ValueError("Free disk reserve must be a nonnegative integer.")
         for name in ("max_videos", "max_file_bytes", "max_total_bytes", "max_temp_bytes"):
             value = getattr(self, name)
             if type(value) is not int or value <= 0:

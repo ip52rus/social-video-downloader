@@ -327,6 +327,24 @@ async def test_two_concurrent_requests_bind_to_their_own_cards(app, monkeypatch,
         release.set()
         await asyncio.gather(*tasks, return_exceptions=True)
     cards = [m for m in session.messages if m.reply_markup is not None]
+    if same_user:
+        # Phase 9C refuses the second link before creating another interaction.
+        from social_video_downloader.download_protection import ACTIVE_MESSAGE
+
+        assert len(cards) == 1
+        assert any(
+            isinstance(c, SendMessage) and c.text == translated(ACTIVE_MESSAGE, "es")
+            for c in session.calls
+        )
+        card = cards[0]
+        await dp.feed_update(
+            bot, callback_update(card, card.reply_markup.inline_keyboard[1][0].callback_data, "es")
+        )
+        assert len(downloads) == 1 and downloads[0][0] == "ru"
+        assert len([c for c in session.calls if isinstance(c, SendMessage)]) == 2
+        assert len([c for c in session.calls if isinstance(c, EditMessageText)]) == 3
+        assert len([c for c in session.calls if isinstance(c, AnswerCallbackQuery)]) == 1
+        return
     assert len(cards) == 2 and cards[0].message_id != cards[1].message_id
     first, second = cards
     # A valid token replayed from the other message must not consume anything.

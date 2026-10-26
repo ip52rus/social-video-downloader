@@ -14,6 +14,7 @@ from social_video_downloader.domain.errors import (
     DownloaderError,
     MediaProcessingError,
 )
+from social_video_downloader.download_protection import check_delivery_file, retain_current_request
 from social_video_downloader.infrastructure.tiktok_native import FILE_BYTES
 from social_video_downloader.operation_logging import Operation
 from social_video_downloader.providers.tiktok import TikTokProvider
@@ -119,6 +120,7 @@ class TelegramTikTokHandler:
                 )
                 try:
                     path, parameters = await _owned_worker(future, cancelled)
+                    check_delivery_file(path)
                     operation.phase = "upload"
                     sending = True
                     async with asyncio.timeout(SEND_SECONDS):
@@ -174,7 +176,9 @@ class TelegramTikTokHandler:
                             directory._finalizer.detach()
                 # Failed cleanup keeps its reservation, even if the notification is
                 # cancelled. Another admitted operation retains its own lifecycle.
-                if not quarantine:
+                if quarantine:
+                    retain_current_request()
+                else:
                     self._active_users.remove(user_id)
                 if cleanup_failed:
                     await _notice(

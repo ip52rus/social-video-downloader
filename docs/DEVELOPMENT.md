@@ -146,8 +146,8 @@ After independent PR review/merge, the separately performed deployment procedure
 7. Inspect errors, file size and actual Telegram client playback; do not retry an ambiguous send.
 8. If rollback is needed, restore the flag to false and recreate only bot with `--no-deps`.
 
-Do not restart/recreate telegram-bot-api or modify its volume. The 25 MiB Reel limit
-and cooperative thread-cancellation limitation remain; no hard whole-request watchdog
+Do not restart/recreate telegram-bot-api or modify its volume. At that historical stage,
+the 25 MiB Reel limit and cooperative thread-cancellation limitation remained; no hard whole-request watchdog
 or production-reliability guarantee is introduced. At that Reel-only stage, `/p/` and
 carousel routing were pending.
 After PR #54, the separately authorized bot-only deployment and one canonical-Reel smoke
@@ -331,7 +331,8 @@ after a valid callback, acquisition through upload/cleanup, but not human choice
 waiting. Busy/failed-ack callbacks do not consume a choice. A consumed callback
 never retries, even if keyboard removal or upload confirmation fails.
 
-Existing conservative media limits remain (10 videos, 25 MiB/file, 100 MiB total).
+At that Item Selection stage, limits were 10 videos, 25 MiB/file and 100 MiB total.
+Phase 9C supersedes the byte budgets in source; the ten-video ceiling is retained.
 Oversized or incomplete publications refuse rather than silently truncate. Worker
 cleanup uncertainty preserves opt-in quarantine workspaces and keeps the Instagram
 handler blocked; investigate ownership/reap before any separately authorized manual
@@ -367,3 +368,33 @@ was not proven and latency was not measured; no final download choice or retry w
 made. See the [review, CI, deployment and LIVE record](TESTING.md#phase-9b-review-deployment-and-live-acceptance-2026-10-23).
 General reliability/load/recovery remain unverified and Phase 9 OPEN. Phase 8 is a
 candidate next direction only after a separate owner decision, not an automatic step.
+
+## Phase 9C shared request admission and technical limits
+
+[Phase 9C](PHASE9C_DOWNLOAD_PROTECTION.md) supersedes historical Instagram byte
+budgets, without changing activation rules or currently running services. Configure
+`DOWNLOAD_MAX_FILE_BYTES`, `DOWNLOAD_MAX_REQUEST_BYTES`,
+`DOWNLOAD_MAX_WORKSPACE_BYTES`, `DOWNLOAD_MIN_FREE_BYTES`,
+`DOWNLOAD_MAX_ACTIVE_REQUESTS`, `DOWNLOAD_LINK_INTERVAL_SECONDS`,
+`DOWNLOAD_MAX_PENDING_REQUESTS`, `DOWNLOAD_NOTICE_INTERVAL_SECONDS`, and
+`YOUTUBE_MAX_FILE_BYTES` / `YOUTUBE_MAX_REQUEST_BYTES` / `YOUTUBE_MAX_WORKSPACE_BYTES`
+through the existing environment mechanism; defaults and consistency checks are in
+the design.
+No real `.env` changes, Docker operations or LIVE downloads are part of implementation.
+
+The router's localization middleware surrounds the new message/callback admission
+middleware. Admission reserves synchronously before metadata; validated callbacks
+reuse the original user lease and locale, acquiring a separate worker atomically
+when available. Busy preserves pending choices without extraction or consume.
+Waiting choices occupy only the bounded user-lease map, not global work capacity.
+`/cancel` invalidates only idle pending choices; it leaves the short
+link cooldown intact. Lazy expiry cannot release a running callback or owned worker.
+Quarantined cleanup retains both its user's slot and global capacity. Investigate
+worker ownership and workspace safety before any separately authorized operational
+recovery; restarting is not itself proof of cleanup. An unconfirmed worker/process-group
+stop or cleanup can retain a lease indefinitely
+and preserves its workspace. This is intentionally fail-closed. YouTube acquisition
+uses an owned POSIX child with scoped write interception, not global file hooks in
+the polling process. Preparation retains its existing drain-on-cancel thread ownership.
+See the design for the additional settings not forwarded by source Compose and
+for conservative disk reservations. No Docker/configuration changes are applied.

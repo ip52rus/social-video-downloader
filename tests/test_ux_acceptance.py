@@ -11,6 +11,7 @@ from aiogram.methods import AnswerCallbackQuery, SendMessage
 
 from social_video_downloader import handlers
 from social_video_downloader.domain.models import DownloadMode
+from social_video_downloader.download_protection import DownloadAdmission
 from social_video_downloader.services.instagram_carousel import InstagramCarouselService
 from social_video_downloader.telegram_i18n import get_i18n, resolve_locale
 from social_video_downloader.telegram_instagram_posts import InstagramPostHandler
@@ -105,7 +106,13 @@ async def test_restart_refusal_then_fresh_and_repeated_request(
 
     # Restart boundary: new dispatcher, handler instances and empty YouTube store.
     monkeypatch.setattr(handlers, "pending_interaction_store", InMemoryPendingInteractionStore())
-    dp, bot, session, _, _, downloads = app(instagram=instagram)
+    clock = [0.0]
+    dp, bot, session, _, _, downloads = app(
+        instagram=instagram,
+        download_admission=DownloadAdmission(
+            clock=lambda: clock[0], free_bytes=lambda: 100 * 1024**3
+        ),
+    )
     locale = resolve_locale(current)
     await asyncio.gather(
         dp.feed_update(bot, callback_update(old_card, old_data, current)),
@@ -121,6 +128,7 @@ async def test_restart_refusal_then_fresh_and_repeated_request(
     assert old_card.model_dump(mode="json") == old_view  # No unsafe visual cleanup.
 
     for expected_count in (1, 2):
+        clock[0] += 3  # A new request after the Phase 9C link cooldown, without sleep.
         await dp.feed_update(bot, message_update(url, current))
         card = session.messages[-1]
         data = card.reply_markup.inline_keyboard[1][0].callback_data

@@ -40,8 +40,11 @@ class CarouselDeliveryLimits:
     max_workspace_entries: int = 2048
     max_prepare_seconds: float = 180
     max_send_seconds: float = 120
+    min_free_bytes: int = 0
 
     def __post_init__(self):
+        if type(self.min_free_bytes) is not int or self.min_free_bytes < 0:
+            raise ValueError("Free disk reserve must be a nonnegative integer.")
         for name in (
             "max_videos",
             "max_upload_file_bytes",

@@ -47,6 +47,15 @@ class DownloadService:
         normalized_url, provider = self._provider_for_url(url)
         return build_choice_plan(provider, normalized_url)
 
+    async def download_bounded(self, url, output_dir, options, limits):
+        """Run the existing YouTube engine under an explicit owned write boundary."""
+        from social_video_downloader.infrastructure.youtube_bounded import acquire
+
+        normalized, provider = self._provider_for_url(url)
+        if not isinstance(provider, YouTubeProvider):
+            raise UnsupportedPlatformError("Bounded acquisition is a YouTube path.")
+        return await acquire(provider, normalized, output_dir, options, limits)
+
     def download(
         self,
         url: str,

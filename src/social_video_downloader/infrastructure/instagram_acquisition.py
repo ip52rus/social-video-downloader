@@ -31,8 +31,9 @@ class _BudgetExceeded(DownloadFailedError):
 class _MediaBudget:
     """Count actual response bytes before writes, independent of size headers/hooks."""
 
-    def __init__(self, limits: CarouselAcquisitionLimits):
+    def __init__(self, limits: CarouselAcquisitionLimits, workspace=None):
         self.limits = limits
+        self.workspace = workspace
         self.total = 0
         self.current = 0
 
@@ -40,6 +41,12 @@ class _MediaBudget:
         original_read = response.read
 
         def bounded_read(size=-1):
+            if (
+                self.workspace is not None
+                and shutil.disk_usage(self.workspace).free < self.limits.min_free_bytes
+            ):
+                response.close()
+                raise _BudgetExceeded("Free disk reserve exhausted.")
             remaining = min(
                 self.limits.max_file_bytes - self.current,
                 self.limits.max_total_bytes - self.total,
@@ -128,14 +135,16 @@ def acquire_in_workspace(plan, workspace: Path, limits, provider=None):
     started = monotonic()
     if list(workspace.iterdir()):
         raise DownloadFailedError("Carousel workspace must be empty.")
-    if shutil.disk_usage(workspace).free < min(limits.max_total_bytes, limits.max_temp_bytes):
+    if shutil.disk_usage(workspace).free < limits.min_free_bytes + min(
+        limits.max_total_bytes, limits.max_temp_bytes
+    ):
         raise DownloadFailedError("Insufficient temporary disk space for carousel limits.")
     facts, entries = provider.fresh_carousel_entries(plan.publication_url)
     if not _same_selection(plan, facts) or len(entries) != plan.total_entries:
         raise DownloadFailedError("Carousel changed; create a new selection plan.")
     # Validate every selected child BEFORE the first acquisition, never parent processing.
     children = [(x, provider._single_video(entries[x.position - 1])) for x in plan.selected_videos]
-    budget = _MediaBudget(limits)
+    budget = _MediaBudget(limits, workspace)
     durations = []
     for item, child in children:
         if monotonic() - started >= limits.max_seconds:

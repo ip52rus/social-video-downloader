@@ -24,6 +24,7 @@ from social_video_downloader.domain.errors import (
     MediaProcessingError,
 )
 from social_video_downloader.domain.urls import has_instagram_item_reference
+from social_video_downloader.download_protection import protected_cleanup
 from social_video_downloader.infrastructure.telegram_media import (
     inspect_telegram_video,
     prepare_telegram_video,
@@ -31,9 +32,9 @@ from social_video_downloader.infrastructure.telegram_media import (
 )
 from social_video_downloader.operation_logging import Operation
 from social_video_downloader.providers.instagram import InstagramProvider
+from social_video_downloader.resource_limits import DownloadLimits
 from social_video_downloader.telegram_i18n import tr
 
-_MAX_BYTES = 25 * 1024**2
 _WORK_SECONDS = 180
 _SEND_SECONDS = 120
 _FFMPEG_LIMIT = (
@@ -57,16 +58,20 @@ class _PreparationStopped(BaseException):
 
 
 class _Guard:
-    def __init__(self, cancelled, *, max_bytes=_MAX_BYTES, seconds=_WORK_SECONDS):
+    def __init__(self, cancelled, *, max_bytes=None, seconds=_WORK_SECONDS, limits=None):
         self.cancelled = cancelled
         self.started = monotonic()
         self.deadline = self.started + seconds
-        self.max_bytes = max_bytes
+        self.limits = limits or DownloadLimits()
+        self.max_bytes = self.limits.max_file_bytes if max_bytes is None else max_bytes
+        self.workspace = None
         self.received = 0
 
     def check(self, *_):
         if self.cancelled.is_set() or monotonic() >= self.deadline:
             raise DownloadTimeoutError("Reel operation stopped.")
+        if self.workspace is not None:
+            self.limits.check_workspace(self.workspace)
 
     def wrap(self, response):
         read = response.read
@@ -131,7 +136,16 @@ class _Guard:
             if command[0] == "ffmpeg":
                 # exec keeps the subprocess PID: run(timeout=...) kills the actual
                 # FFmpeg writer, not a wrapper that leaves a writer behind.
-                command = [sys.executable, "-c", _FFMPEG_LIMIT, str(self.max_bytes), *command]
+                remaining = self.max_bytes
+                if self.workspace is not None:
+                    remaining = min(
+                        remaining,
+                        self.limits.max_workspace_bytes
+                        - self.limits.check_workspace(self.workspace),
+                    )
+                if remaining <= 0:
+                    raise MediaProcessingError("Preparation byte budget exhausted.")
+                command = [sys.executable, "-c", _FFMPEG_LIMIT, str(remaining), *command]
             result = subprocess.run(
                 command, timeout=max(0.001, self.deadline - monotonic()), **kwargs
             )
@@ -163,7 +177,8 @@ async def _owned_worker(task, cancelled):
 class InstagramReelHandler:
     """One active Reel per instance; worker ownership outlives handler cancellation."""
 
-    def __init__(self, *, ydl_factory=None):
+    def __init__(self, *, ydl_factory=None, limits=None):
+        self._limits = limits or DownloadLimits()
         self._ydl_factory = ydl_factory or yt_dlp.YoutubeDL
         self._active = False
         self._blocked = False
@@ -172,7 +187,8 @@ class InstagramReelHandler:
     def _prepare(self, url, workspace, guard, *, provider=None):
         if os.name != "posix":
             raise MediaProcessingError("Limited Reel testing requires POSIX.")
-        if shutil.disk_usage(workspace).free < 3 * guard.max_bytes:
+        guard.workspace = workspace
+        if shutil.disk_usage(workspace).free < guard.limits.min_free_bytes + 2 * guard.max_bytes:
             raise MediaProcessingError("Insufficient isolated Reel workspace space.")
         guard.check()
         provider = provider or InstagramProvider(
@@ -184,7 +200,7 @@ class InstagramReelHandler:
         if source.is_symlink() or source.resolve().parent != workspace or not source.is_file():
             raise MediaProcessingError("Invalid Reel output path.")
         if not 0 < source.stat().st_size <= guard.max_bytes:
-            raise MediaProcessingError("Reel file size exceeds the MVP limit.")
+            raise MediaProcessingError("Reel file size exceeds the technical limit.")
         try:
             prepared = prepare_telegram_video(source, runner=guard.run, allow_silent=True)
             data = inspect_telegram_video(prepared, runner=guard.run)
@@ -232,10 +248,10 @@ class InstagramReelHandler:
             sending = False
             try:
                 await message.answer(tr("Reel link recognized. Starting download…"))
-                with TemporaryDirectory(prefix="instagram-reel-") as directory:
+                with protected_cleanup(TemporaryDirectory(prefix="instagram-reel-")) as directory:
                     try:
                         cancelled = Event()
-                        guard = _Guard(cancelled)
+                        guard = _Guard(cancelled, limits=self._limits)
                         # An executor Future is shielded directly. A separate to_thread Task
                         # could itself be cancelled during shutdown while its thread survives.
                         task = asyncio.get_running_loop().run_in_executor(
@@ -258,7 +274,7 @@ class InstagramReelHandler:
                     finally:
                         operation.phase = "cleanup"
 
-            except (DownloaderError, TelegramAPIError, TimeoutError) as error:
+            except (DownloaderError, TelegramAPIError, TimeoutError, OSError) as error:
                 operation.fail(error)
                 text = (
                     tr("Couldn't confirm video delivery. There will be no automatic retry.")
