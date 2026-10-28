@@ -2337,8 +2337,10 @@ presentation-lock stress case invokes the existing handler directly to retain al
 its forced-overlap assertions; the real dispatcher now refuses that overlap and is
 tested separately. No media-count/identity, binding or one-shot assertion is weakened.
 
-No new LIVE platform request, Telegram call, download, deployment or physical-client
-acceptance is performed. Sparse synthetic 26 MiB files and in-memory body fixtures do
+The implementation/offline verification stage performed no new LIVE platform request,
+Telegram call, download, deployment or physical-client acceptance. Later local
+deployment and owner acceptance are recorded separately below.
+Sparse synthetic 26 MiB files and in-memory body fixtures do
 not establish real-world larger-file playback, near-2 GB delivery, disk/RAM isolation,
 load capacity or crash recovery. Historical LIVE results and Phase 8 MVP acceptance
 remain separate. See [design and residual limits](PHASE9C_DOWNLOAD_PROTECTION.md).
@@ -2357,9 +2359,11 @@ Follow-up admission/guard checks after added assertions: **90 passed** (61.25 s)
 Final YouTube write/merge/resource tests: **23 passed** (62.68 s).
 Final UI/locale/status/restart regression after deterministic disk fixtures:
 **536 passed** (17.87 s).
-No full local pytest is repeated; the final pushed HEAD uses one normal full PR CI.
-CI results and the exact new source HEAD are recorded on PR 83, not inferred from
-its previous successful run.
+No full local pytest was repeated. The final implementation source HEAD
+`349d20e718bcb293d411e470b04e9775f68eabf8` passed the normal full
+[CI #40327275768](https://github.com/ip52rus/social-video-downloader/actions/runs/40327275768).
+The merged baseline and its post-merge CI are recorded below, separately from
+offline and owner LIVE evidence.
 
 New deterministic evidence includes:
 
@@ -2391,3 +2395,46 @@ numeric values on macOS. The installed yt-dlp response `read(amt=None)` contract
 preserved. These checks do not establish an arbitrary external-downloader sandbox,
 RSS isolation, near-2 GB delivery, load capacity, crash recovery or new LIVE results.
 Ruff/diff/privacy and local documentation links are checked before publication.
+
+
+## Phase 9C local deployment (2026-10-26)
+
+**Deployment verdict: TECHNICAL PASS.**
+
+[PR #83](https://github.com/ip52rus/social-video-downloader/pull/83) merged as
+`f74dc6c933012b809d4e6dc33ed3f3bdadc39d34`.
+[Post-merge CI #40333460016](https://github.com/ip52rus/social-video-downloader/actions/runs/40333460016)
+completed **SUCCESS** on that exact commit.
+
+The separately authorized local Docker Desktop rollout replaced only `bot` with
+image `sha256:49a66a1191b906aeba5817c6c2b157b3c469485d85c988fdf07499ed76b0dfae`.
+At verification, bot was RUNNING, restart count 0, OOM false, and polling had started.
+Local Bot API, its configuration and named volume were preserved. The rollback
+image was prepared and available; rollback was not executed.
+
+These are deployment-time observations, not a claim about current continuous
+uptime or owner LIVE acceptance. No media downloads were initiated during rollout.
+
+## Phase 9C owner LIVE acceptance (2026-10-28)
+
+**Owner-reported result: 5/5 PASS. Phase 9C: LOCAL ACCEPTED.**
+
+The owner confirmed the following on the deployed local Phase 9C release:
+
+| # | Owner-controlled LIVE check | Result |
+| --- | --- | --- |
+| 1 | A second link was rejected while a YouTube choice was pending. | PASS |
+| 2 | `/cancel` successfully cancelled a waiting choice. | PASS |
+| 3 | A YouTube video was delivered and played back. | PASS |
+| 4 | A second link was rejected during an active download. | PASS |
+| 5 | An Instagram video larger than 25 MiB was delivered and played back. | PASS |
+
+This is the owner's acceptance report, not a new automated test or a new LIVE run
+performed for documentation closeout. Only these five checks are accepted here;
+earlier offline tests and historical platform acceptance retain their own scope.
+
+The result does not establish load/stress reliability, failure recovery, a tested
+rollback, delivery near 2 GB, or universal platform/network/client/language
+compatibility. No new TikTok LIVE check is included in these five cases. Existing
+restart-stale-button and cleanup/quarantine limitations remain documented in the
+[design](PHASE9C_DOWNLOAD_PROTECTION.md). General Phase 9 remains **OPEN**.

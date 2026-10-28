@@ -484,9 +484,17 @@ Complete the operational and reliability work that is intentionally not part of 
 
 Status: OPEN. Phase 4 functional acceptance does not satisfy this reliability gate.
 
-Phase 9C is an owner-authorized scoped implementation: replace the historical
+Phase 9C status: **LOCAL ACCEPTED**. [PR #83](https://github.com/ip52rus/social-video-downloader/pull/83)
+merged as `f74dc6c933012b809d4e6dc33ed3f3bdadc39d34`; post-merge CI
+[#40333460016](https://github.com/ip52rus/social-video-downloader/actions/runs/40333460016)
+SUCCESS. The 2026-10-26 bot-only deployment received TECHNICAL PASS; the owner
+reported 5/5 LIVE PASS on 2026-10-28. See the separate
+[deployment](TESTING.md#phase-9c-local-deployment-2026-10-26) and
+[owner acceptance](TESTING.md#phase-9c-owner-live-acceptance-2026-10-28) records.
+
+Phase 9C replaces the historical
 Instagram 25 MiB Telegram gates with common configurable file/collection/workspace
-and free-space bounds; add process-local cross-platform user leases, link cooldown
+and free-space bounds, and adds process-local cross-platform user leases, link cooldown
 and bounded global admission without a queue. Pending choices reserve a user slot,
 not worker capacity, for up to their original 15 minutes and may be cancelled with
 `/cancel`; executing or
@@ -495,9 +503,9 @@ formats, HTTP policy, count limits and delivery/no-retry contracts remain in for
 Review corrections add endpoint-aware YouTube limits enforced during acquisition,
 merge and preparation, plus throttled repeated link refusals. Busy callbacks preserve
 the pending choice; quarantine retains work capacity.
-See [design and limits](PHASE9C_DOWNLOAD_PROTECTION.md). Independent review,
-exact-head CI and separately authorized deployment/LIVE checks remain gates;
-this implementation does not close general Phase 9 reliability/load/recovery.
+See [design and limits](PHASE9C_DOWNLOAD_PROTECTION.md). This closes the local
+Phase 9C scope only. General Phase 9 remains **OPEN**: load/stress, failure recovery,
+near-2 GB delivery and universal platform reliability are not established.
 
 
 Phase 9A adds minimal safe standard-library events after a read-only deployed

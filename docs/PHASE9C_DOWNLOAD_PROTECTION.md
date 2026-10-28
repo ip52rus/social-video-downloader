@@ -1,5 +1,24 @@
 # Phase 9C: shared download protection
 
+## Local acceptance and remaining limits
+
+Status: **LOCAL ACCEPTED**. [PR #83](https://github.com/ip52rus/social-video-downloader/pull/83)
+merged as `f74dc6c933012b809d4e6dc33ed3f3bdadc39d34`; post-merge CI
+[#40333460016](https://github.com/ip52rus/social-video-downloader/actions/runs/40333460016)
+SUCCESS. The 2026-10-26 local bot-only deployment received TECHNICAL PASS, with
+Local Bot API/configuration/volume preserved and rollback prepared but not executed.
+On 2026-10-28 the owner confirmed 5/5 LIVE PASS: rejection during pending choice
+and active download, waiting-choice cancellation, YouTube delivery/playback and
+delivery/playback of one Instagram video larger than 25 MiB. See the separate
+[deployment](TESTING.md#phase-9c-local-deployment-2026-10-26) and
+[owner acceptance](TESTING.md#phase-9c-owner-live-acceptance-2026-10-28) evidence.
+
+Acceptance is limited to these local observations. It does not establish
+load/stress reliability, failure recovery or a tested rollback, near-2 GB delivery,
+or universal platform/network/client/language compatibility. The five LIVE cases
+include no new TikTok acceptance. The restart-stale and quarantine limits below
+remain in force. General Phase 9 stays **OPEN**.
+
 ## Reason and scope
 
 The former Telegram Instagram gates imposed a separate 25 MiB file ceiling at
@@ -87,8 +106,8 @@ The original PR forwards the six shared settings through source Compose. Review
 corrections do not change Compose: the five additional settings use their defaults
 unless passed through the existing environment mechanism (or a separately approved
 Compose environment override). A name in `.env` alone does not forward an unlisted
-variable into a container. No running environment, Docker resource, activation flag
-or timeout is changed here.
+variable into a container. The separately authorized local rollout is recorded
+above; this documentation closeout changes no runtime settings.
 
 Admission conservatively requires the free reserve plus a full workspace budget
 for each working request, even if some space is already in use. Pending choices
@@ -110,13 +129,16 @@ cleanup, automatic retry, re-download or new persistence is introduced.
 
 ## Review boundaries
 
-Safety tests use synthetic responses, files, Telegram sessions and controlled clocks;
-no new real platform requests or media downloads are performed. Existing format,
+Implementation safety tests used synthetic responses, files, Telegram sessions and
+controlled clocks, without new real platform requests or media downloads. The later
+owner LIVE report is separate evidence. Existing format,
 manifest/source-position, HTTP/header, retry, one-shot and pending-store contracts
 are preserved. Additional global admission is deliberately stricter than the existing
-per-platform gates, which remain in force. Full CI and independent review are
-required before merge; deployment and LIVE acceptance require separate authorization.
-See [testing evidence](TESTING.md#phase-9c-shared-limits-and-admission-offline).
+per-platform gates, which remain in force. PR #83 is merged with its review
+corrections and successful exact-head/post-merge CI. The separately authorized
+local deployment and owner acceptance are recorded above; neither closes general
+Phase 9 reliability. See
+[offline testing evidence](TESTING.md#phase-9c-shared-limits-and-admission-offline).
 
 ## Independent review corrections
 
