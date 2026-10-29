@@ -7,6 +7,11 @@ Checkpoint: **2026-10-29**. Project source baseline:
 
 **DEFERRED / SERVER RESOLVER BLOCKED / RESEARCH PRESERVED**
 
+Latest owner decision (D1.3): keep Short Drama deferred until completion of the main
+roadmap and a separate owner decision. The [independent Work supplement](#independent-chatgpt-work-investigation--2026-10-29)
+adds populated ordinary-page metadata **with positive preview flags**; it does not
+establish a complete permitted file or independent server resolver. No new LIVE PoC.
+
 The official desktop browser supplies populated playback metadata for the chosen
 Short Drama episode. Independent retrieval of that source by our server Python
 client has not been demonstrated. No isolated research download proved a complete
@@ -95,8 +100,11 @@ width576, height1024, size12704993. Playback host family:
 `v16-webapp-prime.tiktok.com`. **No complete address is preserved.**
 This is positive official-client evidence, not proof anonymous Python can reproduce it.
 Top-level H.264 does not establish that every bitrateInfo candidate is H.264 or that
-an actual file contains the declared streams. Explicit preview/paid/DRM flags for the
-new populated response were not provided; their values remain UNKNOWN.
+an actual file contains the declared streams. At S1/S2, explicit preview/paid/DRM
+flags for that populated item_list capture were not provided. The later independent
+Work investigation found IsPreview=true in an ordinary-page itemStruct; see the
+supplement below. Do not retroactively assign those flags to an earlier raw response
+that was not captured. Paid/DRM state and physical completeness remain unresolved.
 
 ## Separate v19 resource and MSE boundary
 
@@ -153,6 +161,148 @@ request verification may differ. No single causal factor is established. S2 judg
 the known count/client/cover differences insufficient to justify another anonymous
 LIVE; it did not prove that those fields can never affect a response. Integration
 remains blocked, not declared fundamentally impossible.
+
+## Independent ChatGPT Work Investigation — 2026-10-29
+
+### Evidence source and verification boundary
+
+This supplement records **independent ChatGPT Work findings provided by the owner
+in D1.3**, received after S1/S2. A bounded search of the accessible local research
+roots found no separate full Work report or new source checkout for these findings:
+**FULL WORK REPORT / RAW BROWSER EVIDENCE — SOURCE NOT AVAILABLE locally**.
+The supplied findings are preserved here; Codex did not read an unavailable report,
+repeat playback, inspect the user's Chrome/profile, acquire media or perform TikTok
+content/API LIVE requests. Codex checked the existing parser path, public GitHub
+commit/PR/issue references and official developer documentation only. Public source
+links below are provenance, not proof of running third-party tests or license clearance.
+
+### 1. Ordinary video page exposes the existing supported state path
+
+Work reports normal navigation in authorized Google Chrome to the mapped ordinary
+publication <https://www.tiktok.com/@fatefultwistus/video/7698876141532237070>.
+Filled playback metadata was found in `__UNIVERSAL_DATA_FOR_REHYDRATION__` at:
+
+`__DEFAULT_SCOPE__["webapp.video-detail"].itemInfo.itemStruct`
+
+| Field / observation | Owner-provided independent Work result |
+|---|---|
+| item.id / video.id | Both `7698876141532237070` |
+| dramaID / explicit EpisodeNumber | `7698874781395096594` / `1` |
+| author | `fatefultwistus` |
+| playAddr / downloadAddr | Filled; values intentionally not retained |
+| PlayAddrStruct | Present |
+| bitrateInfo | Four variants: one H.264, three H.265 |
+| format / duration | MP4 / 113 seconds |
+| dimensions | 576×1024 |
+| declared size | 12,704,993 bytes; metadata value, not an independently measured file |
+| main source host | `v16-webapp-prime.tiktok.com`; no full signed URL |
+
+The ordinary URL later changed to the Short Drama URL. HTTP redirect versus
+client-side navigation is **UNKNOWN**; no captured chain is available. Do not claim
+that an unsigned server GET to the original URL received the same state.
+
+Our existing `tiktok_public_page.py` already reads `webapp.video-detail`; Codex
+confirmed this in source at the unchanged f74dc6c runtime baseline. The separately
+discussed `webapp.reflow.video.detail` schema is **not an explanation of this specific
+blocker**. This is a new positive browser observation, contrasting with the older
+anonymous ordinary-page trace where playAddr was empty and metadata_schema resulted.
+It does not prove the same source is independently available to server Python, nor
+that parser changes alone would solve retrieval or access/completeness checks.
+
+### 2. Positive preview flags change the admission conclusion
+
+Work found these values **in the same target record**:
+
+| Field | Observed value |
+|---|---|
+| DramaVideoData.IsPreview | `true` |
+| DramaVideoData.PreviewType | `4` |
+| dramaInfo.isLimitedFree | `true` |
+| DramaVideoData.IsFreeIntro | `false` |
+| DramaVideoData.LinkedEpisodeID | `"0"` |
+
+This updates the earlier absence of supplied preview evidence for populated browser
+metadata. Filled playback, exact IDs, duration113 and the declared byte size do **not**
+establish a complete episode. IsLimitedFree is not a full-access entitlement proof.
+The semantics of PreviewType4 in this Web API are unconfirmed; IsPreview=true does
+not independently demonstrate that the actual file is physically shortened. Do not
+label it either a complete episode or a guaranteed truncated preview.
+
+**Candidate admission is NO-GO / BLOCKED under unresolved preview/access state.**
+The current strict research policy cannot clear a positive preview indication by
+ignoring it or relying on duration/size. Complete-file status remains INCONCLUSIVE;
+no new media GET is authorized to settle it. The older v19/blob comparison remains
+UNKNOWN and is not resolved by these newly reported v16 metadata values.
+
+### 3. Additional OSS reviewed by Work
+
+| Pinned primary source | Reported mechanism and limitations | Outcome for our target |
+|---|---|---|
+| [vathsathya/yanich-tiktok-downloader](https://github.com/vathsathya/yanich-tiktok-downloader/tree/1f458ab3d460f2e1e9247d4ad64fff2c29344f81) — `1f458ab3d460f2e1e9247d4ad64fff2c29344f81` | Extracts data from an already open browser page, credentials:include. Work found no license. No independent license audit or code execution by Codex in D1.3. | No demonstrated independent resolver or complete selected episode; code reuse not cleared. |
+| [PM2112-Dev/SurveillanceCameras](https://github.com/PM2112-Dev/SurveillanceCameras/tree/8e383096376c8eb0ecf21354ff8991ebb2283145) — `8e383096376c8eb0ecf21354ff8991ebb2283145` | C# episode API with cookies/browser context. License not confirmed. Integration-test code expects a drama failure without account cookie; whether those tests actually ran is unverified. | An expected assertion is not a measured anonymous/authenticated comparison; target full-file/server support not established. |
+| [itxconsider/855media](https://github.com/itxconsider/855media/tree/76795f6fcf40b58eb5a40e2e3651dc2c1a40c0b8) — `76795f6fcf40b58eb5a40e2e3651dc2c1a40c0b8` | Episode API with cookies, maps episodes to ordinary video URLs. Main-code license not confirmed; additional availability restrictions reported, exact scope not supplied. | Mapping is not source retrieval or access permission; no independent permitted resolver demonstrated for this target. |
+
+Codex verified that the three pinned commit references resolve publicly; the mechanism,
+license-search and test observations above remain attributed to Work. None establishes
+commercial-compatible reuse or a working complete target source. Do not import code
+without confirmed rights. Do not transplant browser wrappers, cookies or authorization
+assumptions.
+
+### 4. Official TikTok Data Portability API — a different use case
+
+Official [Data Types](https://developers.tiktok.com/docs/en/data-portability-data-types)
+documents download links for MP4/JPG posts made by the participating user. Official
+[Get Started](https://developers.tiktok.com/docs/en/data-portability-api-get-started)
+and [FAQ](https://developers.tiktok.com/docs/en/data-portability-api-faq) require
+approved Data Portability access/scopes and Login Kit, with the user's authorization
+and consent. Codex read those public pages for this documentation update; no account,
+application or API data request was created. Work also notes regional applicability;
+no regional eligibility matrix or approval for this project was established here.
+
+This is potentially an approved import path for a participant's **own publications**
+and appropriately licensed content within that scope. A third-party content license
+does not by itself extend the API's data scope. Short Drama support is not demonstrated.
+It is not an arbitrary other-author series downloader and does not solve the original
+product scenario. No implementation or commercial approval is inferred.
+
+### 5. Other official-client checks and upstream references
+
+The owner-provided Work report summary records:
+
+- Official Embed Player `/player/v1/{post_id}`: target video unavailable. No new
+  Embed request was made by Codex; this is separate from the earlier Embed-v2 HTTP429.
+- Incognito Short Drama URL: login/age restrictions appeared.
+- Incognito ordinary video URL: navigation to Short Drama with CAPTCHA; no bypass
+  attempted. Navigation type and target access in other contexts remain unknown.
+- [yt-dlp PR #17599](https://github.com/yt-dlp/yt-dlp/pull/17599): Work considered the
+  webapp.reflow.video.detail schema; the actual successful target state above is
+  webapp.video-detail, so that schema does not explain the observed missing-source gap.
+- [yt-dlp Issue #17725](https://github.com/yt-dlp/yt-dlp/issues/17725): no separately
+  confirmed Short Drama support in the version Work checked. Codex verified the
+  reference exists/is open, not a fresh latest-extractor compatibility matrix.
+
+These observations do not prove mandatory account login for all environments.
+Account/session, region, browser context and request checks remain confounded; no
+cookie export, signature imitation, incognito retry or new experiment is proposed.
+
+### Updated disposition
+
+| Claim / gate | Status and evidence boundary |
+|---|---|
+| Official Chrome playback | **PASS**, independent Work/owner report; not repeated by Codex |
+| Identifying metadata | **PASS**, explicit target drama/episode/item/video/author |
+| Playback metadata in authorized Chrome | **PASS**, filled fields in existing webapp.video-detail state |
+| Independent server retrieval | **INCONCLUSIVE** |
+| Complete target MP4 | **INCONCLUSIVE**; preview flag semantics/completeness unresolved |
+| Admit candidate with unresolved preview/access state | **NO-GO / BLOCKED** |
+| Production Short Drama integration | **NO-GO** at this checkpoint |
+| Commercial use of arbitrary content without permissions | **NO-GO**; software license/browser access grants no content permission |
+
+**Owner decision: Short Drama remains DEFERRED until completion of the main roadmap
+and a separate decision to reopen.** This preserves, rather than overturns, S1's
+architectural feasibility and S2's no-repeat-LIVE conclusion. No global technical
+impossibility is asserted. No new LIVE PoC, monitoring, development, acquisition,
+PR for integration or deployment follows from this documentation supplement.
 
 ## OSS snapshots and reuse decisions
 
@@ -261,7 +411,8 @@ profiles, HAR, raw pages/API bodies or complete signed URLs are preserved here.
 
 ## Conditions to reopen
 
-- [ ] Main roadmap reaches the appropriate priority, or owner approves a new evidence-led exception.
+- [ ] Complete the main roadmap and obtain a separate owner decision to reopen;
+  any exception to the latest D1.3 deferral requires a new explicit owner decision.
 - [ ] A genuinely new permitted OSS mechanism or changed yt-dlp extractor addresses source retrieval.
 - [ ] A documented approved API or reproducible server PoC exists for permitted full content.
 - [ ] New evidence differs from S1/S2; state the exact hypothesis, identity/access gates and source.

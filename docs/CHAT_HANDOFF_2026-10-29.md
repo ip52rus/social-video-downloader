@@ -149,6 +149,41 @@ paid server or new downloader from scratch. Current native GET has no Range and
 expects200; observed browser206 does not prove plain-GET compatibility. Do not weaken
 security/status checks. No active monitoring or reopening until separate owner decision.
 
+### D1.3 independent Work supplement — 2026-10-29
+
+New independent ChatGPT Work findings were provided by the owner after S1/S2;
+no full Work report/raw browser capture was found in the checked local research
+roots, and Codex did not repeat its browser experiments. Authorized Chrome exposed
+filled target playback in the ordinary video's existing
+`__DEFAULT_SCOPE__["webapp.video-detail"].itemInfo.itemStruct` path, with exact
+item.id/video.id `7698876141532237070`, dramaID `7698874781395096594`, explicit
+EpisodeNumber `1` and author `fatefultwistus`. The existing public-page parser already reads that schema;
+webapp.reflow.video.detail does not explain this specific gap. Later URL navigation
+to Short Drama is not proven to be an HTTP redirect.
+
+Critically, the same record has IsPreview=true, PreviewType4, isLimitedFree=true,
+IsFreeIntro=false and LinkedEpisodeID="0". Playback addresses, 113 s duration and
+12,704,993 declared bytes **do not prove full media**. It is also not established
+that the file is physically shortened; PreviewType4 semantics remain unknown.
+Candidate admission stays BLOCKED for unresolved preview/access. Independent server
+retrieval and full MP4 completeness remain INCONCLUSIVE; integration NO-GO.
+
+Work's three additional browser/cookie-based OSS candidates did not establish a
+permitted target resolver and lack confirmed reuse licensing. Official Data
+Portability documents authorized export/download links for a participant's own
+posts, subject to approvals/consent/eligibility; Short Drama is unproven and this is
+not arbitrary third-party-series download. It may support a separate own/licensed-
+publication import use case within the API scope, not our original resolver.
+Work also observed unavailable Embed playback and incognito login/age/CAPTCHA
+restrictions; these do not establish universal login necessity and were not bypassed.
+
+**Final owner disposition: DEFERRED until the main roadmap is complete and a separate
+reopening decision. No new LIVE PoC or Short Drama development.** See the
+[full independent Work supplement](research/TIKTOK_SHORT_DRAMA.md#independent-chatgpt-work-investigation--2026-10-29)
+for all five evidence groups, pinned sources and PASS/INCONCLUSIVE/NO-GO boundaries.
+At D1.3 preflight #85 was OPEN/Draft/MERGEABLE on `64e218d…` with CI #40903473544 SUCCESS;
+the new documentation HEAD/CI belongs on the PR. This does not declare #85 merged.
+
 ## 11. Telegram and Local Bot API
 
 The bot uses aiogram long polling. Custom `TELEGRAM_API_BASE_URL` selects local-client
