@@ -876,7 +876,9 @@ Status: OPEN; not closed by Phase 4 functional acceptance.
 
 ### Phase 9C — shared limits and download protection
 
-Implementation branch; no deployment or new LIVE download. General Phase 9 stays OPEN.
+Status: **LOCAL ACCEPTED**. PR #83 is merged; local deployment passed on
+2026-10-26 and the owner reported **5/5 LIVE PASS** on 2026-10-28.
+General Phase 9 stays **OPEN**.
 
 - [x] Replace Telegram Instagram's historical 25 MiB/file gates with shared validated
   file/request/workspace/free-disk budgets and endpoint-aware upload ceiling; retain
@@ -897,15 +899,23 @@ Implementation branch; no deployment or new LIVE download. General Phase 9 stays
   15-minute expiry, ownership/binding, pinned locale and one-shot consumption.
 - [x] Retain shared reservations on cleanup quarantine, including repeated cancellation
   and overlapping publication/callback contexts; no automatic recovery/retry.
-- [ ] Complete exact-head CI and independent review; no merge/deployment authorized.
-- [ ] Separately authorize deployment and any justified larger-file LIVE acceptance.
+- [x] Merge [PR #83](https://github.com/ip52rus/social-video-downloader/pull/83)
+  with its review corrections as `f74dc6c933012b809d4e6dc33ed3f3bdadc39d34`;
+  implementation exact-head CI #40327275768 and post-merge CI #40333460016 SUCCESS.
+- [x] Complete separately authorized bot-only local deployment on 2026-10-26:
+  TECHNICAL PASS; Local Bot API/configuration/volume preserved, rollback image
+  prepared but rollback not executed.
+- [x] Record owner LIVE acceptance on 2026-10-28: 5/5 PASS for rejection during
+  YouTube choice/download, waiting-choice `/cancel`, YouTube delivery/playback
+  and delivery/playback of one Instagram video above 25 MiB.
 
 See [design, defaults and limits](PHASE9C_DOWNLOAD_PROTECTION.md) and
-[offline verification](TESTING.md#phase-9c-shared-limits-and-admission-offline).
-Historical smaller-file and platform LIVE evidence below is unchanged. The source
-policy removes the old byte gates; it does not claim real 2 GB delivery support,
-arbitrary-downloader/RSS isolation or load/recovery acceptance. Review fixes retain
-the original Instagram >25 MiB policy and do not change runtime or Docker.
+[offline verification](TESTING.md#phase-9c-shared-limits-and-admission-offline),
+[local deployment](TESTING.md#phase-9c-local-deployment-2026-10-26) and
+[owner acceptance](TESTING.md#phase-9c-owner-live-acceptance-2026-10-28).
+Historical smaller-file and platform LIVE evidence below is unchanged. Local
+acceptance does not establish near-2 GB delivery, arbitrary-downloader/RSS isolation,
+load/failure-recovery readiness or universal platform reliability.
 
 
 - [x] Phase 9A read-only baseline: inspect current main/worktrees and unchanged running
