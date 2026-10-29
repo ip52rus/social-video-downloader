@@ -18,31 +18,9 @@ Phase 8 MVP is **ACCEPTED WITH DOCUMENTED LIMITATIONS** (merged PR #82); Phase 9
 | HOSTKEY functional | owner reports normal TikTok succeeds; no measured all-platform/load/client matrix |
 | Short Drama | official desktop Chrome populated target playback metadata; isolated full-file/server retrieval UNKNOWN; research DEFERRED |
 
-### Phase 9C local deployment 2026-10-26
-
-Owner-supplied technical checkpoint: source
-`f74dc6c933012b809d4e6dc33ed3f3bdadc39d34`, bot image
-`sha256:49a66a1191b906aeba5817c6c2b157b3c469485d85c988fdf07499ed76b0dfae`.
-Bot RUNNING, restart0/OOMfalse; Local Bot API/configuration/volume preserved.
-Rollback image prepared, not used. Post-merge
-[CI #40333460016](https://github.com/ip52rus/social-video-downloader/actions/runs/40333460016)
-SUCCESS was rechecked on exact SHA in D1. No D1 Docker/API operation.
-
-### Phase 9C owner LIVE acceptance 2026-10-28
-
-**5/5 PASS**, explicitly local owner confirmation, not independently repeated:
-
-1. Second link rejected while YouTube choice is pending.
-2. /cancel cancels the idle choice.
-3. YouTube video delivered and playable.
-4. Second link rejected during active download.
-5. Instagram video **above25MiB** delivered and playable.
-
-No exact Instagram size, timing, device/client or codec measurement was provided;
-do not invent them. These cases validate the stated functional behavior, not load,
-near-2GB/long-duration delivery, every platform, restart/recovery or rollback. A new
-request after completion is covered by existing offline admission tests; do not
-invent a sixth owner LIVE case. Accepted cases need no repeat absent a concrete reason.
+The canonical detailed records are [local deployment](#phase-9c-local-deployment-2026-10-26)
+and [owner LIVE acceptance](#phase-9c-owner-live-acceptance-2026-10-28) below. Keep
+those local observations separate from the later HOSTKEY technical cutover.
 
 ### HOSTKEY technical cutover 2026-10-28
 
@@ -106,8 +84,31 @@ No full local pytest is repeated for this docs-only checkpoint. Ruff and read-on
 catalog compilation checks apply to unchanged source; normal full GitHub CI on the
 published exact PR HEAD remains the regression gate. CI status/HEAD/run URL are on
 the Draft PR and final handoff report; no self-referential docs commit is fabricated.
-Independent D1 review/owner acceptance remain separate. Open Draft PR84 overlaps local
-Phase9C closeout; reconcile merge ordering instead of claiming it is merged.
+Independent D1 review/owner acceptance remain separate. D1.2 merged PR #84 as
+`a0d57f253c74aaf563efb456abdf4ae9854eee2b` and reconciled it into Draft PR #85
+by an ordinary merge, without rewriting history. PR #85 is not merged. The four
+Phase 9C documents retain one canonical deployment/acceptance record, exact
+implementation HEAD/CI, HOSTKEY separation and all reliability limits.
+
+### D1.2 reconciliation verification
+
+After owner authorization, PR #84 merged as
+`a0d57f253c74aaf563efb456abdf4ae9854eee2b`; its main-relative diff is exactly
+four Markdown files. Remote main advanced, but the original local main checkout
+remained clean at f74dc6c with all152 tracked hashes/private fingerprints unchanged.
+The new main was merged normally into #85; no rebase, force-push, worktree repair
+or history rewrite. Expected conflicts were limited to the three intersecting
+policy/roadmap/task files; TESTING's automatically combined duplicate records were
+manually consolidated. Implementation HEAD349d20e/CI40327275768 and all local/VPS
+acceptance boundaries are preserved. Handoff reflects #84 MERGED; #85 stays Draft.
+
+Documentation Integrity Gate PASS:28 Markdown files,238 local links/anchors,
+formatting, diff and privacy/scope review; exactly one detailed Phase9C deployment
+and one owner acceptance section. Ruff PASS; no local full pytest, runtime/config,
+production, media LIVE or Phase9 implementation. AGENTS/research content remains
+unchanged from reviewed #85. The updated exact-head PR CI and #84 post-merge CI
+are reported on the PR and final handoff; earlier CI success is not reused for a
+new HEAD. D1.2 does not authorize merging #85.
 
 Instagram's narrow live evidence includes
 [Item Selection LIVE acceptance 2026-10-22](#instagram-item-selection--live-acceptance-2026-10-22)
@@ -2435,8 +2436,10 @@ presentation-lock stress case invokes the existing handler directly to retain al
 its forced-overlap assertions; the real dispatcher now refuses that overlap and is
 tested separately. No media-count/identity, binding or one-shot assertion is weakened.
 
-No new LIVE platform request, Telegram call, download, deployment or physical-client
-acceptance is performed. Sparse synthetic 26 MiB files and in-memory body fixtures do
+The implementation/offline verification stage performed no new LIVE platform request,
+Telegram call, download, deployment or physical-client acceptance. Later local
+deployment and owner acceptance are recorded separately below.
+Sparse synthetic 26 MiB files and in-memory body fixtures do
 not establish real-world larger-file playback, near-2 GB delivery, disk/RAM isolation,
 load capacity or crash recovery. Historical LIVE results and Phase 8 MVP acceptance
 remain separate. See [design and residual limits](PHASE9C_DOWNLOAD_PROTECTION.md).
@@ -2454,9 +2457,11 @@ Follow-up admission/guard checks after added assertions: **90 passed** (61.25 s)
 Final YouTube write/merge/resource tests: **23 passed** (62.68 s).
 Final UI/locale/status/restart regression after deterministic disk fixtures:
 **536 passed** (17.87 s).
-No full local pytest is repeated; the final pushed HEAD uses one normal full PR CI.
-CI results and the exact new source HEAD are recorded on PR 83, not inferred from
-its previous successful run.
+No full local pytest was repeated. The final implementation source HEAD
+`349d20e718bcb293d411e470b04e9775f68eabf8` passed the normal full
+[CI #40327275768](https://github.com/ip52rus/social-video-downloader/actions/runs/40327275768).
+The merged baseline and its post-merge CI are recorded below, separately from
+offline and owner LIVE evidence.
 
 New deterministic evidence includes:
 
@@ -2488,3 +2493,50 @@ numeric values on macOS. The installed yt-dlp response `read(amt=None)` contract
 preserved. These checks do not establish an arbitrary external-downloader sandbox,
 RSS isolation, near-2 GB delivery, load capacity, crash recovery or new LIVE results.
 Ruff/diff/privacy and local documentation links are checked before publication.
+
+## Phase 9C local deployment (2026-10-26)
+
+**Deployment verdict: TECHNICAL PASS.**
+
+[PR #83](https://github.com/ip52rus/social-video-downloader/pull/83) merged as
+`f74dc6c933012b809d4e6dc33ed3f3bdadc39d34`.
+[Post-merge CI #40333460016](https://github.com/ip52rus/social-video-downloader/actions/runs/40333460016)
+completed **SUCCESS** on that exact commit.
+
+The separately authorized local Docker Desktop rollout replaced only `bot` with
+image `sha256:49a66a1191b906aeba5817c6c2b157b3c469485d85c988fdf07499ed76b0dfae`.
+At verification, bot was RUNNING, restart count 0, OOM false, and polling had started.
+Local Bot API, its configuration and named volume were preserved. The rollback
+image was prepared and available; rollback was not executed.
+
+These are deployment-time observations, not a claim about current continuous
+uptime or owner LIVE acceptance. No media downloads were initiated during rollout.
+
+## Phase 9C owner LIVE acceptance (2026-10-28)
+
+**Owner-reported result: 5/5 PASS. Phase 9C: LOCAL ACCEPTED.**
+
+The owner confirmed the following on the deployed local Phase 9C release:
+
+| # | Owner-controlled LIVE check | Result |
+| --- | --- | --- |
+| 1 | A second link was rejected while a YouTube choice was pending. | PASS |
+| 2 | `/cancel` successfully cancelled a waiting choice. | PASS |
+| 3 | A YouTube video was delivered and played back. | PASS |
+| 4 | A second link was rejected during an active download. | PASS |
+| 5 | An Instagram video larger than 25 MiB was delivered and played back. | PASS |
+
+This is the owner's acceptance report, not a new automated test or a new LIVE run
+performed for documentation closeout. Only these five checks are accepted here;
+earlier offline tests and historical platform acceptance retain their own scope.
+
+The result does not establish load/stress reliability, failure recovery, a tested
+rollback, delivery near 2 GB, or universal platform/network/client/language
+compatibility. No new TikTok LIVE check is included in these five cases. Existing
+restart-stale-button and cleanup/quarantine limitations remain documented in the
+[design](PHASE9C_DOWNLOAD_PROTECTION.md). General Phase 9 remains **OPEN**.
+
+Additional local-acceptance limits retained by D1.2: exact Instagram size, timing,
+client/device and codec measurements were not supplied; do not invent them. A new
+request after completion has offline coverage, not a sixth owner LIVE case. The
+HOSTKEY ordinary-TikTok owner observation is separate from these five local cases.

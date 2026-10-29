@@ -895,9 +895,10 @@ Status: OPEN; not closed by Phase 4 functional acceptance.
 
 ### Phase 9C — shared limits and download protection
 
-**LOCAL ACCEPTED**: merged PR #83, local technical deployment 2026-10-26 and
-owner 5/5 LIVE 2026-10-28. Later HOSTKEY migration is a separate technical event.
-General Phase 9 stays OPEN.
+Status: **LOCAL ACCEPTED**. PR #83 is merged; local deployment passed on
+2026-10-26 and the owner reported **5/5 LIVE PASS** on 2026-10-28.
+General Phase 9 stays **OPEN**.
+Later HOSTKEY migration remains a separate technical event.
 
 - [x] Replace Telegram Instagram's historical 25 MiB/file gates with shared validated
   file/request/workspace/free-disk budgets and endpoint-aware upload ceiling; retain
@@ -918,20 +919,26 @@ General Phase 9 stays OPEN.
   15-minute expiry, ownership/binding, pinned locale and one-shot consumption.
 - [x] Retain shared reservations on cleanup quarantine, including repeated cancellation
   and overlapping publication/callback contexts; no automatic recovery/retry.
-- [x] Complete independent review and merge PR #83 as f74dc6c; post-merge
-  CI #40333460016 SUCCESS on that exact SHA.
-- [x] Record local deployment TECHNICAL PASS 2026-10-26, rollback prepared/not used.
-- [x] Record owner LIVE 2026-10-28: 5/5 PASS (pending duplicate, /cancel, playable
-  YouTube, active-download duplicate, playable Instagram >25 MiB). No new agent LIVE.
+- [x] Merge [PR #83](https://github.com/ip52rus/social-video-downloader/pull/83)
+  with its review corrections as `f74dc6c933012b809d4e6dc33ed3f3bdadc39d34`;
+  implementation exact-head [CI #40327275768](https://github.com/ip52rus/social-video-downloader/actions/runs/40327275768)
+  and post-merge CI #40333460016 SUCCESS.
+- [x] Complete separately authorized bot-only local deployment on 2026-10-26:
+  TECHNICAL PASS; Local Bot API/configuration/volume preserved, rollback image
+  prepared but rollback not executed.
+- [x] Record owner LIVE acceptance on 2026-10-28: 5/5 PASS for rejection during
+  YouTube choice/download, waiting-choice `/cancel`, YouTube delivery/playback
+  and delivery/playback of one Instagram video above 25 MiB.
 - [x] Record HOSTKEY cutover TECHNICAL PASS 2026-10-28, one VPS poller, local bot/API
   retained stopped; do not label it a second full platform/load/recovery acceptance.
 
 See [design, defaults and limits](PHASE9C_DOWNLOAD_PROTECTION.md) and
-[offline verification](TESTING.md#phase-9c-shared-limits-and-admission-offline).
-Historical smaller-file and platform LIVE evidence below is unchanged. The source
-policy removes the old byte gates; it does not claim real 2 GB delivery support,
-arbitrary-downloader/RSS isolation or load/recovery acceptance. Review fixes retain
-the original Instagram >25 MiB policy and do not change runtime or Docker.
+[offline verification](TESTING.md#phase-9c-shared-limits-and-admission-offline),
+[local deployment](TESTING.md#phase-9c-local-deployment-2026-10-26) and
+[owner acceptance](TESTING.md#phase-9c-owner-live-acceptance-2026-10-28).
+Historical smaller-file and platform LIVE evidence below is unchanged. Local
+acceptance does not establish near-2 GB delivery, arbitrary-downloader/RSS isolation,
+load/failure-recovery readiness or universal platform reliability.
 
 - [x] Phase 9A read-only baseline: inspect current main/worktrees and unchanged running
   Docker services, restart/OOM, one-shot CPU/RAM/disk and logging-driver settings.
@@ -1043,3 +1050,14 @@ Membership is not required during core product development.
 - [x] Verify docs-only scope, links, privacy and unchanged main/19 existing registrations.
 - [ ] Independent review/owner acceptance of D1 Draft PR; no merge/deployment implied.
   Exact-head CI is reported on the PR; it does not authorize the next stage.
+
+### D1.2 — local closeout and handoff reconciliation
+
+- [x] Recheck exact PR heads/base/CI and existing main/worktree integrity before changes.
+- [x] Merge docs-only PR #84 as `a0d57f253c74aaf563efb456abdf4ae9854eee2b` after explicit authorization.
+- [x] Merge that main into the existing #85 branch without rebase/force-push; reconcile
+  four documents, retain implementation CI #40327275768, single local evidence ledger,
+  HOSTKEY context, Short Drama DEFERRED and complete handoff/agent rules.
+- [x] Recheck Markdown/anchors/privacy/diff/docs-only scope and unchanged original checkout.
+- [ ] Final independent review/owner decision for #85; exact-head CI is required and
+  reported on the PR. No #85 merge, deployment, LIVE or Phase 9 work is authorized here.

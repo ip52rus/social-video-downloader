@@ -21,6 +21,13 @@ cutover is not a repeated local acceptance matrix. Phase 9 remains OPEN. Histori
 implementation-stage “no deployment” statements below refer to code verification at
 that time; they do not mean deployment/acceptance is still pending.
 
+See the separate [local deployment](TESTING.md#phase-9c-local-deployment-2026-10-26)
+and [owner acceptance](TESTING.md#phase-9c-owner-live-acceptance-2026-10-28) records.
+Acceptance does not establish load/stress reliability, failure recovery, a tested
+rollback, near-2 GB delivery or universal platform/network/client/language coverage.
+These five local LIVE cases contain no new TikTok acceptance. Restart-stale and
+cleanup/quarantine limits remain in force.
+
 ## Reason and scope
 
 The former Telegram Instagram gates imposed a separate 25 MiB file ceiling at
@@ -108,8 +115,8 @@ The original PR forwards the six shared settings through source Compose. Review
 corrections do not change Compose: the five additional settings use their defaults
 unless passed through the existing environment mechanism (or a separately approved
 Compose environment override). A name in `.env` alone does not forward an unlisted
-variable into a container. No running environment, Docker resource, activation flag
-or timeout is changed here.
+variable into a container. The separately authorized local rollout is recorded
+above; this documentation closeout changes no runtime settings.
 
 Admission conservatively requires the free reserve plus a full workspace budget
 for each working request, even if some space is already in use. Pending choices
@@ -131,13 +138,16 @@ cleanup, automatic retry, re-download or new persistence is introduced.
 
 ## Review boundaries
 
-Safety tests use synthetic responses, files, Telegram sessions and controlled clocks;
-no new real platform requests or media downloads are performed. Existing format,
+Implementation safety tests used synthetic responses, files, Telegram sessions and
+controlled clocks, without new real platform requests or media downloads. The later
+owner LIVE report is separate evidence. Existing format,
 manifest/source-position, HTTP/header, retry, one-shot and pending-store contracts
 are preserved. Additional global admission is deliberately stricter than the existing
-per-platform gates, which remain in force. Full CI and independent review are
-required before merge; deployment and LIVE acceptance require separate authorization.
-See [testing evidence](TESTING.md#phase-9c-shared-limits-and-admission-offline).
+per-platform gates, which remain in force. PR #83 is merged with its review
+corrections and successful exact-head/post-merge CI. The separately authorized
+local deployment and owner acceptance are recorded above; neither closes general
+Phase 9 reliability. See
+[offline testing evidence](TESTING.md#phase-9c-shared-limits-and-admission-offline).
 
 ## Independent review corrections
 

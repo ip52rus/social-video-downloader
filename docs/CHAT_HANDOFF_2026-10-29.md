@@ -245,14 +245,19 @@ PO/MO and wheel resources are tested. RU owner LIVE, EN/ES automated-only accept
 
 PR83 includes 56222a9 initial work and 349d20e review fixes. Not all historical Drafts
 are merged: old discontinued TikTok harness #59 is not our production provider.
-[PR84](https://github.com/ip52rus/social-video-downloader/pull/84) remains OPEN/Draft at
-D1 audit, head b5bfe0ffcf9b280c781a724ad59a2e1667b0c717, docs-only local9C closeout.
-D1 overlaps its four files and extends the checkpoint; neither PR is merged/closed by
-D1. Reviewer/owner must reconcile ordering before merge, not cherry-pick blindly.
+[PR #84](https://github.com/ip52rus/social-video-downloader/pull/84) was OPEN/Draft at
+the initial D1 audit, head b5bfe0ffcf9b280c781a724ad59a2e1667b0c717. During the
+separately authorized D1.2 it merged as `a0d57f253c74aaf563efb456abdf4ae9854eee2b`.
+Its four-file local Phase 9C closeout is reconciled into Draft PR #85 by ordinary
+merge, retaining exact implementation CI, one canonical local acceptance ledger and
+later HOSTKEY context. PR #85 still requires final review and is not merged.
 
 ## 18. HEAD and evidence refresh
 
 Main was clean on f74dc6c and matched GitHub refs/heads/main during D1 read-only audit.
+D1.2 advanced remote main to the docs-only #84 merge
+`a0d57f253c74aaf563efb456abdf4ae9854eee2b`; runtime source remains f74dc6c.
+The original local main checkout is intentionally retained clean at f74dc6c.
 D1 lives in a separate docs branch/worktree; its exact HEAD/CI is in the PR, avoiding
 self-referential commit hashes in this document. Source baseline is not changed by a
 new docs commit. Check current branch/HEAD/status/remote PR before resuming; do not
@@ -366,8 +371,8 @@ scope network/upload, restart/recovery, cleanup, resources/load and rollback wor
 no strict new ordering beyond owner approval is inferred. Membership/monetization,
 analytics, more providers and Short Drama remain deferred.
 
-Dependencies: accept/reconcile D1 and overlapping docs PR84; retain reviewed f74dc6c
-behavior, current single-poller topology and Phase 9C cap1; obtain separate approval
+Dependencies: accept the reconciled D1 Draft PR #85 (#84 is already merged); retain
+reviewed f74dc6c behavior, current single-poller topology and Phase 9C cap1; obtain separate approval
 for any current production read-only checks, LIVE or configuration change. Completed
 prerequisites: metadata isolation/offline tests/CI, Phase 8 accepted UX, Phase 9C local
 5/5 and dated HOSTKEY technical startup. These do not close this responsiveness gate.
