@@ -1,5 +1,26 @@
 # Phase 9C: shared download protection
 
+## Acceptance checkpoint — LOCAL ACCEPTED
+
+Merged [PR #83](https://github.com/ip52rus/social-video-downloader/pull/83) as
+`f74dc6c933012b809d4e6dc33ed3f3bdadc39d34`; exact post-merge
+[CI #40333460016](https://github.com/ip52rus/social-video-downloader/actions/runs/40333460016)
+SUCCESS (rechecked in D1). Independent review fixes are included, not a pending gate.
+
+Local technical deployment **2026-10-26 — PASS**: bot image
+`sha256:49a66a1191b906aeba5817c6c2b157b3c469485d85c988fdf07499ed76b0dfae`,
+RUNNING/restart 0/OOM false; Local API/config/volume preserved. Rollback prepared,
+not executed. Owner **local LIVE 2026-10-28 — 5/5 PASS**: duplicate rejected during
+YouTube selection; /cancel waiting choice; playable YouTube delivered; duplicate
+rejected during download; playable Instagram >25 MiB delivered. These are owner
+confirmations, not new automated tests or a load/near-2 GB/recovery matrix.
+
+The later HOSTKEY [technical migration](LOCAL_BOT_API.md#hostkey-vps-checkpoint-2026-10-28)
+uses the same source and work capacity **1**; source default remains **4**. That
+cutover is not a repeated local acceptance matrix. Phase 9 remains OPEN. Historical
+implementation-stage “no deployment” statements below refer to code verification at
+that time; they do not mean deployment/acceptance is still pending.
+
 ## Reason and scope
 
 The former Telegram Instagram gates imposed a separate 25 MiB file ceiling at

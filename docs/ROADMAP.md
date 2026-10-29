@@ -1,18 +1,42 @@
 # Roadmap
 
+## Current checkpoint — 2026-10-29
+
+Source main: `f74dc6c933012b809d4e6dc33ed3f3bdadc39d34`, merged PR #83.
+Phase 8 MVP **ACCEPTED WITH DOCUMENTED LIMITATIONS** (PR #82); Phase 9B bounded
+metadata worker merged/deployed with LIVE responsiveness still INCONCLUSIVE;
+Phase 9C **LOCAL ACCEPTED** (technical 2026-10-26, owner 5/5 2026-10-28).
+HOSTKEY local-to-VPS cutover **TECHNICAL PASS 2026-10-28**; designated sole poller on
+VPS, MacBook retained stopped. No fresh server check in D1. See
+[operations](LOCAL_BOT_API.md#hostkey-vps-checkpoint-2026-10-28) and [current testing ledger](TESTING.md#checkpoint-2026-10-29).
+Historical sections below retain stage-specific evidence; this checkpoint supersedes
+old statements about what had not yet been merged/deployed.
+
+**Next unfinished main stage: Phase 9 Production Reliability.** Its first retained
+unclosed evidence gate is LIVE callback concurrency responsiveness from Phase 9B;
+then measured network/upload, restart/recovery, cleanup, resources/load and rollback
+work must be scoped independently. No new Phase 9D is silently authorized. See the
+[bounded next-stage plan](CHAT_HANDOFF_2026-10-29.md#28-next-development-stage).
+Phase 4 analytics, Phase 7 additional providers and Phase 10 membership/monetization
+remain deferred backlogs; they do not jump ahead of reliability without owner approval.
+
 ## Phase 0 - Foundation — done
+
 GitHub repository, documentation, security baseline, Git workflow, test strategy, and AI-agent rules.
 Gate: governance files exist, contain no secrets or personal data, and the repository history is reviewable.
 
 ## Phase 1 - Downloader Core — done
+
 Transport-independent URL validation, provider detection, provider interface, download result model, temporary workspace, safe filenames, errors, logging, and tests.
 Gate: core behavior is independently testable without Telegram.
 
 ## Phase 2 - YouTube Provider — done
+
 The YouTube provider is implemented in the provider architecture. Real regular-video downloads succeeded in all three output modes, a live matrix passed for combined MP4, selected-quality video-only, and two audio containers, and Shorts smoke tests plus deterministic error-boundary/format-layout tests are recorded.
 Evidence and limits are documented in TASKS.md and TESTING.md. Live matrix coverage is one regular public URL, not proof of broad reliability.
 
 ## Phase 3 - Telegram Functional MVP — done
+
 The functional Telegram MVP is complete for the supported YouTube flow. It includes:
 
 - Telegram bot entry point and aiogram polling setup;
@@ -39,6 +63,7 @@ This phase closure does not mean production readiness. It does not close restart
 Instagram and TikTok remain recognition-only by default. Instagram has a separate explicit Telegram opt-in with narrow owner-confirmed Reel, single-post and three-video-album evidence; see Phase 5 below. The default downloader registry remains YouTube-only.
 
 ## Phase 4 - Download UX and YouTube Options
+
 Expose useful provider/content capabilities through a polished Telegram interaction flow.
 The primary capability design is [Phase 4 Capability Model](PHASE4_CAPABILITY_MODEL.md).
 
@@ -267,6 +292,7 @@ Order:
 Where Instagram exposes meaningful format or quality choices, map them into the shared download-options model.
 
 ## Phase 6 - TikTok Provider
+
 The previous yt-dlp harness remains in unmerged Draft PR #59 and is discontinued:
 the final series stopped on unrecognized metadata HTML before any media GET.
 Phase 6C prepares a separate native public-video CLI from main, using tt-dlp's
@@ -366,7 +392,8 @@ Subsequent local configuration finalization persisted TikTok true/2 in the prote
 ignored `.env`; Compose resolves those values without shell overrides. That step
 made no runtime/code change and did not restart or redeploy either container.
 
-Next gates are the documentation PR's exact-head CI and independent merge decision;
+At that historical Stage D handoff, the next gates were the documentation PR's
+exact-head CI and independent merge decision;
 broader mobile-link coverage, high-load and recovery validation remain open. Three
 deployed smoke cases do not establish general reliability; `vt` is still offline-only
 and historical 429/403 are not universally resolved. See
@@ -397,6 +424,7 @@ network-dependent success are recorded separately in the
 The [diagnostic contract](TIKTOK_METADATA_DIAGNOSTICS.md) is retained.
 
 ## Phase 7 - Additional Social Platforms
+
 Evaluate other popular services one by one. Do not promise universal platform support.
 
 Candidates should be selected later based on:
@@ -467,24 +495,27 @@ was blocked pending owner acceptance/disposition. The owner now accepts the chec
 YouTube journey, one Instagram Reel, common UX and TikTok in the working network
 exit. RU is LIVE-checked; EN/ES have automated coverage only. TikTok failed through
 the owner-reported Kazakhstan VPN exit and succeeded after switching to the
-Netherlands; exact cause, all Netherlands IPs and future VPS egress are not verified.
+Netherlands; exact cause and all Netherlands IPs were not verified. At that acceptance
+checkpoint VPS egress was still untested; the later HOSTKEY technical migration and
+owner ordinary-TikTok success are recorded in the current checkpoint above.
 Earlier Instagram post/carousel results remain historical, not a repeated E5 matrix.
 
 Accepted MVP limits include EN/ES LIVE, other carousel/client combinations, load and
 failure recovery, and visually stale post-restart keyboards. No persistence/recovery
 is implemented. Accepted cases need no repeat without a concrete regression.
 This closes the scoped Phase 8 MVP, not general platform reliability; Phase 9 remains
-OPEN and is not started here.
+OPEN; this historical acceptance record did not authorize further implementation.
 See [internationalization contract](INTERNATIONALIZATION.md), [review matrix](TRANSLATIONS.md)
 and [E1b verification](TESTING.md#phase-8-e1b-telegram-interface-localization).
 Neither localization nor Phase 9B's narrow smoke closes Phase 9 reliability.
 
 ## Phase 9 - Production Reliability
+
 Complete the operational and reliability work that is intentionally not part of the functional MVP gate.
 
 Status: OPEN. Phase 4 functional acceptance does not satisfy this reliability gate.
 
-Phase 9C is an owner-authorized scoped implementation: replace the historical
+Phase 9C is **LOCAL ACCEPTED** after merged PR #83 and the dated owner 5/5 acceptance. Its scoped implementation: replace the historical
 Instagram 25 MiB Telegram gates with common configurable file/collection/workspace
 and free-space bounds; add process-local cross-platform user leases, link cooldown
 and bounded global admission without a queue. Pending choices reserve a user slot,
@@ -495,10 +526,10 @@ formats, HTTP policy, count limits and delivery/no-retry contracts remain in for
 Review corrections add endpoint-aware YouTube limits enforced during acquisition,
 merge and preparation, plus throttled repeated link refusals. Busy callbacks preserve
 the pending choice; quarantine retains work capacity.
-See [design and limits](PHASE9C_DOWNLOAD_PROTECTION.md). Independent review,
-exact-head CI and separately authorized deployment/LIVE checks remain gates;
-this implementation does not close general Phase 9 reliability/load/recovery.
-
+See [design and limits](PHASE9C_DOWNLOAD_PROTECTION.md). Review/merge, post-merge
+CI #40333460016 on f74dc6c, local deployment and the local 5/5 acceptance are recorded.
+HOSTKEY subsequently received technical cutover PASS, not a repeated 5/5 acceptance.
+This does not close general Phase 9 reliability/load/recovery.
 
 Phase 9A adds minimal safe standard-library events after a read-only deployed
 baseline audit: fixed platform/event/phase/category, monotonic observed duration,
@@ -520,8 +551,10 @@ policy and Telegram delivery behavior are retained. This was merged as PR #72 wi
 successful post-merge CI on `01ffe0e`; it is included in the later separately
 authorized Phase 9B deployment recorded below. See
 [offline cancellation evidence](TESTING.md#youtube-cancellation-safety-offline).
-A permanently hung download thread can retain the workspace indefinitely; metadata
-isolation does not solve hard cancellation of that legacy download path. Phase 9A events
+At the Phase 9B checkpoint, a permanently hung legacy download thread could retain
+its workspace; metadata isolation alone did not solve it. Phase 9C now isolates
+YouTube acquisition and write enforcement in owned process groups; preparation
+executor ownership still drains before cleanup. Phase 9A events
 are not a heartbeat, load test, per-user trace, availability metric, proof of worker
 reap or HTTP-request counter. Broader recovery/load/reliability gates remain open.
 See [operational contract](DEVELOPMENT.md#phase-9a-operational-baseline-and-safe-events)
@@ -588,6 +621,7 @@ Include:
 For media above Telegram delivery limits, the current design direction is a possible external temporary object-storage/download-link fallback. Do not implement or commit to S3, R2, or any storage provider until this phase has a demonstrated requirement and design decision. Do not claim support for files above 2 GB.
 
 ## Phase 10 - Monetization and Access Control
+
 Access restrictions and monetization are deferred until the project has a useful, working multi-platform downloader product worth monetizing.
 
 Investigate and design:
@@ -599,3 +633,14 @@ Investigate and design:
 - access restrictions required by the chosen model.
 
 Current product decision: membership is not required during core product development. Advertising must remain modular and must not be coupled into provider implementations.
+
+## DEFERRED RESEARCH — TikTok Short Drama
+
+**DEFERRED / SERVER RESOLVER BLOCKED / RESEARCH PRESERVED.**
+Browser playback/API evidence exists for the selected episode; anonymous/server URL
+retrieval and full-file equivalence are not established. S1: 86 offline tests PASS;
+S2: 15 offline checks PASS, NO-GO for another anonymous LIVE on present evidence.
+This is not global technical impossibility or a blocker for the main roadmap.
+No active monitoring/API probing. Reopen only after main priorities or a new proven
+permitted OSS/server mechanism, with a separate owner decision; never repeat spent
+request tickets. [Full preserved history](research/TIKTOK_SHORT_DRAMA.md).

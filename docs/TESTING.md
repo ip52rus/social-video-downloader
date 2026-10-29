@@ -1,5 +1,114 @@
 # Testing Strategy
 
+## Checkpoint 2026-10-29
+
+This dated ledger supersedes historical pending merge/deployment/acceptance language
+below without erasing earlier failures. Evidence categories are not interchangeable.
+Phase 8 MVP is **ACCEPTED WITH DOCUMENTED LIMITATIONS** (merged PR #82); Phase 9C
+**LOCAL ACCEPTED**; Phase 9 general reliability remains **OPEN**.
+
+| Evidence | Result / limit |
+|---|---|
+| Baseline Git/CI | main f74dc6c (PR #83); post-merge CI #40333460016 SUCCESS rechecked on exact SHA during D1 |
+| Phase 9B | bounded metadata/IPC isolation implemented and CI PASS; 2026-10-23 LIVE functional smoke PASS, concurrency responsiveness INCONCLUSIVE |
+| Phase 8 owner acceptance | YouTube selection/delivery/terminal card, one Instagram Reel, common UX, ordinary TikTok in working network; RU LIVE, EN/ES automated only |
+| Phase 9C local deployment | 2026-10-26 TECHNICAL PASS, owner-provided checkpoint below |
+| Phase 9C owner local LIVE | 2026-10-28 5/5 PASS, not a new automated test |
+| HOSTKEY cutover | 2026-10-28 TECHNICAL PASS from preserved migration reports, not a fresh D1 server check |
+| HOSTKEY functional | owner reports normal TikTok succeeds; no measured all-platform/load/client matrix |
+| Short Drama | official desktop Chrome populated target playback metadata; isolated full-file/server retrieval UNKNOWN; research DEFERRED |
+
+### Phase 9C local deployment 2026-10-26
+
+Owner-supplied technical checkpoint: source
+`f74dc6c933012b809d4e6dc33ed3f3bdadc39d34`, bot image
+`sha256:49a66a1191b906aeba5817c6c2b157b3c469485d85c988fdf07499ed76b0dfae`.
+Bot RUNNING, restart0/OOMfalse; Local Bot API/configuration/volume preserved.
+Rollback image prepared, not used. Post-merge
+[CI #40333460016](https://github.com/ip52rus/social-video-downloader/actions/runs/40333460016)
+SUCCESS was rechecked on exact SHA in D1. No D1 Docker/API operation.
+
+### Phase 9C owner LIVE acceptance 2026-10-28
+
+**5/5 PASS**, explicitly local owner confirmation, not independently repeated:
+
+1. Second link rejected while YouTube choice is pending.
+2. /cancel cancels the idle choice.
+3. YouTube video delivered and playable.
+4. Second link rejected during active download.
+5. Instagram video **above25MiB** delivered and playable.
+
+No exact Instagram size, timing, device/client or codec measurement was provided;
+do not invent them. These cases validate the stated functional behavior, not load,
+near-2GB/long-duration delivery, every platform, restart/recovery or rollback. A new
+request after completion is covered by existing offline admission tests; do not
+invent a sixth owner LIVE case. Accepted cases need no repeat absent a concrete reason.
+
+### HOSTKEY technical cutover 2026-10-28
+
+Preserved reports show successful deleteWebhook(drop_pending_updates=false), close,
+old API stop, closed-state integrity check/import, VPS API start then sole poller.
+At13:16:49UTC (277.6s after bot startup): both VPS services RUNNING/restart0/OOMfalse,
+one bot container, polling started, getMe identity match, no observed conflicts,
+no API fatal/error lines, expected settings including active work cap1/local mode/
+Instagram/TikTok, no published ports. Local bot/API retained STOPPED; config/env/
+volumes/rollback images/backups preserved. State transfer verified, not inferred from
+matching volume names. [Canonical dated operations](LOCAL_BOT_API.md#hostkey-vps-checkpoint-2026-10-28).
+
+No agent media test accompanied cutover. Owner later reports ordinary TikTok success
+on HOSTKEY; no universal VPS-IP or all-platform reliability follows. The local5/5
+record remains local. D1 performs no SSH/production check; present health, broader
+singleton coverage and reverse migration/rollback rehearsal remain unverified.
+
+### Short Drama research evidence 2026-10-28 and 2026-10-29
+
+The [canonical research](research/TIKTOK_SHORT_DRAMA.md) preserves each separate
+PoC/OSS/browser result, request count, stop and source availability. Original episode
+API bound the correct item but lacked media. Ordinary-page schema diagnosis PASS
+identified empty playAddr; item detail200/empty and Embed429 did not prove DRM/login.
+Later crawler/MediaFlow preserved IsPreview=true; TokKit OPTIONS returned no target.
+Browser PoC5 was INCONCLUSIVE because harness blocked bootstrap. Prepared network
+observer's initial accepted25 offline checks and later37-check artifact are distinct;
+manual auth never reached target observation, login HTTP429 is not confirmed.
+Owner's ordinary desktop Chrome subsequently returned filled item/video metadata;
+no complete research media file or v16/v19/blob equivalence is established.
+
+S1 **86 offline tests PASS/Ruff PASS**, LIVE0; S2 **15 offline artifact checks PASS/
+Ruff PASS**, LIVE0, next anonymous request **NO-GO on current evidence**. They were not
+rerun in D1 and are not the project's full regression suite. Required login remains
+UNKNOWN. No secrets/raw responses/private profiles or signed addresses are published.
+
+### D1 Documentation Integrity Gate
+
+Scope: Markdown only in a permanent separate branch; no code, tests, dependencies,
+PO/MO, Docker/config/env or production modifications. Reviewed source, Git/PR/CI,
+existing documents,12 available research report roots, saved migration summaries and
+owner observations. Important sanitized conclusions are version-controlled here,
+not only linked to private directories. No prior failed result removed.
+
+**Gate PASS before publication:** 28 Markdown files, 225 local links/anchors with
+no errors; heading/fence checks, added-text privacy scan/manual review and docs-only
+scope PASS. Main152 tracked hashes/private fingerprints and all30 prior registrations
+(including19 accepted prunable) unchanged; one authorized permanent worktree added.
+Ruff lint/format and PO/MO --check PASS. The main checkout venv lacked Babel; the
+read-only compiler check succeeded with an existing i18n venv, no installation or
+worktree mutation. No full local pytest was run.
+
+Checks covered local Markdown links and GitHub-style anchors,
+heading/fence formatting, git diff --check, tracked changed-file allowlist, added-text
+privacy scanning/manual review, source/PR hash review and main/private-file/registration
+integrity. The unchanged19 prunable records are accepted, not repaired; adding the one
+explicit docs worktree is separate. Main source baseline f74dc6c and152 tracked file
+hashes must remain intact. Gate PASS applies to documentation consistency, not current
+server health, platform LIVE, missing raw Chrome evidence or legal/commercial readiness.
+
+No full local pytest is repeated for this docs-only checkpoint. Ruff and read-only
+catalog compilation checks apply to unchanged source; normal full GitHub CI on the
+published exact PR HEAD remains the regression gate. CI status/HEAD/run URL are on
+the Draft PR and final handoff report; no self-referential docs commit is fabricated.
+Independent D1 review/owner acceptance remain separate. Open Draft PR84 overlaps local
+Phase9C closeout; reconcile merge ordering instead of claiming it is merged.
+
 Instagram's narrow live evidence includes
 [Item Selection LIVE acceptance 2026-10-22](#instagram-item-selection--live-acceptance-2026-10-22)
 and the earlier [Instagram acceptance 2026-10-18](#instagram-live-acceptance-2026-10-18).
@@ -1723,14 +1832,12 @@ honored upstream. No actual frontend index semantics, photo/mixed classification
 media downloadability was established. CSRF-token warning was nonfatal. The adapter
 introduced here has deterministic validation only; this prior experiment is not its live test.
 
-
 Verification for this carousel-inspection stage (live YouTube matrix explicitly disabled):
 
 - New carousel inspection/selection cases: 103 passed.
 - Full regression suite: 831 passed, 1 skipped (opt-in external YouTube matrix).
 - Ruff lint/format, diff, local documentation links and security/scope review: PASS.
 - No new live extraction or media acquisition was performed for this implementation.
-
 
 ### Corroborated carousel PHOTO classification — offline follow-up
 
@@ -1756,7 +1863,6 @@ At completion of that offline fix, live mixed-selection remained OPEN. The subse
 metadata-only gate below closes it for one publication; no live carousel acquisition or
 Telegram delivery is claimed.
 
-
 Verification of this focused classification fix (no live platform calls):
 
 - 39 additional deterministic cases; carousel suite: 142 passed.
@@ -1765,7 +1871,6 @@ Verification of this focused classification fix (no live platform calls):
 - Ruff lint/format, diff, documentation links and security/scope review: PASS.
 - Application AST comparison: only `_classify` changed; extraction, identity/order,
   cache, URL handling, domain contracts, registry and Telegram handlers are unchanged.
-
 
 ### Final mixed-carousel classification — real metadata-only PASS
 
@@ -1813,7 +1918,6 @@ Verification of this acquisition stage (no live external calls):
 - At this implementation stage, live multi-video acquisition and Telegram groups were
   NOT VERIFIED; the later bounded three-video acquisition is recorded below.
 
-
 ### Silent Instagram video policy — deterministic validation
 
 The user approved MP4 video with optional audio for Reels, single-video `/p/` and carousel
@@ -1845,7 +1949,6 @@ verify byte-preserving passthrough. Neither path proves Telegram delivery.
 The subsequent real acquisition and local preparation evidence are recorded below.
 No external extraction/download or Telegram API request is part of these tests.
 
-
 Verification of silent-video support:
 
 - Focused provider/carousel/acquisition/synthetic integration suite: 563 passed.
@@ -1856,7 +1959,6 @@ Verification of silent-video support:
   regressions: PASS. Ruff lint/format, diff, documentation links and security/scope: PASS.
 - At this stage real silent acquisition/preparation and albums were NOT VERIFIED;
   subsequent evidence below closes only the explicitly tested acquisition/preparation scope.
-
 
 ### First real silent carousel acquisition — narrowly verified
 
@@ -1901,7 +2003,6 @@ These are offline helper/provider tests, not Telegram sends. Instagram remains d
 Real Telegram albums, actual client playback, larger-carousel reliability and broader
 platform availability remain NOT VERIFIED; later offline transport tests are recorded below. No live Instagram or Telegram calls in this stage.
 
-
 Optional-audio stage verification (offline, existing local dependencies):
 
 - Focused helper/local-media/synthetic Instagram integration tests: 98 passed.
@@ -1932,13 +2033,11 @@ within one private directory, and KeyboardInterrupt/CancelledError while an unre
 final file exists. Existing failure cleanup/passthrough tests remain; real local media
 tests verify final filename, private FFmpeg paths, silent remux/transcode and cleanup.
 
-
 P2 correction verification (offline): net +10 deterministic cases; focused preparation/
 local-media/Instagram pipeline suite 108 passed; full suite 1122 passed, 1 skipped
 (external YouTube matrix disabled). Sixteen real local FFmpeg/ffprobe cases still pass,
 including silent remux/transcode and audio-bearing defaults. Ruff lint/format, diff,
 documentation and security/scope review PASS. No external platform or Telegram calls.
-
 
 ### Offline carousel Telegram delivery
 
@@ -1964,7 +2063,6 @@ extraction/acquisition, bot polling or deployment changes are part of these test
 PR #51 is merged; the earlier real three-video acquisition remains narrow external
 evidence only. Mock send success does not establish real Telegram album delivery,
 client playback, larger Instagram collection reliability or production readiness.
-
 
 Offline delivery verification:
 
@@ -2342,7 +2440,6 @@ acceptance is performed. Sparse synthetic 26 MiB files and in-memory body fixtur
 not establish real-world larger-file playback, near-2 GB delivery, disk/RAM isolation,
 load capacity or crash recovery. Historical LIVE results and Phase 8 MVP acceptance
 remain separate. See [design and residual limits](PHASE9C_DOWNLOAD_PROTECTION.md).
-
 
 ### PR 83 independent-review corrections
 

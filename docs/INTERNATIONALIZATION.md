@@ -2,6 +2,14 @@
 
 ## Scope and decision
 
+Checkpoint 2026-10-29: E1–E5 merged, Phase 8 MVP accepted through PR #82.
+Current catalogs contain 88 entries per locale after Phase 9C.
+RU has narrow owner LIVE evidence; EN/ES have automated/catalog/wheel coverage but
+no separate language_code=en/es LIVE acceptance. Telegram User.language_code is the
+input, not proof of a particular client's visible language. Earlier E2/E4 future-tense
+notes below describe those historical stage boundaries; their implementations are
+now present. Host migration does not add language/client coverage.
+
 E1a introduced aiogram I18n, gettext/Babel and package-local EN/RU/ES catalogs,
 merged in PR #75. E1b activated existing Telegram presentation in PR #76, merged at
 08d726d; post-merge CI #40085827763 succeeded. Its offline evidence remains distinct
@@ -44,7 +52,7 @@ technical diagnostics, worker IPC and media selection are not translated.
 ## Catalogs and packaging
 
 [Review matrix](TRANSLATIONS.md) retains the 68 E1b user-facing entries and adds
-two E3 receipt strings, nine E4 entries and two E5 guidance entries. Catalogs now contain 83 entries,
+two E3 receipt strings, nine E4 entries and two E5 guidance entries. At E5 the catalogs contained 83 entries,
 including two infrastructure entries and retained historical copy. E4 uses one
 trusted platforms placeholder in /start; plural rules remain unchanged. English
 msgids are trusted application copy. Translate first, then substitute plain named
@@ -169,7 +177,6 @@ window. Partial/uncertain carousel delivery copy remains unchanged. Invalid fore
 expired/unknown callbacks receive their existing toast and cannot erase another
 user's valid prompt.
 
-
 ## E5 acceptance and localized guidance
 
 The final [journey review](PHASE8_UX_ACCEPTANCE.md) found two presentation gaps.
@@ -188,8 +195,9 @@ command/profile publication or translation service is added.
 
 Owner E4 LIVE PASS is narrow: greeting/platform list, YouTube video and the Russian
 sent card without old buttons. EN/ES and all client/platform combinations are not
-claimed verified. Final owner manual acceptance remains open; no E5 LIVE request
-or deployment occurs. Unknown old messages after a restart cannot be safely
+claimed verified. At the implementation handoff, final owner acceptance was still open; it was later
+accepted with the limits in PR #82. That earlier verification made no E5 LIVE request
+or deployment. Unknown old messages after a restart cannot be safely
 retired without a separate ownership/persistence design.
 
 ## Phase 9C admission copy

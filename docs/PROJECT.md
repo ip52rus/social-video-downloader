@@ -1,59 +1,71 @@
 # Project Definition
 
-## Product
-Social Video Downloader is a free Telegram bot-service for downloading media from popular social platforms.
+## Product and authority
 
-## Primary flow
-User sends a supported URL, the service identifies the platform and media, downloads it, and returns the result.
+Social Video Downloader is a free Telegram-first media downloader, repository
+[ip52rus/social-video-downloader](https://github.com/ip52rus/social-video-downloader).
+Users submit supported public links and receive verified media in the same chat.
+Video editing inside Telegram is out of scope. The owner approves stage boundaries;
+implementation, LIVE, merge and deployment are distinct gates in [AGENTS.md](../AGENTS.md).
 
-## Scope
-The product is focused on downloading. Video editing and manipulation inside Telegram are out of scope.
+Checkpoint: **2026-10-29**, source main
+`f74dc6c933012b809d4e6dc33ed3f3bdadc39d34` (merged PR #83).
+This is a source checkpoint, not a promise that a server is still running that revision.
 
-## Current product strategy
-The current priority is building a useful downloader product with a strong Telegram experience and broader platform coverage. Access restrictions are intentionally deferred while the core downloader product is still maturing.
+## Current accepted product
 
-The Telegram UX should be capability-driven: minimum steps, provider-specific
-capabilities, and consistent visual language. The bot should show only meaningful options
-supported by the current platform and content. YouTube may expose Video/Audio and
-video-quality choices, while Instagram, TikTok, or future platforms should skip audio or
-quality screens when the provider/content has no useful choice.
+- **Phase 8 MVP — ACCEPTED WITH DOCUMENTED LIMITATIONS**, closed by merged PR #82.
+  EN/RU/ES gettext UI, one short configuration-aware /start, meaningful YouTube choices,
+  E3 pre-binding and E4 evidence-based terminal cards. RU is owner LIVE-checked;
+  EN/ES are automated-only. See [acceptance](PHASE8_UX_ACCEPTANCE.md).
+- YouTube: normal video/Shorts; Video or Audio and available quality only when useful;
+  direct download where no choice is needed. No normal user-facing video-only mode.
+- Instagram: opt-in public Reels, public single-video /p/ and guarded video carousel
+  selection. Photos are never delivered. Original source positions include photos;
+  img_index instructions belong in that route, not /start. Ten-video ceiling retained.
+- Ordinary TikTok: opt-in standard public video and guarded vm/vt short references;
+  native public-page acquisition, no extra audio/quality screen. Availability depends
+  on platform/network context. Narrow HOSTKEY success is owner-reported, not universal.
+- Phase 9B bounded metadata isolation is implemented/merged/deployed. The old initial
+  synchronous planning defect is fixed within the verified contract. LIVE callback
+  concurrency responsiveness remains INCONCLUSIVE, not a new confirmed defect.
+- **Phase 9C LOCAL ACCEPTED**: one unfinished cross-platform request per user,
+  separate pending/work capacities, /cancel for waiting choices, bounded link replies,
+  guarded writes/cleanup; fixed Instagram 25 MiB gates removed. Local owner 5/5 PASS.
+- HOSTKEY cutover received a dated TECHNICAL PASS on 2026-10-28. VPS is the designated
+  sole poller; MacBook bot/API are preserved stopped. No server check was performed
+  for this documentation checkpoint. See [operations](LOCAL_BOT_API.md#hostkey-vps-checkpoint-2026-10-28).
 
-Product analytics should exist to improve UX and technical decisions, but the privacy
-principle is to collect product and technical statistics rather than users' viewing
-history. Analytics should not store source URLs, video titles, channel or author names,
-Telegram usernames, message text, or unnecessary personal data. Pseudonymous or anonymous
-identity is sufficient for aggregate usage statistics.
+Repository defaults and deployed settings differ: flags default off, work capacity
+four; the preserved HOSTKEY evidence has both platform flags on and work capacity one.
+APP_ENV remains development to preserve the existing Instagram production guard;
+physical production deployment does not justify silently changing it.
 
-## Monetization direction
-Monetization and access control are future business-model decisions. A Telegram community-membership gate, an advertising gateway, optional paid/free models, or other access restrictions may be investigated later after the service has useful mature functionality. Advertising must remain modular and must not be coupled into provider implementations.
+## Current boundaries
 
-## Initial platforms
-YouTube was the first provider. The provider architecture and Phase 2 validation gate are in place, including live matrix coverage for combined video/audio, selected-quality video-only, and audio-only outputs in two containers, as well as recorded regular-video and Shorts smoke tests and deterministic error-boundary coverage. This is targeted evidence rather than a guarantee of broad reliability across all YouTube content and platform conditions.
-Phase 4 YouTube UX functional scope is ACCEPTED. Phase 5 Instagram is in progress after
-explicit user GO for anonymous individual Reels. The first provider PR is isolated from
-bot activation; external acquisition and Telegram validation remain pending. See
-[the narrow scope](PHASE5_INSTAGRAM_REELS.md). The broader gated process still requires
-feasibility evidence and an explicit Go/No-Go
-decision before implementation; Phase 6 TikTok follows under the same feasibility gate.
-Phase 4 analytics remains unfinished, and Phase 8 UX and Phase 9 reliability tasks remain
-open.
+**Phase 9 remains OPEN**: load, restart/recovery, fault handling, rollback rehearsal,
+large/long files and additional clients are not accepted by the small functional sample.
+A historical playable 414.7 MB transfer and the Phase 9C >25 MiB Instagram acceptance
+are not validated near-2 GB support. No queue, durable interaction recovery, distributed
+lease database or external file-storage service is implemented.
 
-## Current implementation boundary
+TikTok Short Drama is **DEFERRED / SERVER RESOLVER BLOCKED / RESEARCH PRESERVED**.
+The official browser supplies target-bound playback metadata, but independent server
+retrieval and a complete permitted file are unverified. [Canonical research](research/TIKTOK_SHORT_DRAMA.md)
+retains negative results, S1/S2 and reopening conditions; it does not block core work.
 
-Phase 6G subsequently verified one public-page TikTok download and Telegram video
-delivery, with owner-confirmed playback, orientation and sound. Phase 6H prepares
-public opt-in TikTok access on that same engine: no personal allowlist, one operation
-per user and bounded process capacity (default two). The feature stays off by default;
-permitting production configuration does not establish production readiness. Public
-acceptance and deployment remain separate gates. See
-[Phase 6H](PHASE6H_TIKTOK_PUBLIC_MVP.md) for offline evidence and limits.
+## Product strategy and future business model
 
-Phase 4 functional scope is ACCEPTED as of 2026-10-15 for the recorded real Telegram
-Video/Audio, playlist-context, landscape/portrait quality, M4A duration/playback and
-interaction-protection cases. See
-[TESTING.md](TESTING.md#phase-4-functional-acceptance-2026-10-15) for the tested revision,
-evidence and limits. This does not close analytics or all UX work. Phase 8 retains choice
-prompt/copy polish; Phase 9 remains open for HTTP 403 recovery, metadata blocking the
-async event loop, network resilience, restart/recovery and monitoring. No architecture
-or product-policy change is made by this acceptance record.
-The downloader core, YouTube provider, and functional Telegram URL-to-download-to-delivery flow are implemented. A limited live flow through the Local Bot API Server was verified with a short video and an MP4 file of approximately 414.7 MB; the large file arrived and was confirmed playable. This does not establish reliability across all clients, codecs, file sizes, preview behavior, or deployment conditions, and does not prove project support up to 2 GB. Community-membership enforcement is not implemented and is not required during core product development. The project is not production-ready; consult ROADMAP.md and TASKS.md for the current stage and outstanding work.
+Minimum actions, provider-specific capabilities, consistent language and truthful
+status/delivery evidence. Unknown delivery must stay unknown; never retry media
+because an acknowledgement was lost. Language follows Telegram User.language_code,
+not a guaranteed client-interface language; no /language or preference database.
+
+Membership of a Telegram channel/group is **not required** and enforcement is not
+implemented. Membership gating, modular advertising, optional paid/free models and
+other monetization choices remain Phase 10 design work, not approved current features.
+Analytics remains a Phase 4 backlog: product/technical aggregates without viewing
+history; no analytics database/service is selected. Advertising must stay outside providers.
+
+See [ROADMAP](ROADMAP.md), [TASKS](TASKS.md), [architecture](ARCHITECTURE.md),
+[testing](TESTING.md) and the [self-contained chat handoff](CHAT_HANDOFF_2026-10-29.md).
