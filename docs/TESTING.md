@@ -2540,3 +2540,59 @@ Additional local-acceptance limits retained by D1.2: exact Instagram size, timin
 client/device and codec measurements were not supplied; do not invent them. A new
 request after completion has offline coverage, not a sixth owner LIVE case. The
 HOSTKEY ordinary-TikTok owner observation is separate from these five local cases.
+
+## P9-R1b minimal concurrency instrumentation — offline
+
+The owner approved a narrow opt-in extension of the existing metadata IPC for two
+monotonic extraction timestamps. The implementation and measurement boundaries are in
+[DEVELOPMENT](DEVELOPMENT.md#p9-r1b-opt-in-concurrency-diagnostics). No LIVE operation,
+production access, deployment, runtime configuration change or second poller is part
+of this stage. LIVE concurrency responsiveness remains **INCONCLUSIVE**; Phase 9 OPEN.
+
+The focused proof uses the real production metadata child and actual dispatcher with
+a network-free synthetic extractor held until the other user's valid callback has
+received Busy at global working capacity one. It checks the returned child timestamps
+against callback/ack times and their distinct update/request correlations, preserves
+the pending choice without consume or acquisition/delivery, then exercises the same
+nonterminal choice after the worker slot is released and cancels pending selections.
+No wall-time latency assertion depends on runner speed; watchdogs only prevent hung
+test-owned fixtures. Missing extraction boundaries or unproved overlap **FAIL** this
+mandatory deterministic offline gate; they cannot skip it. This is distinct from real
+observations: the best-effort recorder can lose tail records, so missing evidence in
+an observation still means **INCONCLUSIVE**, never PASS.
+Disabled-mode and cancellation cases preserve the existing lifecycle. Fault injection
+covers missing/corrupt/contradictory evidence; controlled clocks check timing arithmetic,
+not just event presence. Wire tests retain legacy messages, TTL/cache boundaries,
+strict field/type checks and the original IPC byte ceilings.
+
+Instrumentation: **OFFLINE VERIFIED**. Focused verification with inherited external
+socket/DNS denial passed **270 tests in 93.21 s** after correcting disabled lifecycle
+compatibility. The broader related run had 910 PASS and two old lifecycle mock-contract
+failures; the disabled factory call was restored and both cases passed in the final
+checks. A subsequent fault/clock/observer run passed **86 tests in 31.63 s**, including
+the initial 49 new diagnostic cases. Final malformed-clock/IPC follow-up passed
+**7 tests in 14.90 s**; there are **51 new cases** in total, with the final complete
+result delegated to exact-head CI.
+Ruff lint/format, diff/privacy review and 246 local links/anchors passed. The full
+suite runs in normal exact-head GitHub CI, reported on the PR; no repeated full local
+pytest was performed. These are offline results, not a LIVE PASS.
+
+PR #86 independent-review follow-up: all six controlled-child parameterizations passed
+(**6 PASS**). A temporary test-only pytest plugin separately dropped extraction-start
+records, dropped extraction-finish records, and moved callback entry outside the
+extraction interval. Each run of the actual mandatory success/enabled test exited 1
+at the corresponding assertion: **1 failed, 0 skipped**, as required. The fixture's
+child-release handshake and all Busy/lease/pending/cancellation/quarantine/media/cleanup
+assertions are unchanged. Related diagnostics, metadata, admission, lifecycle and
+cancellation regressions passed **217 tests in 101.72 s**, with inherited external
+socket/DNS denial. Ruff lint/format, diff/privacy and internal links passed. This
+follow-up changes no production instrumentation; incomplete real observations remain
+INCONCLUSIVE. The new exact-head CI result is reported on the same Draft PR.
+
+Local recorder-only sampling (five sets of 400 events) observed roughly 7.5 microseconds
+per record; a full 512-event recorder used about 275 kB peak under tracemalloc, with
+fixed log records at most 290 bytes in that sample. Disabled observe calls were below
+one microsecond in that local sample. These are illustrative local measurements,
+not performance assertions, production RSS/callback latency bounds or a network test.
+Controlled clocks additionally prove that lag calculation includes the observer's
+own simulated sink stall, instead of hiding it by resetting the deadline afterwards.

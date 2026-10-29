@@ -511,6 +511,12 @@ Neither localization nor Phase 9B's narrow smoke closes Phase 9 reliability.
 
 ## Phase 9 - Production Reliability
 
+P9-R1b instrumentation is **OFFLINE VERIFIED**, opt-in and default-off, without deployment. It preserves
+Phase 9C acceptance and the remaining LIVE gate: callback responsiveness is still
+INCONCLUSIVE. Review and exact-head CI are separate from authorization to enable it.
+See [measurement limits](DEVELOPMENT.md#p9-r1b-opt-in-concurrency-diagnostics).
+
+
 Complete the operational and reliability work that is intentionally not part of the functional MVP gate.
 
 Status: OPEN. Phase 4 functional acceptance does not satisfy this reliability gate.

@@ -7,6 +7,7 @@ from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
 
 from social_video_downloader import handlers
+from social_video_downloader.concurrency_diagnostics import Probe, SessionObserver, UpdateObserver
 from social_video_downloader.config import Settings
 from social_video_downloader.download_protection import (
     DownloadAdmission,
@@ -37,9 +38,14 @@ def create_dispatcher(
     instagram_reels=None,
     tiktok_videos=None,
     download_admission=None,
+    diagnostics=None,
 ) -> Dispatcher:
     """Create the root dispatcher and register Telegram handlers."""
     dispatcher = Dispatcher()
+    if diagnostics is not None:
+        dispatcher.update.outer_middleware(UpdateObserver(diagnostics))
+        dispatcher.startup.register(diagnostics.start)
+        dispatcher.shutdown.register(diagnostics.close)
     admission = download_admission or DownloadAdmission(
         **(
             {
@@ -86,13 +92,22 @@ def create_dispatcher(
 async def run_bot(settings: Settings) -> None:
     """Start polling and close the bot session when polling stops."""
     bot = create_bot(settings)
-    dispatcher = create_dispatcher(settings)
+    diagnostics = Probe() if settings.concurrency_diagnostics else None
+    if diagnostics is not None:
+        bot.session.middleware(SessionObserver(diagnostics))
+    dispatcher = (
+        create_dispatcher(settings, diagnostics=diagnostics)
+        if diagnostics is not None
+        else create_dispatcher(settings)
+    )
     with Operation("service", "polling") as operation:
         try:
             with operation.at("polling"):
                 await dispatcher.start_polling(bot)
         finally:
             with operation.at("session_close"):
+                if diagnostics is not None:
+                    await diagnostics.close()
                 await bot.session.close()
 
 

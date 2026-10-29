@@ -212,3 +212,15 @@ This targets native yt-dlp writes/current FFmpeg outputs, not arbitrary external
 programs or RSS. No new HTTP calls, headers, cookies, retry/fallback or production
 activation bypass are introduced.
 See [limits and lifecycle](PHASE9C_DOWNLOAD_PROTECTION.md).
+
+## P9-R1b diagnostic privacy boundary
+
+Concurrency diagnostics are opt-in and off by default. Only a fixed schema of monotonic
+times, ephemeral random run/ordinal trace labels, trusted enum results and lease counts/
+booleans is accepted by the owned logging formatter. No Telegram IDs or hashes, raw
+callback data, message contents, URLs, headers, cookies, media payloads or exception
+strings are retained. Weak object identity is used transiently in memory only, with
+bounded correlation and a 600-second collection lifetime. No new IPC descriptor,
+network call, account/session integration or broadened unstructured logging is added.
+Unknown timing evidence cannot authorize retries, release leases or clear quarantine.
+See [the diagnostic contract](DEVELOPMENT.md#p9-r1b-opt-in-concurrency-diagnostics).

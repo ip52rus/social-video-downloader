@@ -13,6 +13,7 @@ from aiogram import BaseMiddleware
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, Message
 
+from social_video_downloader.concurrency_diagnostics import observe, observe_lease
 from social_video_downloader.domain.errors import DownloadCleanupError, DownloaderError
 from social_video_downloader.domain.urls import detect_platform, normalize_media_url
 from social_video_downloader.resource_limits import DownloadLimits
@@ -33,7 +34,7 @@ class WaitingChoice:
     invalidate: Callable[[], object] = field(repr=False)
 
 
-@dataclass(slots=True, repr=False)
+@dataclass(slots=True, repr=False, weakref_slot=True)
 class RequestLease:
     user_id: int = field(repr=False)
     limits: DownloadLimits
@@ -253,12 +254,23 @@ class DownloadProtectionMiddleware(BaseMiddleware):
         data["download_admission"] = self.admission
         callback = isinstance(event, CallbackQuery)
         if callback:
+            observe("callback_entered")
             # Stores validate owner/chat/message/expiry first; no untrusted locale lookup.
             choice = self.callback_choice(event, data.get("instagram_reels"))
             if choice is None:
                 return await handler(event, data)
             key, locale = choice
             lease, refusal = self.admission.enter_callback(event.from_user.id, key)
+            observed = lease or self.admission._leases.get(event.from_user.id)
+            observe_lease(
+                self.admission,
+                observed,
+                result="admitted"
+                if refusal is None
+                else "busy"
+                if refusal == BUSY_MESSAGE
+                else "stale",
+            )
             if refusal:
                 with get_i18n().use_locale(locale), suppress(TelegramAPIError, TimeoutError):
                     await event.answer(tr(refusal))
@@ -274,6 +286,7 @@ class DownloadProtectionMiddleware(BaseMiddleware):
             if event.from_user is None:
                 return
             lease, refusal = self.admission.admit(event.from_user.id, platform=platform.value)
+            observe_lease(self.admission, lease, result="admitted" if refusal is None else "busy")
             if refusal:
                 if self.admission.should_notify(event.from_user.id):
                     await event.answer(tr(refusal))
@@ -288,4 +301,5 @@ class DownloadProtectionMiddleware(BaseMiddleware):
             raise
         finally:
             self.admission.leave(lease, callback=callback)
+            observe_lease(self.admission, lease, result="returned", leaving=True)
             _current.reset(token)

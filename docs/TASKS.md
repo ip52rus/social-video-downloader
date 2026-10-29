@@ -1061,3 +1061,19 @@ Membership is not required during core product development.
 - [x] Recheck Markdown/anchors/privacy/diff/docs-only scope and unchanged original checkout.
 - [ ] Final independent review/owner decision for #85; exact-head CI is required and
   reported on the PR. No #85 merge, deployment, LIVE or Phase 9 work is authorized here.
+
+### P9-R1b — minimal opt-in concurrency instrumentation
+
+- [x] Owner approved only two extraction monotonic timestamps over the existing metadata IPC.
+- [x] Preserve default-off behavior, legacy snapshots/cache/TTL, strict wire budgets and guards.
+- [x] Add bounded private correlation and parent observation before callback admission,
+  including Busy; separate API round trip from client latency and event-loop scheduling.
+- [x] Complete focused offline verification and privacy/performance review: instrumentation **OFFLINE VERIFIED**.
+- [x] Address PR #86 overlap-gate review: require FAIL for missing extraction boundaries
+  or unproved synthetic overlap; retain INCONCLUSIVE for incomplete real observations.
+- Exact-head CI is required on the submitted PR HEAD and reported in its checks; no LIVE result is inferred.
+- [ ] Obtain independent review; merge/deployment/LIVE remain separately authorized gates.
+- [ ] P9-R2 LIVE responsiveness remains INCONCLUSIVE; do not close this gate from synthetic tests.
+
+See [contract and measurement limits](DEVELOPMENT.md#p9-r1b-opt-in-concurrency-diagnostics)
+and [offline proof](TESTING.md#p9-r1b-minimal-concurrency-instrumentation--offline).

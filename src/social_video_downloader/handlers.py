@@ -28,6 +28,7 @@ from aiogram.types import (
     Message,
 )
 
+from social_video_downloader.concurrency_diagnostics import observe, observe_lease
 from social_video_downloader.domain.errors import (
     DownloadCleanupError,
     DownloaderError,
@@ -353,6 +354,7 @@ async def _download_and_deliver_media(
                 TemporaryDirectory(prefix="social-video-downloader-")
             ) as temporary_directory:
                 try:
+                    observe("acquisition_started")
                     limits = current_limits()
                     budget = None
                     if limits is not None:
@@ -761,7 +763,10 @@ def _callback_status_message(status: PendingInteractionStatus) -> str:
 
 async def handle_cancel(message: Message, download_admission) -> None:
     if message.from_user is not None:
-        await message.answer(tr(download_admission.cancel_waiting(message.from_user.id)))
+        lease = download_admission._leases.get(message.from_user.id)
+        result = download_admission.cancel_waiting(message.from_user.id)
+        observe_lease(download_admission, lease, result="returned", leaving=True)
+        await message.answer(tr(result))
 
 
 def validated_download_callback(callback: CallbackQuery, instagram_reels=None):

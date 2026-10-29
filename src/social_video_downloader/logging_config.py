@@ -3,7 +3,7 @@
 import json
 import logging
 
-from social_video_downloader import tiktok_diagnostics
+from social_video_downloader import concurrency_diagnostics, tiktok_diagnostics
 from social_video_downloader.config import Settings
 from social_video_downloader.operation_logging import LOGGER_NAME, error_category, safe_payload
 
@@ -27,6 +27,11 @@ class SafeEventFilter(logging.Filter):
                 elapsed_ms=None,
             )
             return True
+        if record.name == concurrency_diagnostics.LOGGER_NAME:
+            return (
+                concurrency_diagnostics.safe_payload(getattr(record, "safe_concurrency", None))
+                is not None
+            )
         if record.name == tiktok_diagnostics.LOGGER_NAME:
             return (
                 tiktok_diagnostics.safe_payload(getattr(record, "safe_tiktok_event", None))
@@ -41,7 +46,11 @@ class SafeEventFilter(logging.Filter):
 class SafeEventFormatter(logging.Formatter):
     def format(self, record):
         # Do not call getMessage/formatException: even a library traceback may contain secrets.
-        if record.name == tiktok_diagnostics.LOGGER_NAME:
+        if record.name == concurrency_diagnostics.LOGGER_NAME:
+            payload = concurrency_diagnostics.safe_payload(
+                getattr(record, "safe_concurrency", None)
+            )
+        elif record.name == tiktok_diagnostics.LOGGER_NAME:
             payload = tiktok_diagnostics.safe_payload(getattr(record, "safe_tiktok_event", None))
         else:
             payload = safe_payload(getattr(record, "safe_event", None))

@@ -4,7 +4,7 @@ import json
 import math
 import sys
 from dataclasses import dataclass, field
-from time import monotonic
+from time import monotonic, monotonic_ns
 
 from yt_dlp.extractor.youtube import YoutubeIE
 from yt_dlp.utils.networking import HTTPHeaderDict
@@ -206,13 +206,25 @@ class Snapshot:
     info: dict = field(repr=False)
 
 
-def request(url, nonce):
+def request(url, nonce, *, diagnostics=False):
     canonical, video_id = target(url)
-    return dict(version=VERSION, yt_dlp=__version__, url=canonical, video_id=video_id, nonce=nonce)
+    result = dict(
+        version=VERSION, yt_dlp=__version__, url=canonical, video_id=video_id, nonce=nonce
+    )
+    if diagnostics:
+        result["diagnostics"] = True
+    return result
 
 
 def validate_request(payload):
-    if type(payload) is not dict or set(payload) != {
+    if type(payload) is not dict:
+        refuse()
+    fields = set(payload)
+    if "diagnostics" in fields:
+        if payload["diagnostics"] is not True:
+            refuse()
+        fields.remove("diagnostics")
+    if fields != {
         "version",
         "yt_dlp",
         "url",
@@ -234,14 +246,61 @@ def validate_request(payload):
     return payload
 
 
-def response(req, info, created_at):
-    return {**req, "created_at": created_at, "info": info}
+@dataclass(frozen=True, slots=True)
+class ExtractionInterval:
+    extraction_started_ns: int
+    extraction_finished_ns: int
+
+
+def extraction_interval(data, req, *, earliest_ns=0, now_ns=None):
+    """Reject untrusted diagnostic evidence as UNKNOWN, never repair/infer timestamps."""
+    if req.get("diagnostics") is not True or type(data) is not dict:
+        return None
+    value = data.get("diagnostics")
+    if type(value) is not dict or set(value) != {"extraction_started_ns", "extraction_finished_ns"}:
+        return None
+    start, end = value["extraction_started_ns"], value["extraction_finished_ns"]
+    now = monotonic_ns() if now_ns is None else now_ns
+    if any(type(n) is not int or not 0 <= n <= 2**63 - 1 for n in (start, end, now)):
+        return None
+    stamp = data.get("created_at")
+    if type(stamp) not in (int, float) or not math.isfinite(stamp):
+        return None
+    # Same-host monotonic domain; the parent also supplies its request lower bound.
+    if not earliest_ns <= start <= end <= now or now - start >= TTL * 10**9:
+        return None
+    # Allow only float conversion precision, not a new clock/skew tolerance.
+    if end > int(stamp * 10**9) + 1000:
+        return None
+    return ExtractionInterval(start, end)
+
+
+def response(req, info, created_at, *, extraction=None):
+    result = {k: v for k, v in req.items() if k != "diagnostics"}
+    result.update(created_at=created_at, info=info)
+    if req.get("diagnostics") is True:
+        result["diagnostics"] = (
+            {
+                "extraction_started_ns": extraction.extraction_started_ns,
+                "extraction_finished_ns": extraction.extraction_finished_ns,
+            }
+            if extraction is not None
+            else {"extraction_started_ns": None, "extraction_finished_ns": None}
+        )
+    return result
 
 
 def validate_response(data, req):
-    if type(data) is not dict or set(data) != set(req) | {"created_at", "info"}:
+    expected = {k: v for k, v in req.items() if k != "diagnostics"}
+    allowed = set(expected) | {"created_at", "info"}
+    fields = set(data) if type(data) is dict else set()
+    if req.get("diagnostics") is True:
+        fields = fields - {"diagnostics"}
+    if type(data) is not dict or fields != allowed:
         refuse()
-    if any(type(data[key]) is not type(value) or data[key] != value for key, value in req.items()):
+    if any(
+        type(data[key]) is not type(value) or data[key] != value for key, value in expected.items()
+    ):
         refuse()
     stamp, info = data["created_at"], data["info"]
     age = monotonic() - stamp if type(stamp) in (int, float) else -1
@@ -258,3 +317,25 @@ def validate_response(data, req):
         refuse()
     memory_size(info)
     return Snapshot(req["url"], req["video_id"], stamp, info)
+
+
+def encode_metadata_response(payload):
+    """Optional timing evidence must not displace an otherwise valid media snapshot."""
+    try:
+        return encode(payload)
+    except MetadataExtractionError:
+        if "diagnostics" not in payload:
+            raise
+        # Drop only optional evidence; no extraction/network/worker retry.
+        return encode({k: v for k, v in payload.items() if k != "diagnostics"})
+
+
+def encode_metadata_request(req):
+    """An opt-in flag must not shrink the legacy request URL byte budget."""
+    try:
+        return req, encode(req, REQUEST_BYTES)
+    except MetadataExtractionError:
+        if req.get("diagnostics") is not True:
+            raise
+        legacy = {k: v for k, v in req.items() if k != "diagnostics"}
+        return legacy, encode(legacy, REQUEST_BYTES)
