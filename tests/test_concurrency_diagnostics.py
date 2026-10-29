@@ -365,11 +365,13 @@ raise SystemExit(main())
             ack = next(
                 e for e in events if e["event"] == "ack_finished" and e["trace"] == busy["trace"]
             )
-            if len(starts) != 2 or len(finishes) != 2:
-                pytest.skip("INCONCLUSIVE: missing extraction boundaries")
+            assert len(starts) == 2 and len(finishes) == 2, (
+                "mandatory deterministic gate: missing extraction boundaries"
+            )
             a_start, a_end = starts[-1], finishes[-1]
-            if not (a_start["at_ns"] <= cb["at_ns"] <= ack["at_ns"] <= a_end["at_ns"]):
-                pytest.skip("INCONCLUSIVE: callback/extraction overlap not established")
+            assert a_start["at_ns"] <= cb["at_ns"] <= ack["at_ns"] <= a_end["at_ns"], (
+                "mandatory deterministic gate: callback/extraction overlap not established"
+            )
             assert a_start["trace"] == a_end["trace"] and a_start["trace"] != cb["trace"]
             assert busy["request"] == starts[0]["trace"]
             assert ack["result"] == "returned" and ack["duration_ns"] >= 0

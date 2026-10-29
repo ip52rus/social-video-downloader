@@ -1069,6 +1069,8 @@ Membership is not required during core product development.
 - [x] Add bounded private correlation and parent observation before callback admission,
   including Busy; separate API round trip from client latency and event-loop scheduling.
 - [x] Complete focused offline verification and privacy/performance review: instrumentation **OFFLINE VERIFIED**.
+- [x] Address PR #86 overlap-gate review: require FAIL for missing extraction boundaries
+  or unproved synthetic overlap; retain INCONCLUSIVE for incomplete real observations.
 - Exact-head CI is required on the submitted PR HEAD and reported in its checks; no LIVE result is inferred.
 - [ ] Obtain independent review; merge/deployment/LIVE remain separately authorized gates.
 - [ ] P9-R2 LIVE responsiveness remains INCONCLUSIVE; do not close this gate from synthetic tests.

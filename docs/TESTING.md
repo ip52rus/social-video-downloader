@@ -2556,7 +2556,10 @@ against callback/ack times and their distinct update/request correlations, prese
 the pending choice without consume or acquisition/delivery, then exercises the same
 nonterminal choice after the worker slot is released and cancels pending selections.
 No wall-time latency assertion depends on runner speed; watchdogs only prevent hung
-test-owned fixtures. Unproved overlap is explicitly INCONCLUSIVE, never PASS.
+test-owned fixtures. Missing extraction boundaries or unproved overlap **FAIL** this
+mandatory deterministic offline gate; they cannot skip it. This is distinct from real
+observations: the best-effort recorder can lose tail records, so missing evidence in
+an observation still means **INCONCLUSIVE**, never PASS.
 Disabled-mode and cancellation cases preserve the existing lifecycle. Fault injection
 covers missing/corrupt/contradictory evidence; controlled clocks check timing arithmetic,
 not just event presence. Wire tests retain legacy messages, TTL/cache boundaries,
@@ -2573,6 +2576,18 @@ result delegated to exact-head CI.
 Ruff lint/format, diff/privacy review and 246 local links/anchors passed. The full
 suite runs in normal exact-head GitHub CI, reported on the PR; no repeated full local
 pytest was performed. These are offline results, not a LIVE PASS.
+
+PR #86 independent-review follow-up: all six controlled-child parameterizations passed
+(**6 PASS**). A temporary test-only pytest plugin separately dropped extraction-start
+records, dropped extraction-finish records, and moved callback entry outside the
+extraction interval. Each run of the actual mandatory success/enabled test exited 1
+at the corresponding assertion: **1 failed, 0 skipped**, as required. The fixture's
+child-release handshake and all Busy/lease/pending/cancellation/quarantine/media/cleanup
+assertions are unchanged. Related diagnostics, metadata, admission, lifecycle and
+cancellation regressions passed **217 tests in 101.72 s**, with inherited external
+socket/DNS denial. Ruff lint/format, diff/privacy and internal links passed. This
+follow-up changes no production instrumentation; incomplete real observations remain
+INCONCLUSIVE. The new exact-head CI result is reported on the same Draft PR.
 
 Local recorder-only sampling (five sets of 400 events) observed roughly 7.5 microseconds
 per record; a full 512-event recorder used about 275 kB peak under tracemalloc, with
