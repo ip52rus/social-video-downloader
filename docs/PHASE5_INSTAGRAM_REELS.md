@@ -1,5 +1,18 @@
 # Phase 5: Instagram scope and evidence
 
+## Current boundary — 2026-10-29
+
+This document preserves the Phase 5 chronology. Its earlier fixed 25 MiB Telegram
+file / 100 MiB collection limits are **superseded by Phase 9C**, not current caps.
+The ten-video count, source identity/manifest, public-content, no-photo, codec,
+activation and cleanup rules remain. Current configurable file/request/workspace/
+free-space and endpoint limits are in [Phase 9C](PHASE9C_DOWNLOAD_PROTECTION.md).
+Owner local acceptance on 2026-10-28 includes a playable Instagram file >25 MiB.
+Item Selection's later 2026-10-22 LIVE results are in [TESTING](TESTING.md#instagram-item-selection--live-acceptance-2026-10-22).
+HOSTKEY now hosts the designated sole poller; retained MacBook services are stopped.
+No D1 server check, broader carousel reliability or new activation is implied.
+
+
 ## Current acceptance — 2026-10-18
 
 After PR #57 deployment at `13da14d6f1ea9378d776543c94b22b7b716630d3`, the owner

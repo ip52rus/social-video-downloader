@@ -1,5 +1,19 @@
 # Phase 8 E5 UX acceptance
 
+## Later checkpoint — 2026-10-29
+
+The accepted Phase 8 MVP and its original sample limits below remain unchanged;
+[PR #82](https://github.com/ip52rus/social-video-downloader/pull/82) merged this acceptance.
+Phase 9C later received local owner 5/5 acceptance, and HOSTKEY received a separate
+technical cutover PASS. Owner now reports ordinary TikTok success on HOSTKEY;
+references below to future VPS egress being untested describe the earlier acceptance
+checkpoint, not the absence of this later narrow result. EN/ES LIVE, wider Instagram/
+client coverage, load/recovery and visual post-restart cleanup remain unverified.
+See the [updated evidence ledger](TESTING.md#checkpoint-2026-10-29); no repeat E5 LIVE
+or broader reliability is inferred. Historical E5 catalog counts do not include the
+later five Phase 9C entries (current total88 per locale).
+
+
 Current owner disposition (2026-10-26): **PHASE 8 MVP — ACCEPTED WITH DOCUMENTED LIMITATIONS**.
 Acceptance baseline: E5 plus TikTok diagnostics, main `b55a019b9943d75e7ed715f1b64cefc57f1e2dbc`.
 This accepts the verified MVP; it does not establish universal platform reliability.

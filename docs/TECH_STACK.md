@@ -1,5 +1,19 @@
 # Technology Baseline
 
+## Deployment checkpoint — 2026-10-29
+
+The same Python/Compose architecture is deployed on HOSTKEY VPS with one bot poller
+and an internal Local Bot API; MacBook containers are retained stopped for rollback.
+The dated [operations record](LOCAL_BOT_API.md#hostkey-vps-checkpoint-2026-10-28)
+is the deployment authority, not the older local-setup terminology below. No fresh
+D1 runtime observation. Ordinary TikTok uses the native protected transport, not
+yt-dlp; Instagram and YouTube retain their provider engines. Gettext/Babel with
+aiogram I18n supplies package-local EN/RU/ES catalogs. POSIX workers and bounded IPC
+provide metadata/acquisition isolation; no browser/Go service or queue is deployed.
+FFmpeg conversion fallback described below applies to the compatible existing
+YouTube pipeline, not a new transcode policy for Instagram or TikTok.
+
+
 ## Runtime
 
 - Python 3.13.

@@ -86,7 +86,7 @@ existing documents,12 available research report roots, saved migration summaries
 owner observations. Important sanitized conclusions are version-controlled here,
 not only linked to private directories. No prior failed result removed.
 
-**Gate PASS before publication:** 28 Markdown files, 225 local links/anchors with
+**Gate PASS before publication:** 28 Markdown files, 229 local links/anchors with
 no errors; heading/fence checks, added-text privacy scan/manual review and docs-only
 scope PASS. Main152 tracked hashes/private fingerprints and all30 prior registrations
 (including19 accepted prunable) unchanged; one authorized permanent worktree added.
