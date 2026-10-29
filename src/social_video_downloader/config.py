@@ -40,6 +40,7 @@ class Settings:
     youtube_max_file_bytes: int = LOCAL_API_FILE_BYTES
     youtube_max_request_bytes: int = 4 * 1024**3
     youtube_max_workspace_bytes: int = 8 * 1024**3
+    concurrency_diagnostics: bool = False
 
     @property
     def download_limits(self) -> DownloadLimits:
@@ -101,6 +102,8 @@ class Settings:
             or not 1 <= self.download_link_interval_seconds <= 300
         ):
             raise ConfigurationError("DOWNLOAD_LINK_INTERVAL_SECONDS must be from 1 to 300.")
+        if type(self.concurrency_diagnostics) is not bool:
+            raise ConfigurationError("CONCURRENCY_DIAGNOSTICS must be true or false.")
         if type(self.instagram_telegram_enabled) is not bool:
             raise ConfigurationError("INSTAGRAM_TELEGRAM_ENABLED must be true or false.")
         if type(self.tiktok_telegram_enabled) is not bool:
@@ -178,6 +181,9 @@ class Settings:
         tiktok_enabled = source.get("TIKTOK_TELEGRAM_ENABLED", "false").strip().lower()
         if tiktok_enabled not in {"true", "false"}:
             raise ConfigurationError("TIKTOK_TELEGRAM_ENABLED must be true or false.")
+        diagnostics = source.get("CONCURRENCY_DIAGNOSTICS", "false").strip().lower()
+        if diagnostics not in {"true", "false"}:
+            raise ConfigurationError("CONCURRENCY_DIAGNOSTICS must be true or false.")
         raw_concurrency = source.get("TIKTOK_MAX_CONCURRENT_OPERATIONS", "2").strip()
         # Bound the text before conversion, including pathological environment values.
         if len(raw_concurrency) != 1 or raw_concurrency not in "12345678":
@@ -207,6 +213,7 @@ class Settings:
             telegram_bot_token=token,
             app_env=source.get("APP_ENV", "development").strip().lower(),
             log_level=source.get("LOG_LEVEL", "INFO").strip(),
+            concurrency_diagnostics=diagnostics == "true",
             telegram_api_base_url=api_base_url,
             telegram_api_timeout_seconds=api_timeout_seconds,
             instagram_telegram_enabled=instagram_enabled == "true",

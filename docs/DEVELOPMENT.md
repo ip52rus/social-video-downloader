@@ -425,3 +425,84 @@ uses an owned POSIX child with scoped write interception, not global file hooks 
 the polling process. Preparation retains its existing drain-on-cancel thread ownership.
 See the design for the additional settings not forwarded by source Compose and
 for conservative disk reservations. No Docker/configuration changes are applied.
+
+## P9-R1b opt-in concurrency diagnostics
+
+The owner approved only a narrow timing extension to the existing metadata IPC.
+`CONCURRENCY_DIAGNOSTICS=false` is the default; no deployment, configuration change
+or LIVE permission follows from this implementation. Source Compose does not forward
+this new setting. Enabling it on a deployed bot needs separately approved configuration
+and deployment. No additional network call, worker pool, FD, thread or IPC channel is
+introduced. Phase 9 remains OPEN; LIVE callback responsiveness remains INCONCLUSIVE.
+
+### Wire compatibility and UNKNOWN
+
+Legacy request/response fields and version remain unchanged. An enabled request may
+add exactly `diagnostics: true`. Its response may add one sibling `diagnostics` object
+with exactly `extraction_started_ns` and `extraction_finished_ns`. Both are obtained
+with `time.monotonic_ns()` directly around `_read_raw_info()`, outside yt-dlp setup and
+teardown. They cover that metadata extraction call, not individual HTTP operations.
+The ordinary `created_at` is still taken at its original point and retains its TTL
+meaning. Diagnostic fields never enter `Snapshot`, `info`, the cache or download IPC.
+
+Opt-in parents accept legacy replies without diagnostics as UNKNOWN. Disabled parents
+reject unsolicited diagnostics; request flags must be the exact boolean true. Unknown
+top-level fields remain a wire refusal. The diagnostic subrecord is accepted only
+with the exact two fields, integer (not bool) nonnegative int64 timestamps, ordered in
+the parent's same-host monotonic window, no future values, within snapshot TTL and
+not later than `created_at` except float-conversion precision. A missing, malformed,
+extra-field or contradictory diagnostic subrecord is rejected as evidence (UNKNOWN),
+while an otherwise valid media snapshot still plans normally. No values are repaired.
+
+The 8 KiB request / 2 MiB response limits are unchanged. If optional evidence would
+prevent serialization of an otherwise valid snapshot within its budget, only that
+optional evidence is omitted. This is not an extraction/download/network retry.
+If the request flag would exceed the original request budget, it too is omitted.
+Legacy traffic is compatible; an enabled request requires a child supporting this
+opt-in extension (no mixed-version negotiation or retry is introduced).
+Failure/cancellation without a returned valid pair yields UNKNOWN; parent timestamps
+are never substituted for child extraction boundaries. Existing ownership, cleanup,
+quarantine, cache expiry and format decisions remain authoritative.
+
+### Measurement points and limits
+
+A standard aiogram session middleware records successful `GetUpdates` return before
+dispatch. This is when the coroutine observes the parsed response, not physical socket
+arrival, Telegram server delivery or the user's button click. A blocked event loop
+can delay this point. A standard update outer middleware attaches an ephemeral trace;
+callback entry is measured in protection middleware before admission, including Busy.
+Admission and lease exit snapshots record only booleans/counts and request correlation.
+Session middleware brackets actual `AnswerCallbackQuery` calls and media-send attempts;
+ack confirmation requires the exact boolean true. Delivery `returned` only describes
+an API return, not media acceptance; existing handlers determine delivery evidence.
+Acquisition events count application acquisition entries, not media HTTP requests.
+
+Use `run` plus `trace` for an update and `request` for its originating admitted lease.
+These are random run/ordinal labels, not Telegram IDs, callback tokens or their hashes.
+Zero/missing correlation means UNKNOWN. Weak object references bridge successful
+GetUpdates results to dispatch without keeping Updates, messages or personal data.
+Child boundary events arrive retrospectively after bounded IPC/cleanup; order by
+`at_ns`, not log arrival or `seq`. Distinguish extraction overlap, local callback
+handling, API round trip, loop lag and unmeasured client latency. Never subtract a
+MacBook clock from VPS monotonic time. A missing boundary or record cannot establish PASS.
+
+### Bounds and performance
+
+One process-start diagnostic window lasts at most 600 seconds, with at most 128 traces
+and 512 events. Hot-path recording performs no logging or I/O. A single asyncio task
+samples 50-ms timer lateness, emits its maximum in five-second windows, and drains at
+most four fixed small records per tick through the existing sanitized logging sink.
+There is no telemetry service, unbounded backlog, extra diagnostics thread or global
+library-log enablement. Timer summaries are scheduling evidence, not HTTP latency or
+proof that every instant in an extraction interval was sampled. Sink writes remain
+best effort and can themselves stall; this is not a nonblocking logging guarantee.
+
+All in-memory records/correlation are cleared on window expiry or shutdown. A full
+budget disables collection; pending/failed log output may be lost, making affected
+measurements UNKNOWN. Existing logger level can also hide INFO diagnostics. Bounded
+sampling/filtering avoids heavy synchronous logging in callback/extraction paths;
+production overhead and client/network latency are not claimed from offline checks.
+
+P9-R2 still needs independent review, approved deployment/configuration and production
+preflight, an owner-approved latency criterion/budget, and separate LIVE authorization.
+No runtime approval is conveyed by the offline proof.

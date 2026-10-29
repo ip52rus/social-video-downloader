@@ -11,8 +11,9 @@ from contextvars import copy_context
 from functools import partial
 from pathlib import Path
 from threading import Lock
-from time import monotonic
+from time import monotonic, monotonic_ns
 
+from social_video_downloader.concurrency_diagnostics import current, observe
 from social_video_downloader.domain.errors import (
     MetadataBusyError,
     MetadataCleanupError,
@@ -21,10 +22,10 @@ from social_video_downloader.domain.errors import (
 )
 from social_video_downloader.domain.models import Platform
 from social_video_downloader.infrastructure.youtube_snapshot import (
-    REQUEST_BYTES,
     RESPONSE_BYTES,
     decode,
-    encode,
+    encode_metadata_request,
+    extraction_interval,
     request,
     response,
     validate_response,
@@ -106,31 +107,53 @@ class YouTubeMetadata:
             raise MetadataBusyError("YouTube metadata admission unavailable.")
         self.active = True  # No wait/queue; also safe across concurrent service callers.
         deadline = monotonic() + self.seconds
+        diagnostic = current() is not None
+        started_ns = 0
+        if diagnostic:
+            with suppress(Exception):
+                started_ns = monotonic_ns()
+            diagnostic = type(started_ns) is int and 0 < started_ns <= 2**63 - 1
+            if not diagnostic:
+                started_ns = 0
+        evidence = "unknown"
+        observe("metadata_started")
         try:
             async with asyncio.timeout(self.seconds):
                 canonical = provider._normalize_youtube_url(url)
                 cached = await self._cpu(provider._planning_snapshot, canonical)
-                req = request(canonical, secrets.token_urlsafe(24))
+                req = request(
+                    canonical, secrets.token_urlsafe(24), diagnostics=diagnostic and cached is None
+                )
                 if cached is not None:
                     stamp, info = cached
+                    evidence = "cache"
                     return await self._cpu(self._cached_plan, req, stamp, info)
-                wire = encode(req, REQUEST_BYTES)
+                req, wire = encode_metadata_request(req)
                 raw = await self._exchange(wire, deadline)
-                snapshot, plan = await self._cpu(self._decode_plan, raw, req)
+                snapshot, plan, interval = await self._cpu(self._decode_plan, raw, req, started_ns)
+                if interval is not None:
+                    observe("extraction_started", at_ns=interval.extraction_started_ns)
+                    observe("extraction_finished", at_ns=interval.extraction_finished_ns)
+                    evidence = "known"
                 await self._cpu(provider._publish_snapshot, snapshot)
                 return plan
         except asyncio.CancelledError:
+            evidence = "unknown"
             raise
         except MetadataExtractionError:
+            evidence = "unknown"
             raise
         except TimeoutError:
+            evidence = "unknown"
             raise MetadataTimeoutError("YouTube metadata deadline expired.") from None
         except Exception:
+            evidence = "unknown"
             raise MetadataExtractionError("YouTube metadata operation failed.") from None
         finally:
             self.active = False
             if not self.blocked:
                 self._admission.release()
+            observe("metadata_finished", result=evidence)
 
     @staticmethod
     def _cached_plan(req, stamp, info):
@@ -138,9 +161,11 @@ class YouTubeMetadata:
         return build_choice_plan(_Choices(snapshot.info), snapshot.url)
 
     @staticmethod
-    def _decode_plan(raw, req):
-        snapshot = validate_response(decode(raw), req)
-        return snapshot, build_choice_plan(_Choices(snapshot.info), snapshot.url)
+    def _decode_plan(raw, req, earliest_ns=0):
+        data = decode(raw)
+        snapshot = validate_response(data, req)
+        interval = extraction_interval(data, req, earliest_ns=earliest_ns)
+        return snapshot, build_choice_plan(_Choices(snapshot.info), snapshot.url), interval
 
     async def _exchange(self, wire, deadline):
         creation = asyncio.create_task(

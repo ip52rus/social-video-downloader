@@ -19,6 +19,13 @@ The [Short Drama resolver design](research/TIKTOK_SHORT_DRAMA.md#s1-proposed-int
 is isolated offline research, not registered production code. It needs a narrow JSON
 adapter; existing metadata admission cannot accept arbitrary API URLs/queries.
 
+P9-R1b adds default-off bounded concurrency observations and an optional two-timestamp
+metadata IPC diagnostic sibling, separate from `Snapshot`/cache. It does not change
+admission, downloader policy or ownership. GetUpdates observation is not physical
+callback arrival; child extraction intervals arrive retrospectively. See
+[measurement contract](DEVELOPMENT.md#p9-r1b-opt-in-concurrency-diagnostics).
+LIVE responsiveness remains INCONCLUSIVE; no production change is implied.
+
 ## Target logical architecture
 
 Telegram -> Telegram handlers -> application/download service -> provider interface -> provider implementation -> media engine -> temporary storage.
