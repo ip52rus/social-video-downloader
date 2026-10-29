@@ -1,11 +1,34 @@
 # Development Workflow
 
+## Current entry point for agents
+
+Read [AGENTS.md](../AGENTS.md) and the [2026-10-29 handoff](CHAT_HANDOFF_2026-10-29.md)
+before relying on historical stage notes below. Source main f74dc6c includes Phase 8,
+9B and 9C; HOSTKEY is designated sole poller, MacBook bot/API retained stopped.
+[Canonical operations](LOCAL_BOT_API.md#hostkey-vps-checkpoint-2026-10-28) supersedes
+older “both local services running” deployment snapshots. No fresh production check
+is implied. Do not start development with the production token.
+
+Nineteen unchanged prunable registrations are owner-accepted existing deviations,
+not repaired history. Inventory only; no prune/remove/repair/gc or restoring missing
+temporary worktrees. Preserve private archives, .env and IDE files. New worktrees
+must be permanent. Check original checkout/private fingerprints before and after;
+allow only the explicitly created worktree registration to be added.
+
+D1 documentation-only work uses a permanent focused branch, no Python/config/catalog
+changes, Markdown link/anchor/privacy/diff checks, and exact-head PR CI. Do not repeat
+full local pytest without a docs-related reason. Update TASKS/ROADMAP/TESTING and all
+inaccurate affected docs before the next stage. Distinguish accepted MVP, deployed
+checkpoint and unverified reliability; do not launch the next gate automatically.
+
 ## Source of truth
+
 During active development, the local repository is the primary working state. GitHub is the synchronized remote history and checkpoint after a verified stage. Before work, inspect the current branch and working tree, understand any unrelated local changes, and preserve them.
 
 After a stage is implemented and verified, synchronize the remote history by committing and pushing the reviewed local result, then confirm the GitHub branch and CI state match the intended change.
 
 ## Stage workflow
+
 1. Read the relevant roadmap, task decomposition, architecture, testing guidance, and applicable agent rules before implementation.
 2. Confirm the current stage, its acceptance criteria, dependencies, and outstanding checks. Do not skip an unmet roadmap gate without explicitly documenting the reason and obtaining a decision where needed.
 3. Make a small, focused local implementation or configuration change on an appropriate branch.
@@ -17,6 +40,7 @@ After a stage is implemented and verified, synchronize the remote history by com
 9. Push the branch, then verify the GitHub branch state and CI result.
 
 ## Documentation requirements
+
 - Documentation updates are part of the stage's definition of done.
 - A task may be marked complete only when its acceptance criteria have evidence supporting completion.
 - Keep partial work unchecked and describe the checks still outstanding.
@@ -27,6 +51,7 @@ After a stage is implemented and verified, synchronize the remote history by com
 - Do not defer routine documentation synchronization to an unspecified future cleanup task.
 
 ## Branches
+
 Use `feature/name`, `fix/name`, `refactor/name`, or `docs/name` for non-trivial work.
 
 ## Permanent worktrees
@@ -39,9 +64,11 @@ Historical damaged directories and private preservation archives remain untouche
 unknown historical untracked/ignored data is not claimed recovered.
 
 ## Commits
+
 Use Conventional Commit prefixes. One coherent change per commit.
 
 ## Pre-commit checklist
+
 - Relevant tests and checks pass, or outstanding failures are explicitly documented.
 - Diff and changed-file list reviewed.
 - No secrets or personal data.
@@ -51,6 +78,7 @@ Use Conventional Commit prefixes. One coherent change per commit.
 - Commit message describes the actual change.
 
 ## Synchronization
+
 After each commit, verify the commit SHA and branch state. After each push, verify the remote branch and CI. Do not overwrite unrelated local work while synchronizing.
 
 ## Public TikTok configuration
@@ -79,6 +107,7 @@ embed/public-page CLI and benchmark retain their full-link interfaces. See
 
 ### Deployed public TikTok configuration
 
+Historical local checkpoint (superseded operationally by the HOSTKEY record above):
 PR #66 merged at main `389258cee9cf966be531ae5d6d60b192a59bcdb2`, with successful
 [post-merge CI #39517532808](https://github.com/ip52rus/social-video-downloader/actions/runs/39517532808).
 The separately authorized deployment built bot image
@@ -91,7 +120,8 @@ Image retention is rollback preparation, not evidence of a tested rollback.
 Cloud logout succeeded, followed by a successful Local Bot API getMe from the private
 Compose network. The existing API container/image and
 `youtubedownloader_telegram-bot-api-data` volume were preserved. Updated bot polling
-uses `http://telegram-bot-api:8081`; both services were left running. Do not repeat
+uses `http://telegram-bot-api:8081`; both local services were left running at that earlier checkpoint; they are now
+retained stopped after HOSTKEY migration. Do not repeat
 the migration or modify the API volume as routine configuration maintenance.
 
 The existing protected local `.env` now contains only these two newly persisted
@@ -203,7 +233,6 @@ perform real external calls as part of the acceptance-documentation update. The 
 owner-confirmed cases do not authorize additional deployments, tests or limit changes.
 Broader publication/client/size coverage and production capacity remain unverified.
 
-
 ## Phase 9A operational baseline and safe events
 
 ### Decision and deployed baseline
@@ -310,7 +339,6 @@ Verification and exact-head CI are recorded in
 No live request, container restart/recreation/build, env change or deployment is
 part of this stage. Inspect logs privately; never paste raw deployed logs into PRs.
 
-
 ## Instagram Item Selection
 
 Public `/p/` with one valid `img_index=N` is inspected as an entire carousel before
@@ -337,7 +365,6 @@ Oversized or incomplete publications refuse rather than silently truncate. Worke
 cleanup uncertainty preserves opt-in quarantine workspaces and keeps the Instagram
 handler blocked; investigate ownership/reap before any separately authorized manual
 cleanup or restart. No automatic recovery, data deletion or retry is performed.
-
 
 ## Phase 9B deployed baseline 2026-10-23
 

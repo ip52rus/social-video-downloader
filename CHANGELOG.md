@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+
+- Preserve the 2026-10-29 documentation checkpoint, agent rules, self-contained chat
+  handoff and canonical deferred Short Drama research; no runtime changes.
+- Record Phase 8 MVP acceptance (PR #82), merged Phase 9C (PR #83), local technical
+  deployment and owner 5/5 acceptance, and separate dated HOSTKEY Local API migration.
+- Reconcile completed bounded YouTube metadata isolation, Phase 9C write/admission
+  guards and retained reliability limits; no claim of load/recovery or near-2 GB support.
+
 - Add Docker Compose configuration for the bot and Local Bot API Server, keeping the API endpoint on the internal Compose network.
 - Add Docker build-context protection with `.dockerignore` so local secrets, runtime data, caches, and generated media are excluded while `.env.example` remains available.
 - Add environment examples for Telegram API application credentials, optional local Bot API endpoint, and configurable local API request timeout.
@@ -30,6 +38,7 @@
 - Add downloader domain models, error taxonomy, provider interface, URL normalization, and unit tests.
 
 ## Verification notes
+
 - GitHub Actions run [37966225469](https://github.com/ip52rus/social-video-downloader/actions/runs/37966225469) passed 131 tests and Ruff lint/format checks on merge commit f27051fded257b5f39056c45333b4fa8c50075a3.
 - Opt-in live matrix passed locally on 2026-10-09 for https://www.youtube.com/watch?v=dQw4w9WgXcQ in 140.06 seconds. It verified combined MP4, selected-quality video-only output, and audio-only output in two containers using ffprobe.
 - GitHub Actions run [37974061474](https://github.com/ip52rus/social-video-downloader/actions/runs/37974061474) passed lint, format, and deterministic tests for Telegram download orchestration and file-delivery handling.

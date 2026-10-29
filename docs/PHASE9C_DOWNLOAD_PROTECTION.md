@@ -1,23 +1,32 @@
 # Phase 9C: shared download protection
 
-## Local acceptance and remaining limits
+## Acceptance checkpoint — LOCAL ACCEPTED
 
-Status: **LOCAL ACCEPTED**. [PR #83](https://github.com/ip52rus/social-video-downloader/pull/83)
-merged as `f74dc6c933012b809d4e6dc33ed3f3bdadc39d34`; post-merge CI
-[#40333460016](https://github.com/ip52rus/social-video-downloader/actions/runs/40333460016)
-SUCCESS. The 2026-10-26 local bot-only deployment received TECHNICAL PASS, with
-Local Bot API/configuration/volume preserved and rollback prepared but not executed.
-On 2026-10-28 the owner confirmed 5/5 LIVE PASS: rejection during pending choice
-and active download, waiting-choice cancellation, YouTube delivery/playback and
-delivery/playback of one Instagram video larger than 25 MiB. See the separate
-[deployment](TESTING.md#phase-9c-local-deployment-2026-10-26) and
-[owner acceptance](TESTING.md#phase-9c-owner-live-acceptance-2026-10-28) evidence.
+Merged [PR #83](https://github.com/ip52rus/social-video-downloader/pull/83) as
+`f74dc6c933012b809d4e6dc33ed3f3bdadc39d34`; exact post-merge
+[CI #40333460016](https://github.com/ip52rus/social-video-downloader/actions/runs/40333460016)
+SUCCESS (rechecked in D1). Independent review fixes are included, not a pending gate.
 
-Acceptance is limited to these local observations. It does not establish
-load/stress reliability, failure recovery or a tested rollback, near-2 GB delivery,
-or universal platform/network/client/language compatibility. The five LIVE cases
-include no new TikTok acceptance. The restart-stale and quarantine limits below
-remain in force. General Phase 9 stays **OPEN**.
+Local technical deployment **2026-10-26 — PASS**: bot image
+`sha256:49a66a1191b906aeba5817c6c2b157b3c469485d85c988fdf07499ed76b0dfae`,
+RUNNING/restart 0/OOM false; Local API/config/volume preserved. Rollback prepared,
+not executed. Owner **local LIVE 2026-10-28 — 5/5 PASS**: duplicate rejected during
+YouTube selection; /cancel waiting choice; playable YouTube delivered; duplicate
+rejected during download; playable Instagram >25 MiB delivered. These are owner
+confirmations, not new automated tests or a load/near-2 GB/recovery matrix.
+
+The later HOSTKEY [technical migration](LOCAL_BOT_API.md#hostkey-vps-checkpoint-2026-10-28)
+uses the same source and work capacity **1**; source default remains **4**. That
+cutover is not a repeated local acceptance matrix. Phase 9 remains OPEN. Historical
+implementation-stage “no deployment” statements below refer to code verification at
+that time; they do not mean deployment/acceptance is still pending.
+
+See the separate [local deployment](TESTING.md#phase-9c-local-deployment-2026-10-26)
+and [owner acceptance](TESTING.md#phase-9c-owner-live-acceptance-2026-10-28) records.
+Acceptance does not establish load/stress reliability, failure recovery, a tested
+rollback, near-2 GB delivery or universal platform/network/client/language coverage.
+These five local LIVE cases contain no new TikTok acceptance. Restart-stale and
+cleanup/quarantine limits remain in force.
 
 ## Reason and scope
 

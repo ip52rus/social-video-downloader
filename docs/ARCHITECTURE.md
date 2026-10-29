@@ -1,6 +1,26 @@
 # Architecture
 
+## Checkpoint 2026-10-29
+
+Implemented source baseline is f74dc6c (PR #83). [Operations](LOCAL_BOT_API.md#hostkey-vps-checkpoint-2026-10-28)
+records the HOSTKEY sole poller and preserved stopped MacBook stack; repository flags
+and capacities are defaults, not deployed values. No D1 runtime inspection.
+
+Current heavy-work paths are distinct: YouTube metadata in a bounded POSIX worker
+and off-loop planner; Phase 9C YouTube acquisition in a separate owned process with
+write guards; Telegram preparation executor work drains before cleanup. Instagram
+metadata/acquisition workers enforce immutable manifest/parent identity. TikTok uses
+its native owned process group. Do not describe all downloads as legacy threads.
+
+Phase 8 pre-binding/terminal cards and EN/RU/ES presentation are implemented. Phase 9C
+holds user leases through pending, delivery and safe cleanup while global working
+slots exclude waiting choices. No durable recovery, distributed locks or analytics.
+The [Short Drama resolver design](research/TIKTOK_SHORT_DRAMA.md#s1-proposed-integration)
+is isolated offline research, not registered production code. It needs a narrow JSON
+adapter; existing metadata admission cannot accept arbitrary API URLs/queries.
+
 ## Target logical architecture
+
 Telegram -> Telegram handlers -> application/download service -> provider interface -> provider implementation -> media engine -> temporary storage.
 
 ## Runtime and deployment
@@ -18,6 +38,7 @@ bot -> private Compose network -> `telegram-bot-api:8081` -> Telegram infrastruc
 The `telegram-bot-api` service stores its working state and data in a named volume. The Compose setup uses the service DNS name `telegram-bot-api` and the internal base URL `http://telegram-bot-api:8081`; the Local Bot API endpoint is not published externally by default and should remain private unless an explicit secured deployment requires otherwise.
 
 ## Configuration and startup
+
 Environment-based settings are validated before starting the application. The Telegram token is required, excluded from the settings representation, and must never be written to logs. The package entry point is python -m social_video_downloader; it configures standard-library logging, creates an aiogram bot and dispatcher, registers the Telegram router, and starts polling. Bot session cleanup runs when polling stops.
 
 ## Telegram layer
@@ -35,7 +56,6 @@ in an owned POSIX child so write guards cannot mutate the polling process or oth
 platform threads. Native HTTP bytes, partials and current FFmpeg outputs are bounded;
 owned-group drain precedes cleanup, uncertainty retains quarantine. See
 [Phase 9C lifecycle and technical limits](PHASE9C_DOWNLOAD_PROTECTION.md).
-
 
 The aiogram router owns commands and text intake, user-facing validation responses, and result delivery. It does not contain provider-specific download logic. Membership/access control is deferred to a future monetization or business-model layer and is not part of the current implementation. The /start response describes current platform support. Text messages are validated against supported platform domains. By default, YouTube URLs are passed to the application service; Instagram and TikTok URLs receive an explicit not-connected response. Merged PR #56 adds an explicit Instagram opt-in delegating `/reel/` to the established Reel flow and `/p/` to positively inspected single-video or complete video-carousel flows. Both share one admission slot. PR #57 subsequently aligned share-link admission and was separately deployed only to bot. On 2026-10-18 the owner confirmed normal playback for one full-link single-video post and one ordered three-video silent album. This is narrow client evidence, not broad reliability or capacity validation; see [the acceptance record](TESTING.md#instagram-live-acceptance-2026-10-18).
 
@@ -56,8 +76,8 @@ primary design reference is [Phase 4 Capability Model](PHASE4_CAPABILITY_MODEL.m
 For YouTube, the provider may technically report `VIDEO_WITH_AUDIO`, `VIDEO_ONLY`,
 `AUDIO_ONLY`, and multiple quality options. The normal user-facing policy is `Видео` and
 `Аудио`; `VIDEO_ONLY` is hidden from the ordinary flow; quality selection is offered only
-for `Видео`. For future Instagram and TikTok providers, do not hard-code capabilities
-before the provider spike. If a provider/content combination only has normal video and no
+for `Видео`. For additional future providers, do not hard-code capabilities before the provider
+spike. Instagram/TikTok now have their own implemented guarded paths. If a provider/content combination only has normal video and no
 meaningful quality alternatives, Telegram should start the download directly without
 audio or quality screens.
 
@@ -95,7 +115,7 @@ or fallback send. Cancellation stays authoritative even if its final notice fail
 Metadata errors before a card exists retain standalone best-effort notification.
 See [terminal contract](INTERNATIONALIZATION.md#e4-terminal-presentation-decision).
 
-The synchronous download and media-preparation operations run in worker threads so yt-dlp and FFmpeg do not block the aiogram event loop. Before delivery, the Telegram layer probes media with ffprobe and prepares the downloaded media through this pipeline:
+YouTube acquisition now runs in the Phase 9C owned process; existing media-preparation/probe executor work is awaited through cancellation before cleanup. These boundaries keep heavy work off the aiogram event loop. Before delivery, the Telegram layer probes media with ffprobe and prepares the downloaded media through this pipeline:
 
 1. MP4 files already containing H.264 video and AAC audio pass through unchanged, without an FFmpeg re-encode.
 2. Non-MP4 files with compatible H.264/AAC streams attempt an FFmpeg stream-copy remux to MP4. The remuxed output is re-probed, and the bot uses it only when the resulting container and codecs verify as Telegram-compatible.
@@ -317,6 +337,7 @@ analytics SaaS, queue, or other analytics infrastructure exists in the current
 architecture.
 
 ## Provider layer
+
 Each provider owns URL recognition, metadata retrieval, media acquisition, and provider-specific quirks.
 
 The YouTube provider delegates extraction to yt-dlp. For YouTube JavaScript challenge
@@ -486,9 +507,11 @@ The existing MP4 admission filter is reused. Metadata-only planning does not sel
 codec preference for single-file acquisition is unchanged. Acquisition verifies actual streams.
 
 ## Media engine
+
 Responsible for download and media assembly. The first implementation uses yt-dlp and FFmpeg where appropriate.
 
 ## Evolution
+
 The initial implementation may run in one process. Queues, workers, persistent storage, and distributed deployment are introduced only when measured requirements justify them.
 
 ### Ordered carousel acquisition design decision
@@ -503,7 +526,6 @@ limits actual media bytes before writes; ffprobe will verify actual video/audio.
 All staged files belong to one isolated workspace; failure/cancellation removes the
 workspace before returning. Successful output ownership transfers to the caller only
 when the complete ordered collection is returned. No media transformation is included.
-
 
 `InstagramCarouselAcquisition.acquire(plan, output_dir)` returns a frozen
 `DownloadedCarousel` with an ordered tuple of `DownloadedCarouselVideo` (original position,
@@ -548,7 +570,6 @@ which must delete them when finished. This is caller-result atomicity, not a fil
 transaction or crash/power-loss recovery. Hard-link support on the output filesystem is
 required. Default registry, YouTube, normal single-file paths and Telegram handlers are unchanged.
 
-
 ### Silent Instagram policy and transport boundary
 
 The user explicitly approved silent MP4 videos for Reels, single-video `/p/` posts and
@@ -586,7 +607,6 @@ PR #51, including the P2 ownership correction, was independently reviewed and me
 Future Instagram callers must explicitly opt in; existing handlers/routing are unchanged.
 The separate carousel transport below opts in without activating live delivery.
 Local generated fixtures verify preparation, not real Telegram delivery or playback.
-
 
 ### Explicit offline carousel Telegram transport
 
@@ -723,7 +743,6 @@ and was separately deployed only to bot. On 2026-10-18 the owner confirmed full-
 single-post delivery/playback and all three carousel videos in one ordered, playable,
 silent album. See [the evidence limits](TESTING.md#instagram-live-acceptance-2026-10-18).
 This documentation update changes no runtime behavior, resources or configuration.
-
 
 ## Instagram Item Selection — offline follow-up
 

@@ -1,5 +1,10 @@
 # Telegram translation review (E1b)
 
+Checkpoint 2026-10-29: this is the source-copy/review matrix, not a claim of manual
+EN/ES acceptance. Phase 8 is accepted with documented limitations (merged PR #82);
+RU owner LIVE, EN/ES automated-only. Phase 9C additions retain request-pinned valid
+callbacks and sender locale for invalid callbacks. No catalog changes in D1.
+
 All rows are application UI copy. Source titles, diagnostic exceptions, IDs and URLs are not translated.
 The disabled-platform /start copy is corrected to describe YouTube only; enabled-platform branches retain the same message counts.
 No upload confirmation, retry, selection or resource-policy meaning is changed. Item numbers mean original source positions.
@@ -106,7 +111,6 @@ not-sent and never promises retry. All valid callbacks keep the request locale.
 | Request interrupted. Delivery isn't confirmed. There will be no automatic retry. | Запрос прерван. Доставка не подтверждена. Автоматического повтора не будет. | Solicitud interrumpida. La entrega no está confirmada. No habrá un reintento automático. | E4 presentation only; no media or callback-policy change. |
 | File sent. An error occurred while finishing the request; there will be no automatic retry. | Файл отправлен. При завершении запроса произошла ошибка; автоматического повтора не будет. | Archivo enviado. Se produjo un error al finalizar la solicitud; no habrá un reintento automático. | E4 presentation only; no media or callback-policy change. |
 | Instagram selection accepted. Results appear in separate messages. | Выбор для Instagram принят. Результат — отдельным сообщением. | Selección de Instagram aceptada. El resultado se envía en un mensaje aparte. | E4 presentation only; no media or callback-policy change. |
-
 
 ## E5 actionable guidance
 

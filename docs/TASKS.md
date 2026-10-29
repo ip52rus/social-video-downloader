@@ -1,6 +1,17 @@
 # Task Decomposition
 
+## Current checkpoint — 2026-10-29
+
+Baseline f74dc6c / merged PR #83; Phase 8 accepted through PR #82; Phase 9C
+**LOCAL ACCEPTED**. HOSTKEY designated sole poller after 2026-10-28 technical cutover;
+MacBook bot/API preserved stopped. D1 reads saved evidence, not production.
+See [current evidence](TESTING.md#checkpoint-2026-10-29), [operations](LOCAL_BOT_API.md#hostkey-vps-checkpoint-2026-10-28)
+and [next main stage](CHAT_HANDOFF_2026-10-29.md#28-next-development-stage).
+Historical unchecked tasks remain historical or explicitly deferred; later acceptance
+records supersede old merge/deployment gates, without erasing earlier failures.
+
 ## Phase 0 - Foundation — done
+
 - [x] Create GitHub repository.
 - [x] Establish README.
 - [x] Establish AGENTS.md.
@@ -13,6 +24,7 @@
 - [x] Add dependency management.
 
 ## Phase 1 - Downloader Core — done
+
 - [x] Define domain models.
 - [x] Define provider interface.
 - [x] Define platform-independent download modes and quality options.
@@ -26,6 +38,7 @@
 - [x] Add integration harness.
 
 ## Phase 2 - YouTube Provider — done
+
 - [x] Move the YouTube provider implementation into the provider architecture.
 - [x] Smoke-test metadata extraction and downloads with public videos.
 - [x] Validate Shorts with real downloads in all three modes.
@@ -33,6 +46,7 @@
 - [x] Validate deterministic provider error boundaries and representative format layouts.
 
 ### Recorded verification evidence
+
 - Live matrix run on 2026-10-09 for https://www.youtube.com/watch?v=dQw4w9WgXcQ: 1 passed in 140.06s.
 - The live test downloaded combined video/audio MP4, selected-quality video-only, and audio-only outputs in two distinct containers. ffprobe verified stream composition, codecs, dimensions, sample rate, and expected containers.
 - Shorts were tested in all three modes; additional successful Shorts smoke tests were recorded for VF_MOfnz7OY and osrN3A_Rdiw.
@@ -42,6 +56,7 @@
 The Phase 2 gate is satisfied by the combined live matrix and deterministic failure-boundary coverage. Scope limitation: the live matrix was run against one regular public video, not every YouTube format or platform condition.
 
 ## Phase 3 - Telegram Functional MVP — done
+
 - [x] Add validated environment-based application settings and deterministic tests.
 - [x] Configure standard-library application logging and add an aiogram bot/dispatcher polling entry point.
 - [x] Test logging configuration and bot/dispatcher construction without Telegram API calls.
@@ -430,7 +445,6 @@ See [the accepted scope](PHASE5_INSTAGRAM_REELS.md) for the evidence boundary.
 - PR #49 was independently reviewed and merged; the subsequent three-video live smoke
   passed. Larger collections and Telegram integration/validation remain open.
 
-
 ### Silent Instagram video acquisition
 
 - [x] Record approved optional-audio policy for Reels, single-video posts and carousel VIDEO entries; keep normal route/enum and all direct-video safety guards.
@@ -496,7 +510,9 @@ are unchanged. No live external-platform or Telegram calls.
 - [x] Independently review PR #56 at `219e1bfcc134e80be24bb8565f6dfc18dae77c21` (PASS), merge at `20d14441a2b7ea906ed2a0abc83679d25d9f2d32`, and separately deploy only bot. Full offline suite/CI: 1397 passed, 1 skipped. Image source identity and polling passed; Local Bot API was unchanged. This closes technical integration/deployment only, not real `/p/` delivery or album playback.
 - [x] Confirm one previously rejected full-link carousel delivers all three videos in one ordered, playable album with silence preserved (owner report, 2026-10-18). No link to the earlier measured acquisition fixture is inferred.
 - [ ] Verify live `/p/` and album cleanup telemetry separately; the owner acceptance report did not include it.
-- [ ] Reassess initial 10-video / 25 MiB-per-file / 100 MiB-total limits and source-query policy using test evidence before expansion.
+- [x] Replace historical 25 MiB/file and 100 MiB aggregate Instagram gates in Phase 9C
+  with configurable resource/endpoint budgets; ten-video ceiling retained. Further
+  count/source-policy expansion and near-2 GB validation are not accepted.
 - Review correction P1: use source-confirmed single-video metadata and the same cached
   snapshot; BLOCKED never permits fallback. Domain/download contracts and media policy stay unchanged.
 - Review correction P2: initial inspection shares cancellation/deadline with later stages;
@@ -582,6 +598,7 @@ Reel MVP verification: 32 new cases; focused 142 passed; full 1234 passed, 1 ski
 Ruff lint/format, diff, documentation and security/scope review PASS; no live requests.
 
 ## Phase 6 - TikTok Provider
+
 - [x] Inspect tt-dlp `08a1f42` sources/tests and MIT license; retain attribution.
 - [x] Prepare separate native embed resolver/acquisition CLI with explicit source
   identity, constrained video-host/DNS/TLS/redirect policy, operation-local cookies,
@@ -750,7 +767,9 @@ requires exact-head CI and a separate merge decision; it does not redeploy the b
   Exact-head GitHub CI is a publication gate, reported on the Draft PR.
 - [x] Record PR #81 merge at b55a019, post-merge CI #40231655683 SUCCESS and
   separately authorized bot-only deployment. Diagnostics remain enabled.
-- [ ] Diagnose the five historical LIVE failures: original internal codes remain
+- [ ] Preserve the unresolved exact codes of the original five historical failures; later
+  three-request diagnostics/network-exit observations do not reconstruct those codes.
+  Original internal codes remain
   UNKNOWN. Later three missing-state refusals, one metadata-only UNKNOWN result and
   the owner-confirmed network-dependent success are recorded in the
   [chronology](TESTING.md#subsequent-deployment-and-live-observations). No parser or
@@ -762,6 +781,7 @@ This diagnostic change does not itself close acceptance; the separate Phase 8
 owner decision is recorded below. Phase 9 reliability remains OPEN.
 
 ## Phase 7 - Additional Social Platforms
+
 - [ ] Select candidate platforms based on user demand, feasibility, legal/platform restrictions, extraction reliability, and maintenance burden.
 - [ ] Run a technical spike for each candidate platform.
 - [ ] Make an explicit Go/No-Go decision for each candidate before implementation.
@@ -780,7 +800,7 @@ pre-binding and minimal request cards merged in PR #78. E4 merged in PR #79 at
 separately deployed; post-merge CI #40184267688 SUCCESS. The owner decision on
 2026-10-26 is **PHASE 8 MVP — ACCEPTED WITH DOCUMENTED LIMITATIONS**.
 See [final acceptance](PHASE8_UX_ACCEPTANCE.md#final-mvp-owner-acceptance--2026-10-26).
-Phase 9 remains OPEN and is not started by this documentation change.
+Phase 9 remains OPEN; the historical Phase 8 acceptance did not authorize its next work.
 
 - [x] Implement and verify inactive E1a: safe EN/RU/ES resolver, ContextVar middleware, compiled package
   catalogs and backward-compatible presentation locale in pending records. Telegram
@@ -843,13 +863,12 @@ Phase 9 remains OPEN and is not started by this documentation change.
   diagnostics. Network-egress dependence is observed, exact cause is not proven.
 - [x] Explicitly accept/defer the bounded
   [remaining manual matrix](PHASE8_UX_ACCEPTANCE.md#remaining-manual-acceptance-matrix)
-  as MVP limitations: EN/ES LIVE, future VPS TikTok egress, other carousel/client
+  as MVP limitations at that date: EN/ES LIVE, then-untested VPS TikTok egress, other carousel/client
   combinations, load/recovery and stale post-restart cards. Do not repeat confirmed
   journeys without a concrete regression or relabel untested cases as LIVE PASS.
 - [ ] Separately decide whether durable ownership/message binding for visual cleanup
   after restart is required. No persistence, recovery or background cleanup is
   implemented; stale callbacks are safely refused without another download.
-
 
 The unchecked UX ideas below remain deferred backlog beyond the owner-accepted
 MVP. They do not block its scoped acceptance or imply universal client coverage;
@@ -879,6 +898,7 @@ Status: OPEN; not closed by Phase 4 functional acceptance.
 Status: **LOCAL ACCEPTED**. PR #83 is merged; local deployment passed on
 2026-10-26 and the owner reported **5/5 LIVE PASS** on 2026-10-28.
 General Phase 9 stays **OPEN**.
+Later HOSTKEY migration remains a separate technical event.
 
 - [x] Replace Telegram Instagram's historical 25 MiB/file gates with shared validated
   file/request/workspace/free-disk budgets and endpoint-aware upload ceiling; retain
@@ -901,13 +921,16 @@ General Phase 9 stays **OPEN**.
   and overlapping publication/callback contexts; no automatic recovery/retry.
 - [x] Merge [PR #83](https://github.com/ip52rus/social-video-downloader/pull/83)
   with its review corrections as `f74dc6c933012b809d4e6dc33ed3f3bdadc39d34`;
-  implementation exact-head CI #40327275768 and post-merge CI #40333460016 SUCCESS.
+  implementation exact-head [CI #40327275768](https://github.com/ip52rus/social-video-downloader/actions/runs/40327275768)
+  and post-merge CI #40333460016 SUCCESS.
 - [x] Complete separately authorized bot-only local deployment on 2026-10-26:
   TECHNICAL PASS; Local Bot API/configuration/volume preserved, rollback image
   prepared but rollback not executed.
 - [x] Record owner LIVE acceptance on 2026-10-28: 5/5 PASS for rejection during
   YouTube choice/download, waiting-choice `/cancel`, YouTube delivery/playback
   and delivery/playback of one Instagram video above 25 MiB.
+- [x] Record HOSTKEY cutover TECHNICAL PASS 2026-10-28, one VPS poller, local bot/API
+  retained stopped; do not label it a second full platform/load/recovery acceptance.
 
 See [design, defaults and limits](PHASE9C_DOWNLOAD_PROTECTION.md) and
 [offline verification](TESTING.md#phase-9c-shared-limits-and-admission-offline),
@@ -916,7 +939,6 @@ See [design, defaults and limits](PHASE9C_DOWNLOAD_PROTECTION.md) and
 Historical smaller-file and platform LIVE evidence below is unchanged. Local
 acceptance does not establish near-2 GB delivery, arbitrary-downloader/RSS isolation,
 load/failure-recovery readiness or universal platform reliability.
-
 
 - [x] Phase 9A read-only baseline: inspect current main/worktrees and unchanged running
   Docker services, restart/OOM, one-shot CPU/RAM/disk and logging-driver settings.
@@ -946,7 +968,8 @@ load/failure-recovery readiness or universal platform reliability.
 - [x] Merge cancellation safety as [PR #72](https://github.com/ip52rus/social-video-downloader/pull/72);
   post-merge main `01ffe0e` CI #39845155273 SUCCESS. This is source/CI evidence,
   not deployment evidence by itself; PR #72 is included in the later Phase 9B rollout
-  recorded below. A permanently hung legacy download thread still owns its workspace.
+  recorded below. That historical legacy-thread limit predates Phase 9C owned acquisition; preparation
+  executor work still must drain before cleanup.
 - [x] Phase 9B metadata subprocess: implement and locally verify one admitted POSIX
   child, bounded private snapshot IPC, synchronized cache, off-loop planning and
   process-group cleanup/quarantine. See
@@ -987,7 +1010,7 @@ load/failure-recovery readiness or universal platform reliability.
 - [ ] Observe resource usage and document operational limits.
 - [ ] Verify disk and temporary-file cleanup behavior under failures.
 - [ ] Assess concurrency and load.
-- [ ] Add rate limits only when justified.
+- [x] Add justified minimal link cooldown and repeated Busy notice throttling in Phase 9C; further tuning requires evidence.
 - [ ] Introduce queues or workers only if measured workload requires them.
 - [ ] Add monitoring and observability when deployment needs are clear.
 - [ ] Add deployment automation where justified.
@@ -997,6 +1020,7 @@ load/failure-recovery readiness or universal platform reliability.
 For media above Telegram delivery limits, keep only a future design direction for now: possible external temporary object storage with download-link fallback. Do not implement S3, R2, or any storage provider during documentation planning, and do not claim support for files above 2 GB.
 
 ## Phase 10 - Monetization and Access Control
+
 - [ ] Investigate Telegram community membership gating as a future access option.
 - [ ] Design advertising gateway options.
 - [ ] Evaluate optional paid/free models if desired later.
@@ -1006,3 +1030,34 @@ For media above Telegram delivery limits, keep only a future design direction fo
 - [ ] Implement access gating only after a product decision and only after the downloader product is useful enough to monetize.
 
 Membership is not required during core product development.
+
+## Deferred research — TikTok Short Drama
+
+- [x] Preserve prior anonymous/API/OSS/browser experiments and negative evidence.
+- [x] Complete S1 offline architecture/normalizer assessment: 86 tests, Ruff PASS, HTTP 0.
+- [x] Complete S2 offline request comparison: 15 checks, Ruff PASS, HTTP 0;
+  next anonymous LIVE NO-GO, mandatory account authorization UNKNOWN.
+- [x] Preserve owner desktop Chrome populated playback evidence without sensitive values.
+- [ ] Reopen only after main priorities/new proven permitted mechanism and owner decision.
+  No active monitoring, new downloader, repeated GET, auth-cookie integration or production
+  support is authorized. [Canonical research](research/TIKTOK_SHORT_DRAMA.md).
+
+## D1 documentation checkpoint
+
+- [x] Reconcile code/Git/CI, Phase 8, Phase 9B/9C and dated HOSTKEY cutover evidence.
+- [x] Preserve research conclusions in version-controlled text independent of local folders.
+- [x] Add agent reading order, scope/security gates and self-contained chat handoff.
+- [x] Verify docs-only scope, links, privacy and unchanged main/19 existing registrations.
+- [ ] Independent review/owner acceptance of D1 Draft PR; no merge/deployment implied.
+  Exact-head CI is reported on the PR; it does not authorize the next stage.
+
+### D1.2 — local closeout and handoff reconciliation
+
+- [x] Recheck exact PR heads/base/CI and existing main/worktree integrity before changes.
+- [x] Merge docs-only PR #84 as `a0d57f253c74aaf563efb456abdf4ae9854eee2b` after explicit authorization.
+- [x] Merge that main into the existing #85 branch without rebase/force-push; reconcile
+  four documents, retain implementation CI #40327275768, single local evidence ledger,
+  HOSTKEY context, Short Drama DEFERRED and complete handoff/agent rules.
+- [x] Recheck Markdown/anchors/privacy/diff/docs-only scope and unchanged original checkout.
+- [ ] Final independent review/owner decision for #85; exact-head CI is required and
+  reported on the PR. No #85 merge, deployment, LIVE or Phase 9 work is authorized here.

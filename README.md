@@ -4,6 +4,19 @@ Free Telegram bot-service for downloading media from popular social platforms.
 
 ## Project status
 
+Checkpoint **2026-10-29**: main `f74dc6c933012b809d4e6dc33ed3f3bdadc39d34`
+(PR #83 merged; post-merge CI #40333460016 SUCCESS). Phase 8 multilingual MVP is
+**ACCEPTED WITH DOCUMENTED LIMITATIONS**; Phase 9C is **LOCAL ACCEPTED** after owner
+5/5 LIVE acceptance. **Phase 9 reliability remains OPEN.** HOSTKEY is the designated
+sole production poller; MacBook containers are preserved stopped for controlled
+rollback. The dated migration report is not a fresh server-health check.
+
+Start with [project scope](docs/PROJECT.md), [current operations](docs/LOCAL_BOT_API.md#hostkey-vps-checkpoint-2026-10-28)
+and [new-chat handoff](docs/CHAT_HANDOFF_2026-10-29.md). TikTok Short Drama is
+[deferred research](docs/research/TIKTOK_SHORT_DRAMA.md), not a supported URL route.
+
+### Earlier functional evidence (historical)
+
 The downloader core and YouTube provider are implemented, and the YouTube validation gate has passed within the documented test scope. Phase 3 (Telegram Functional MVP) is complete: the bot accepts supported YouTube URLs, downloads YouTube media, prepares Telegram-compatible video when necessary, and sends it as a video message. Automated tests cover deterministic download orchestration, media preparation, error handling, and cleanup. A real Telegram flow through the Local Bot API Server has been verified with a short video and an MP4 file of approximately 414.7 MB; the large file arrived in Telegram and was confirmed to open and play. Telegram documents a Local Bot API Server upload ceiling of 2000 MB, but this project does not claim validated 2 GB support. The current evidence is limited to the tested scenario, not all file sizes, codecs, clients, or deployment conditions. See [the changelog](CHANGELOG.md) and [testing strategy](docs/TESTING.md) for the recorded evidence and its limits. By default, Instagram and TikTok URLs remain recognition-only in the bot. Instagram remains opt-in: real Reel delivery and, on 2026-10-18 after PR #57, one full-link single-video `/p/` and one ordered three-video silent Telegram album were owner-confirmed with normal playback. This limited acceptance does not establish broad reliability; the downloader registry remains YouTube-only by default. See [Phase 5 scope](docs/PHASE5_INSTAGRAM_REELS.md).
 
 Phase 4 functional scope is **ACCEPTED (2026-10-15)**: playlist-context watch links,
@@ -11,13 +24,19 @@ Video/Audio choices, recorded landscape/portrait quality selections, M4A playbac
 duration, callback protection and distinct-URL isolation were validated in a real
 Telegram client. See [the evidence and limits](docs/TESTING.md#phase-4-functional-acceptance-2026-10-15).
 
-The project is not production-ready. Remaining UX polish is tracked in Phase 8;
-intermittent YouTube HTTP 403, metadata/event-loop blocking, network/restart recovery
-and monitoring remain open in Phase 9. Analytics and additional platform providers are
+Functional MVP acceptance is not general production reliability. Phase 8 MVP is
+accepted; any broader polish is deferred backlog. Phase 9B fixed initial metadata/
+planning event-loop blocking within its tested contract; actual LIVE concurrency
+responsiveness remains INCONCLUSIVE. Intermittent YouTube HTTP 403, network/restart
+recovery, load and monitoring remain open in Phase 9. Analytics and additional platform providers are
 not implied by functional acceptance. Access restrictions and monetization remain
 deferred. See [the roadmap](docs/ROADMAP.md) and [task checklist](docs/TASKS.md).
 
 ## Local startup
+
+Do not start this command with the production token while HOSTKEY polls. Use a
+separately authorized test bot for development; the retained MacBook stack is rollback,
+not a second active deployment.
 
 Use Python 3.13 and uv. Install dependencies with uv sync, set TELEGRAM_BOT_TOKEN in your environment, then run:
 

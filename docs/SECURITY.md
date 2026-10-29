@@ -1,6 +1,25 @@
 # Security Policy
 
+## Dated deployment and research boundaries
+
+At the 2026-10-29 checkpoint, HOSTKEY is the designated sole poller; MacBook rollback
+containers must remain stopped. See [operations](LOCAL_BOT_API.md#hostkey-vps-checkpoint-2026-10-28).
+Do not start a second poller, inspect production or change server config during docs
+work. Keep Local API internal: source Compose has expose, no published ports; UFW
+alone does not protect a Docker-published API port. Preserve API volumes and backups.
+
+Credentials belong only in protected environment/secret storage, not Git, logs, PRs,
+HAR, diagnostics or chat handoffs. Query values such as msToken, fingerprint/device
+identifiers and X-* signatures previously pasted in chat must not be recovered,
+reused or copied as examples. No browser-profile/cookie export or signed CDN URLs.
+Short Drama [research](research/TIKTOK_SHORT_DRAMA.md) preserves field names and
+non-secret observations only; known public target content IDs are evidence references,
+not user/account identifiers. OSS licensing does not grant platform/content rights.
+Keep Phase 9C URL/DNS/IP, stream-byte, disk, ownership and quarantine safeguards;
+uncertain delivery never authorizes another download/upload.
+
 ## Secrets
+
 Secrets must be supplied through environment variables or an approved secret manager. Never commit tokens, API keys, passwords, private keys, session files, or cookies.
 
 Telegram secrets and credentials include the bot token, `TELEGRAM_API_ID`, and
@@ -11,9 +30,11 @@ interpolation, not hardcoded values.
 contains only variable names and empty or non-secret example values.
 
 ## Personal data
+
 Do not commit user IDs, email addresses, phone numbers, private usernames, downloaded media, logs containing personal data, or local paths exposing personal information.
 
 ## Runtime data
+
 Downloaded media, temporary files, logs, and local databases are runtime data and must not be version-controlled.
 
 Telegram Local Bot API Server working data, named volumes, downloaded media,
@@ -21,6 +42,7 @@ temporary download directories, generated audio/video artifacts, and Bot API run
 state are runtime data and must not be committed.
 
 ## Telegram data
+
 Treat Telegram identifiers, messages, usernames, submitted URLs, and media metadata as potentially sensitive runtime data. Do not place real user data into fixtures or documentation.
 
 Keep the Local Bot API endpoint private by default. Do not publish an unauthenticated
@@ -34,6 +56,7 @@ The Docker build context must not contain secrets. `.dockerignore` must exclude 
 runtime data while allowing `.env.example` to document required variables.
 
 ## Security gate
+
 Before each release inspect changed files, review the Git diff, search for credential-like strings, confirm ignored runtime files, review dependency changes, and verify logs do not expose secrets or unnecessary personal data.
 
 ## Isolated native TikTok experiment
@@ -134,7 +157,6 @@ are runtime data, not fixtures or logs; raw yt-dlp messages are suppressed. Acqu
 uses an isolated temporary workspace, a fixed internal filename and generated safe output
 names. No titles or source IDs are interpolated into output paths; symlinks and extra
 outputs are rejected. This provider is not registered in the default bot yet.
-
 
 ## Instagram Item Selection
 
