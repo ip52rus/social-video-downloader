@@ -1,5 +1,14 @@
 # Local Telegram Bot API Server
 
+## P9-R2d deployment checkpoint — 2026-10-30
+
+HOSTKEY bot-only deployment of `742bc105`: **TECHNICAL PASS** at 07:41 UTC.
+Effective `CONCURRENCY_DIAGNOSTICS=false`; API identity/state, configuration and
+resource limits preserved. **LIVE concurrency responsiveness: INCONCLUSIVE**.
+No media downloads or Telegram LIVE scenarios were performed for deployment.
+[Evidence and limits](P9_R2D_DEPLOYMENT.md). This dated record supersedes the older
+bot image checkpoint below. The docs-only closeout performs no runtime inspection.
+
 ## HOSTKEY VPS checkpoint 2026-10-28
 
 **Canonical operations record, reviewed for D1 on 2026-10-29.** Source release

@@ -1,5 +1,15 @@
 # Task Decomposition
 
+## P9-R2d deployment checkpoint — 2026-10-30
+
+HOSTKEY bot-only deployment of `742bc105e923500fc0b22844bec2809c0c8fbc45`:
+**TECHNICAL PASS**, checked at 07:41 UTC. Old poller exited before the new startup;
+API identity/state, environment and resource limits were preserved.
+`CONCURRENCY_DIAGNOSTICS=false`; **LIVE concurrency responsiveness: INCONCLUSIVE**.
+No media downloads or Telegram LIVE scenarios were performed for deployment.
+[Evidence, rollback tag and limits](P9_R2D_DEPLOYMENT.md). Documentation closeout
+publishes a docs-only Draft PR for review; no further deployment or LIVE is implied.
+
 ## Current checkpoint — 2026-10-29
 
 Baseline f74dc6c / merged PR #83; Phase 8 accepted through PR #82; Phase 9C
@@ -1072,7 +1082,11 @@ Membership is not required during core product development.
 - [x] Address PR #86 overlap-gate review: require FAIL for missing extraction boundaries
   or unproved synthetic overlap; retain INCONCLUSIVE for incomplete real observations.
 - Exact-head CI is required on the submitted PR HEAD and reported in its checks; no LIVE result is inferred.
-- [ ] Obtain independent review; merge/deployment/LIVE remain separately authorized gates.
+- [x] PR #86 merged as `742bc105e923500fc0b22844bec2809c0c8fbc45`;
+  post-merge CI #40952269982 SUCCESS, rechecked during P9-R2d documentation closeout.
+- [x] Separately authorized P9-R2d HOSTKEY bot-only deployment: TECHNICAL PASS;
+  diagnostics remains false. See [deployment evidence](P9_R2D_DEPLOYMENT.md).
+- [ ] Independent review of the P9-R2d documentation Draft PR; merge is not authorized.
 - [ ] P9-R2 LIVE responsiveness remains INCONCLUSIVE; do not close this gate from synthetic tests.
 
 See [contract and measurement limits](DEVELOPMENT.md#p9-r1b-opt-in-concurrency-diagnostics)

@@ -1,5 +1,15 @@
 # Roadmap
 
+## P9-R2d deployment checkpoint — 2026-10-30
+
+HOSTKEY bot-only deployment of `742bc105e923500fc0b22844bec2809c0c8fbc45`:
+**TECHNICAL PASS**, checked at 07:41 UTC. Old poller exited before the new startup;
+API identity/state, environment and resource limits were preserved.
+`CONCURRENCY_DIAGNOSTICS=false`; **LIVE concurrency responsiveness: INCONCLUSIVE**.
+No media downloads or Telegram LIVE scenarios were performed for deployment.
+[Evidence, rollback tag and limits](P9_R2D_DEPLOYMENT.md). Documentation closeout
+publishes a docs-only Draft PR for review; no further deployment or LIVE is implied.
+
 ## Current checkpoint — 2026-10-29
 
 Source main: `f74dc6c933012b809d4e6dc33ed3f3bdadc39d34`, merged PR #83.
@@ -515,7 +525,6 @@ P9-R1b instrumentation is **OFFLINE VERIFIED**, opt-in and default-off, without 
 Phase 9C acceptance and the remaining LIVE gate: callback responsiveness is still
 INCONCLUSIVE. Review and exact-head CI are separate from authorization to enable it.
 See [measurement limits](DEVELOPMENT.md#p9-r1b-opt-in-concurrency-diagnostics).
-
 
 Complete the operational and reliability work that is intentionally not part of the functional MVP gate.
 

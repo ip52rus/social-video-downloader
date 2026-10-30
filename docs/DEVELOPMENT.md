@@ -1,5 +1,14 @@
 # Development Workflow
 
+## P9-R2d deployment checkpoint — 2026-10-30
+
+HOSTKEY bot-only deployment of `742bc105`: **TECHNICAL PASS** at 07:41 UTC.
+Effective `CONCURRENCY_DIAGNOSTICS=false`; API identity/state, configuration and
+resource limits preserved. **LIVE concurrency responsiveness: INCONCLUSIVE**.
+No media downloads or Telegram LIVE scenarios were performed for deployment.
+[Evidence and limits](P9_R2D_DEPLOYMENT.md). This dated record supersedes the older
+bot image checkpoint below. The docs-only closeout performs no runtime inspection.
+
 ## Current entry point for agents
 
 Read [AGENTS.md](../AGENTS.md) and the [2026-10-29 handoff](CHAT_HANDOFF_2026-10-29.md)
@@ -503,6 +512,8 @@ measurements UNKNOWN. Existing logger level can also hide INFO diagnostics. Boun
 sampling/filtering avoids heavy synchronous logging in callback/extraction paths;
 production overhead and client/network latency are not claimed from offline checks.
 
-P9-R2 still needs independent review, approved deployment/configuration and production
-preflight, an owner-approved latency criterion/budget, and separate LIVE authorization.
-No runtime approval is conveyed by the offline proof.
+P9-R1b was subsequently merged and deployed in P9-R2d with diagnostics disabled;
+see the [dated deployment record](P9_R2D_DEPLOYMENT.md). P9-R2 LIVE still needs an
+owner-approved latency criterion/budget, separate authorization for diagnostics
+activation/configuration and LIVE, and a fresh preflight for that authorized stage.
+No further runtime approval is conveyed by offline proof or technical deployment.
