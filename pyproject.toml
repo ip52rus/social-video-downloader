@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "aiogram[i18n]>=3.28,<4",
-    "yt-dlp[default]>=2026.8,<2027",
+    "yt-dlp[default]==2026.10.26",
 ]
 
 [dependency-groups]

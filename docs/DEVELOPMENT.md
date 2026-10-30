@@ -1,5 +1,39 @@
 # Development Workflow
 
+## yt-dlp stable upgrade — 2026-10-30
+
+Owner-authorized stable target `2026.10.26`; baseline main `f804c2e` (PR #88
+merged, post-merge CI #41058700939 SUCCESS). P9-R3a is OFFLINE VERIFIED;
+the saved P9-R3b technical deployment checkpoint is 13:06:40 UTC,
+source `f804c2e`, diagnostics=false. This stage does not inspect or modify HOSTKEY.
+
+A/B used exactly one metadata extraction per version: both returned matching
+identity, then failed existing snapshot validation. Serialization, IPC and choice
+planning were NOT REACHED; the exact refusal predicate remains UNKNOWN. The
+reported video is not demonstrated fixed. Library compatibility is evaluated
+independently. P9-R2 remains INCONCLUSIVE; Phase 9 remains OPEN.
+[Detailed evidence, dependency diff and release limits](YTDLP_STABLE_UPGRADE.md).
+
+## yt-dlp stable maintenance policy
+
+- Check official stable releases and security advisories at least weekly and before
+  a planned release; monitoring alone never changes a running installation.
+- Create a focused permanent worktree, choose an explicit reviewed stable version,
+  pin it and resolve only necessary dependency/security changes. Inspect the exact
+  lock diff; do not upgrade the whole environment or introduce access workarounds.
+- Require metadata child/IPC/cache/format/limits/cancellation/cleanup/quarantine,
+  upload ownership/no-resend/admission and Instagram/TikTok regressions, full offline
+  tests, package/import checks, Ruff, privacy and Markdown checks.
+- Publish a Draft PR; verify exact-head CI. Merge and production deployment each
+  require separate owner authorization. External metadata/download/Telegram LIVE
+  checks require their own explicit bounded scope.
+- Build from clean approved source and frozen lock; preserve the actual previous
+  Docker image/configuration for controlled bot-only rollback. Verify built-image
+  dependencies, source and catalogs before replacement. Never self-update yt-dlp
+  or resolve/install packages automatically inside the running container.
+- Rollback only after confirmed poller/worker termination and safe ownership;
+  preserve Local Bot API state and never retry uncertain delivery automatically.
+
 ## P9-R2 evidence closeout and P9-R3a — 2026-10-30
 
 P9-R1b is **MERGED / OFFLINE VERIFIED**, deployed as source `742bc105`.

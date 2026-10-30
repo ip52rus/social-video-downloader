@@ -1,5 +1,26 @@
 # Task Decomposition
 
+## yt-dlp stable upgrade — 2026-10-30 (offline verified)
+
+Owner-authorized target is `2026.10.26`; GitHub main is `f804c2e` (PR #88
+merged; post-merge CI #41058700939 SUCCESS). The saved P9-R3b checkpoint at
+13:06:40 UTC is **TECHNICAL PASS**, diagnostics=false. This stage performs no
+HOSTKEY inspection, deployment or Telegram LIVE. P9-R2 remains INCONCLUSIVE;
+Phase 9 remains OPEN.
+
+- [x] Verify baseline, latest official stable and preserve main/historical worktrees.
+- [x] Resolve only yt-dlp, required certifi and the upstream Brotli security patch.
+- [x] Complete exactly one isolated metadata extraction per old/new version; both
+  returned data, then failed snapshot validation (precise predicate UNKNOWN).
+- [x] Complete offline/quality gates: 304 focused + 4 compatibility checks; full
+  suite 3006 passed, 1 opt-in LIVE skip; wheel/frozen install, Ruff/privacy/links PASS.
+- [x] Synchronize evidence and the stable maintenance policy.
+- [ ] Independent review; exact-head CI is recorded on the Draft PR after publication.
+- [ ] Separately authorize any merge/deployment or further metadata investigation.
+
+Dependency compatibility is **OFFLINE VERIFIED**; the video issue is not demonstrated
+fixed. [A/B, package evidence and release limits](YTDLP_STABLE_UPGRADE.md).
+
 ## P9-R2 evidence closeout and P9-R3a — 2026-10-30
 
 P9-R1b is **MERGED / OFFLINE VERIFIED**, deployed as source `742bc105`.
