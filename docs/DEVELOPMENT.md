@@ -1,5 +1,39 @@
 # Development Workflow
 
+## P9-R2 evidence closeout and P9-R3a — 2026-10-30
+
+P9-R1b is **MERGED / OFFLINE VERIFIED**, deployed as source `742bc105`.
+P9-R2 experimental series is **CLOSED / INCONCLUSIVE**; LIVE responsiveness
+acceptance remains **OPEN / INCONCLUSIVE**. Phase 9 remains **OPEN**.
+[Evidence and limits](TESTING.md#p9-r2-live-evidence-closeout--2026-10-30).
+
+P9-R3a includes offline upload-transport tests, fixtures/documentation and the
+separately owner-authorized minimal upload ownership fix. Coverage is
+**OFFLINE VERIFIED**: 30 focused checks and 606 related regressions passed. The original
+partial-upload FAIL is preserved as historical evidence and now passes with the
+owned reader guard. SDK/session/multipart, delivery classification and quarantine
+policy are unchanged.
+[Coverage and limits](TESTING.md#p9-r3a-offline-upload-transport--offline-verified).
+Independent review and exact-head CI remain separate gates. No merge, deployment
+or LIVE recovery acceptance is implied.
+
+### P9-R3a upload ownership fix — offline verified
+
+Root cause in the locked SDK: aiogram 3.31.0 passes FSInputFile.read() to aiohttp
+3.14.4 AsyncIterablePayload. Interrupted write_with_length() does not explicitly
+aclose that iterator; the payload marks itself autoclose, while the async generator
+can still own an aiofiles handle. Handler return was not proof of reader closure.
+
+The approved fix keeps the existing SDK/session/multipart and streams the same
+FSInputFile generator through a request-owned iterator. One shielded anext task
+tracks the current read; close drains that task and explicitly closes the source
+before workspace cleanup. Repeated cancellation cannot interrupt this drain.
+Unconfirmed close raises DownloadCleanupError through existing quarantine handling.
+This is a local resource-ownership boundary, not a new transport, queue or retry.
+The 30 focused cases and 606 related regressions passed; the earlier BLOCKED
+evidence remains historical. No SDK internals, artificial delay, forced GC or
+whole-file buffering is used by the production fix.
+
 ## P9-R2d deployment checkpoint — 2026-10-30
 
 HOSTKEY bot-only deployment of `742bc105`: **TECHNICAL PASS** at 07:41 UTC.
@@ -513,7 +547,9 @@ sampling/filtering avoids heavy synchronous logging in callback/extraction paths
 production overhead and client/network latency are not claimed from offline checks.
 
 P9-R1b was subsequently merged and deployed in P9-R2d with diagnostics disabled;
-see the [dated deployment record](P9_R2D_DEPLOYMENT.md). P9-R2 LIVE still needs an
-owner-approved latency criterion/budget, separate authorization for diagnostics
-activation/configuration and LIVE, and a fresh preflight for that authorized stage.
+see the [dated deployment record](P9_R2D_DEPLOYMENT.md). Two separately authorized
+P9-R2 LIVE windows completed with preregistered criteria
+and budgets; both were INCONCLUSIVE. The experimental series is closed. Another
+LIVE stage requires a new reproducible protocol, explicit authorization and fresh
+preflight; the completed authorizations do not permit automatic repeats.
 No further runtime approval is conveyed by offline proof or technical deployment.

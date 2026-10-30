@@ -26,6 +26,19 @@ callback arrival; child extraction intervals arrive retrospectively. See
 [measurement contract](DEVELOPMENT.md#p9-r1b-opt-in-concurrency-diagnostics).
 LIVE responsiveness remains INCONCLUSIVE; no production change is implied.
 
+## YouTube upload reader ownership — P9-R3a
+
+YouTube Video/Audio uploads use a request-owned FSInputFile subtype with the same
+SDK AiohttpSession and streaming multipart. It retains the original file generator
+and one current source-read task, shielding that read from the SDK writer's
+cancellation. Before the enclosing workspace can exit, an owned close task drains
+pending I/O and explicitly closes the source generator. Repeated cancellation
+cannot bypass that drain. Unconfirmed closure raises DownloadCleanupError through
+existing workspace retention and admission quarantine; it cannot release capacity.
+Delivery evidence is recorded before cleanup, preserving DELIVERED versus
+UNCERTAIN even when close fails. No retry queue or durable recovery is introduced.
+See [offline evidence](TESTING.md#p9-r3a-offline-upload-transport--offline-verified).
+
 ## Target logical architecture
 
 Telegram -> Telegram handlers -> application/download service -> provider interface -> provider implementation -> media engine -> temporary storage.

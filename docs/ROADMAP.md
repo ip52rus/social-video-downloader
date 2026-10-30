@@ -1,5 +1,22 @@
 # Roadmap
 
+## P9-R2 evidence closeout and P9-R3a — 2026-10-30
+
+P9-R1b is **MERGED / OFFLINE VERIFIED**, deployed as source `742bc105`.
+P9-R2 experimental series is **CLOSED / INCONCLUSIVE**; LIVE responsiveness
+acceptance remains **OPEN / INCONCLUSIVE**. Phase 9 remains **OPEN**.
+[Evidence and limits](TESTING.md#p9-r2-live-evidence-closeout--2026-10-30).
+
+P9-R3a includes offline upload-transport tests, fixtures/documentation and the
+separately owner-authorized minimal upload ownership fix. Coverage is
+**OFFLINE VERIFIED**: 30 focused checks and 606 related regressions passed. The original
+partial-upload FAIL is preserved as historical evidence and now passes with the
+owned reader guard. SDK/session/multipart, delivery classification and quarantine
+policy are unchanged.
+[Coverage and limits](TESTING.md#p9-r3a-offline-upload-transport--offline-verified).
+Independent review and exact-head CI remain separate gates. No merge, deployment
+or LIVE recovery acceptance is implied.
+
 ## P9-R2d deployment checkpoint — 2026-10-30
 
 HOSTKEY bot-only deployment of `742bc105e923500fc0b22844bec2809c0c8fbc45`:
@@ -8,7 +25,7 @@ API identity/state, environment and resource limits were preserved.
 `CONCURRENCY_DIAGNOSTICS=false`; **LIVE concurrency responsiveness: INCONCLUSIVE**.
 No media downloads or Telegram LIVE scenarios were performed for deployment.
 [Evidence, rollback tag and limits](P9_R2D_DEPLOYMENT.md). Documentation closeout
-publishes a docs-only Draft PR for review; no further deployment or LIVE is implied.
+was merged in PR #87; later separately authorized experiments are recorded above.
 
 ## Current checkpoint — 2026-10-29
 
@@ -521,7 +538,8 @@ Neither localization nor Phase 9B's narrow smoke closes Phase 9 reliability.
 
 ## Phase 9 - Production Reliability
 
-P9-R1b instrumentation is **OFFLINE VERIFIED**, opt-in and default-off, without deployment. It preserves
+P9-R1b instrumentation is **MERGED / OFFLINE VERIFIED**, deployed with diagnostics
+disabled by default. It preserves
 Phase 9C acceptance and the remaining LIVE gate: callback responsiveness is still
 INCONCLUSIVE. Review and exact-head CI are separate from authorization to enable it.
 See [measurement limits](DEVELOPMENT.md#p9-r1b-opt-in-concurrency-diagnostics).
