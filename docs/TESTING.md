@@ -108,8 +108,14 @@ typed private cleanup errors and refusal to reopen an uncertain file owner.
 
 Focused verification: **30 passed**. Related handlers, terminal UX,
 admission, cancellation, operation logging, logging filters and localization:
-**606 passed in 19.50 s**. Ruff/diff/privacy and internal Markdown links are checked
-before publication. Exact-head full CI is recorded on the Draft PR. These are
+**606 passed in 19.50 s**. The full local suite using the CI entry point
+`uv run --offline pytest -q --tb=short` passed **3002 tests, 1 skipped** in 449.86 s.
+The skip is the opt-in real YouTube download matrix; no LIVE test ran.
+The integration directory is an explicit Python package so shared test fixtures
+resolve under both `pytest` and `python -m pytest`. The first PR CI run stopped
+at collection without that marker; it did not execute the transport matrix.
+Ruff/diff/privacy and internal Markdown links are checked before publication.
+Exact-head full CI is recorded on the Draft PR. These are
 unit and deterministic loopback integration results, not real platform smoke,
 Telegram LIVE recovery, throughput/load or production deployment acceptance.
 
