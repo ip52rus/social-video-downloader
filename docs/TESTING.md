@@ -1,5 +1,28 @@
 # Testing Strategy
 
+## yt-dlp stable upgrade — 2026-10-30
+
+Owner-authorized stable target `2026.10.26`; baseline main `f804c2e` (PR #88
+merged, post-merge CI #41058700939 SUCCESS). P9-R3a is OFFLINE VERIFIED;
+the saved P9-R3b technical deployment checkpoint is 13:06:40 UTC,
+source `f804c2e`, diagnostics=false. This stage does not inspect or modify HOSTKEY.
+
+A/B used exactly one metadata extraction per version: both returned matching
+identity, then failed existing snapshot validation. Serialization, IPC and choice
+planning were NOT REACHED; the exact refusal predicate remains UNKNOWN. The
+reported video is not demonstrated fixed. Library compatibility is evaluated
+independently. P9-R2 remains INCONCLUSIVE; Phase 9 remains OPEN.
+[Detailed evidence, dependency diff and release limits](YTDLP_STABLE_UPGRADE.md).
+
+Existing focused regression gate: **304 passed in 160.17 s**; added upstream
+parser/version-boundary checks: **4 passed**. Offline wheel build/fresh frozen
+installation, 29 exact runtime distributions, SDK imports, EN/RU/ES catalogs and
+Deno compatibility passed. Full offline suite: **3006 passed, 1 skipped in
+456.71 s**; the skip is the opt-in YouTube download matrix. Ruff lint/format,
+diff/privacy and **144 internal Markdown links/anchors** passed.
+Exact-head CI is checked after Draft PR publication and reported separately.
+No Telegram/media LIVE acceptance is inferred from synthetic/loopback tests.
+
 ## P9-R2 LIVE evidence closeout — 2026-10-30
 
 P9-R1b is **MERGED / OFFLINE VERIFIED**. The two-window P9-R2 experimental

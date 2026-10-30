@@ -16,7 +16,7 @@ RUN apt-get update \
 
 ENV PIP_DEFAULT_TIMEOUT=120 PIP_RETRIES=10
 
-RUN pip install --no-cache-dir uv && pip cache purge || true
+RUN pip install --no-cache-dir uv
 
 RUN uv venv /opt/venv
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv
@@ -25,10 +25,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 COPY pyproject.toml .
 COPY uv.lock .
-RUN uv sync --frozen --no-dev --no-install-project 2>/dev/null || uv sync --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --no-install-project
 
-RUN python -c 'from aiogram.client.default import DefaultBotProperties; print("aiogram 3.x installed")' 2>/dev/null || \
-    (uv pip install --python /opt/venv/bin/python "aiogram>=3.0.0" && echo 'aiogram 3.x installed')
+RUN python -c 'from aiogram.client.default import DefaultBotProperties; print("aiogram 3.x installed")'
 
 RUN (uv cache prune 2>/dev/null || pip cache purge 2>/dev/null) || true
 RUN pip cache purge || true

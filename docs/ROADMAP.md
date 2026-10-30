@@ -1,5 +1,22 @@
 # Roadmap
 
+## yt-dlp stable upgrade — 2026-10-30
+
+Owner-authorized stable target `2026.10.26`; baseline main `f804c2e` (PR #88
+merged, post-merge CI #41058700939 SUCCESS). P9-R3a is OFFLINE VERIFIED;
+the saved P9-R3b technical deployment checkpoint is 13:06:40 UTC,
+source `f804c2e`, diagnostics=false. This stage does not inspect or modify HOSTKEY.
+
+A/B used exactly one metadata extraction per version: both returned matching
+identity, then failed existing snapshot validation. Serialization, IPC and choice
+planning were NOT REACHED; the exact refusal predicate remains UNKNOWN. The
+reported video is not demonstrated fixed. Library compatibility is evaluated
+independently. P9-R2 remains INCONCLUSIVE; Phase 9 remains OPEN.
+Dependency compatibility is **OFFLINE VERIFIED** (3006 passed, 1 opt-in LIVE skip).
+Next gate: independent review/exact-head CI; merge and deployment remain separately
+authorized. Further snapshot-predicate diagnosis requires a new bounded scope.
+[Detailed evidence, dependency diff and release limits](YTDLP_STABLE_UPGRADE.md).
+
 ## P9-R2 evidence closeout and P9-R3a — 2026-10-30
 
 P9-R1b is **MERGED / OFFLINE VERIFIED**, deployed as source `742bc105`.
