@@ -1,5 +1,132 @@
 # Testing Strategy
 
+## P9-R2 LIVE evidence closeout — 2026-10-30
+
+P9-R1b is **MERGED / OFFLINE VERIFIED**. The two-window P9-R2 experimental
+series is **CLOSED / INCONCLUSIVE**; LIVE responsiveness acceptance remains
+**OPEN / INCONCLUSIVE**, and Phase 9 remains **OPEN**.
+
+| Window | Attempts | Qualified overlap | Evidence |
+|---|---:|---:|---|
+| First | 0 | 0 | One B preparation; no callback measurement; 128 sanitized events |
+| Retest | 2 | 0 | A extraction 1.018 / 1.261 s; 183 sanitized events |
+
+Retest `updates_received -> ack_started` was 6.812 / 1.173 ms;
+`callback_entered -> ack_started` was 5.748 / 0.203 ms. Bot API acknowledgement
+returned in 15.235 / 24.287 ms. The maximum observed event-loop lag was 10.573 ms.
+Both extractions were below the 2-second qualification minimum, and B callbacks
+were observed 20.685 / 16.757 seconds after extraction ended. The third attempt
+was not started because the remaining action window was insufficient.
+
+The missing overlap is a scenario reproducibility limitation. It proves neither
+absence nor presence of event-loop blocking. Fast callback observations outside
+overlap are not concurrency PASS. GetUpdates observation is not physical click
+arrival, and no client tap-to-visible time was measured. Busy was not observed:
+both callbacks were admitted after A released the working slot.
+
+Both windows recorded zero acquisition/delivery events. Retest preserved B pending
+choices until cancellation; A/B cancellation events ended with active/work leases
+zero and no observed quarantine or cleanup UNKNOWN. One metadata_unavailable
+failure in retest released its lease without quarantine. In the first window B
+cancellation was not confirmed; the waiting card became stale after maintenance.
+A separate manual Video -> quality precheck received owner-observed PASS with
+cancellation confirmed. That UI observation applies to the tested card, not every
+future plan, and is separate from concurrency acceptance.
+
+Saved final postflight at **2026-10-30 09:17:44 UTC**: one poller, bot/API RUNNING,
+restart 0, OOM false; effective CONCURRENCY_DIAGNOSTICS=false. Runtime source
+`742bc105e923500fc0b22844bec2809c0c8fbc45`, image
+`sha256:a8daabf3bd383740ede1138cfef0ec08802b2d2f27c409a5517daba7dffe350a`.
+API identity/volume/mounts, limits, platform activation and persistent release
+image override were preserved. This is dated saved evidence, not a fresh server
+inspection in P9-R3a. No private paths, IDs, URLs or raw logs are published here.
+
+PR #86 merged as `742bc105`; PR #87 documentation merged as `1aa0943`.
+Post-merge CI #41024517298 on exact `1aa0943` was SUCCESS at P9-R3a preflight.
+Historical dated records below retain their original stage-specific scope.
+
+## P9-R3a offline upload transport — OFFLINE VERIFIED
+
+The initial tests-only stage found a real ownership ordering FAIL on source
+`1aa0943`: when the endpoint aborted after a partial upload, one native upload file
+handle was still open at workspace cleanup. The minimal run was **1 passed,
+1 failed**, with cleanup counts `[1, 0]` instead of `[0, 0]`. Classification was
+already UNCERTAIN, callback replay did not resend, and a later independent request
+was admitted. This was a cleanup-ordering failure, not proof of duplicate delivery,
+permanent FD leakage or a production incident. Production fixes stopped until the
+owner separately authorized the upload ownership stage.
+
+Root cause: aiogram 3.31.0 hands the FSInputFile generator to aiohttp 3.14.4
+AsyncIterablePayload, whose interrupted write need not explicitly close that
+generator. The request-owned OwnedUploadFile now tracks one shielded source read,
+drains it and explicitly closes the original SDK generator before returning to
+workspace cleanup. Repeated cancellation cannot interrupt that close task. Failed
+closure raises DownloadCleanupError into existing workspace retention/quarantine.
+Confirmed Video/Audio receipts are recorded before close, so cleanup uncertainty
+does not erase confirmed delivery; without a receipt, delivery stays UNCERTAIN.
+The SDK session and multipart implementation are unchanged. No retry, full-file
+buffering, forced GC, artificial production delay or new dependency was added.
+
+### Deterministic local transport matrix
+
+The fixture uses the real AiohttpSession and FSInputFile generator, native files,
+synthetic media bytes and numeric loopback TCP. It guards connect/connect_ex/DNS
+against all destinations except its own listener and bound non-listening refusal
+port. No environment credentials or external platforms are used. Both Video and
+Audio pass every A–I case. Correct Bot API JSON envelopes are used for 400/429/5xx,
+including retry_after for 429; status codes alone are not treated as SDK errors.
+
+| Fault | Expected and verified result |
+|---|---|
+| A: valid media receipt | DELIVERED |
+| B: connection refusal before upload | TelegramNetworkError; UNCERTAIN; no server media request |
+| C: break after partial body | TelegramNetworkError; UNCERTAIN; native handles closed before cleanup |
+| D: full body accepted, response lost | UNCERTAIN; received bytes alone do not prove delivery |
+| E: response timeout | SDK TelegramNetworkError; UNCERTAIN |
+| F: compatible 5xx response | TelegramServerError; UNCERTAIN |
+| G: compatible 400 / 429 | TelegramBadRequest / TelegramRetryAfter; FAILED, no automatic retry |
+| H: cancellation / repeated cancellation | cancellation propagates after reader drain; no resend |
+| I: terminal edit failure after media success | confirmed media stays DELIVERED; no resend |
+
+There are **28 integration cases**: 18 Video/Audio transport cases, four upload
+cancellation variants and six unknown-close/workspace-cleanup variants. Native
+file objects are observed without replacing them. Partial-upload tests leave
+FSInputFile.read and aiofiles.open unchanged. Cancellation uses test-only Events
+around a real reader to prove that pending I/O, workspace and admission remain
+owned until release; it does not use wall-clock performance assertions or alter
+production timeouts. A watchdog only prevents hung test fixtures.
+
+All normal outcomes attempt the original media once, reject consumed callback
+replay, close files before deletion, release the lease, then accept a new explicit
+request after controlled cooldown. Unknown-close cases cover both confirmed
+receipts and network-unknown delivery; workspace and quarantined working lease are
+retained, /cancel and a new request cannot free them, and another user cannot take
+the occupied global slot. Fixture teardown drains its own resources and checks
+closed handles, no remaining test files/tasks and no external connection attempts.
+Two unit cases additionally inject source aclose failure/cancellation and verify
+typed private cleanup errors and refusal to reopen an uncertain file owner.
+
+Focused verification: **30 passed**. Related handlers, terminal UX,
+admission, cancellation, operation logging, logging filters and localization:
+**606 passed in 19.50 s**. The full local suite using the CI entry point
+`uv run --offline pytest -q --tb=short` passed **3002 tests, 1 skipped** in 449.86 s.
+The skip is the opt-in real YouTube download matrix; no LIVE test ran.
+The integration directory is an explicit Python package so shared test fixtures
+resolve under both `pytest` and `python -m pytest`. The first PR CI run stopped
+at collection without that marker; it did not execute the transport matrix.
+Ruff/diff/privacy and internal Markdown links are checked before publication.
+Exact-head full CI is recorded on the Draft PR. These are
+unit and deterministic loopback integration results, not real platform smoke,
+Telegram LIVE recovery, throughput/load or production deployment acceptance.
+
+```sh
+uv run --offline python -m pytest -q tests/test_telegram_upload.py tests/integration/test_youtube_upload_transport.py
+```
+
+Synthetic bytes exercise transport and ownership, not media decoding/playback.
+Production HOSTKEY was not accessed or changed during this stage. P9-R2 remains
+INCONCLUSIVE and Phase 9 remains OPEN.
+
 ## P9-R2d deployment checkpoint — 2026-10-30
 
 HOSTKEY bot-only deployment of `742bc105`: **TECHNICAL PASS** at 07:41 UTC.

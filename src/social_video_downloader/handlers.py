@@ -22,7 +22,6 @@ from aiogram.exceptions import (
 from aiogram.filters import Command, CommandStart
 from aiogram.types import (
     CallbackQuery,
-    FSInputFile,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Message,
@@ -55,6 +54,7 @@ from social_video_downloader.infrastructure.telegram_media import (
     prepare_telegram_video,
     telegram_video_upload_parameters,
 )
+from social_video_downloader.infrastructure.telegram_upload import OwnedUploadFile
 from social_video_downloader.infrastructure.youtube_write_budget import (
     BudgetExceeded,
     YouTubeWriteBudget,
@@ -384,12 +384,13 @@ async def _download_and_deliver_media(
                         check_delivery_file(audio.file_path)
                         operation.phase = "upload"
                         sending = True
-                        sent_message = await message.answer_audio(
-                            FSInputFile(audio.file_path),
-                            caption=downloaded.metadata.title[:1024],
-                            **audio_parameters,
-                        )
-                        confirmed = getattr(sent_message, "audio", None) is not None
+                        async with OwnedUploadFile(audio.file_path) as upload:
+                            sent_message = await message.answer_audio(
+                                upload,
+                                caption=downloaded.metadata.title[:1024],
+                                **audio_parameters,
+                            )
+                            confirmed = getattr(sent_message, "audio", None) is not None
                         if not confirmed:
                             operation.fail(category="unconfirmed_upload")
                             return _uncertain_delivery()
@@ -418,14 +419,14 @@ async def _download_and_deliver_media(
                     check_delivery_file(telegram_video)
                     operation.phase = "upload"
                     sending = True
-                    sent_message = await message.answer_video(
-                        FSInputFile(telegram_video),
-                        caption=downloaded.metadata.title[:1024],
-                        supports_streaming=True,
-                        **upload_parameters,
-                    )
-
-                    confirmed = getattr(sent_message, "video", None) is not None
+                    async with OwnedUploadFile(telegram_video) as upload:
+                        sent_message = await message.answer_video(
+                            upload,
+                            caption=downloaded.metadata.title[:1024],
+                            supports_streaming=True,
+                            **upload_parameters,
+                        )
+                        confirmed = getattr(sent_message, "video", None) is not None
                     if not confirmed:
                         operation.fail(category="unconfirmed_upload")
                         return _uncertain_delivery()
