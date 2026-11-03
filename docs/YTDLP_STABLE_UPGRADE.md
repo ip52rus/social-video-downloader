@@ -1,4 +1,8 @@
 # yt-dlp stable upgrade and metadata A/B — 2026-10-30
+## Subsequent merge and deployment — documentation update 2026-11-03
+
+PR #89 was merged into `1df3fc129c6880555bc021cbbade74c6ce1fe14a`, [post-merge CI SUCCESS](https://github.com/ip52rus/social-video-downloader/actions/runs/41067317374). The dependency upgrade described below was **deployed on HOSTKEY VPS** as P9-R4, technical PASS at 2026-10-31 08:23:43 UTC; see [P9-R4 deployment record](LOCAL_BOT_API.md#p9-r4-deployment-checkpoint--2026-10-31). The following 2026-10-30 baseline and statement that *this stage does not deploy* describe the historical A/B stage, not the current release. Upgrading yt-dlp did not resolve the historical YouTube snapshot failure.
+
 
 ## Scope and baseline
 

@@ -1,4 +1,10 @@
 # Architecture
+## Current deployed topology — 2026-11-03
+
+**Deployed, not pre-launch.** The Telegram bot [@GetThatVideo_bot](https://t.me/GetThatVideo_bot) is running on HOSTKEY VPS under Docker Compose with an internal Local Telegram Bot API Server. The last saved P9-R4 technical postflight was **PASS on 2026-10-31 at 08:23:43 UTC**, source `1df3fc129c6880555bc021cbbade74c6ce1fe14a` (merged [PR #89](https://github.com/ip52rus/social-video-downloader/pull/89), [post-merge CI SUCCESS](https://github.com/ip52rus/social-video-downloader/actions/runs/41067317374)), image `sha256:f93a3f497ad23761397f557bb849b73eff85e8c57665c9efad8b40d244aedde3` (linux/amd64). Previous image and rollback tag are retained. One poller, bot/API RUNNING, restart 0/OOM false were recorded; MacBook bot/API containers remain stopped. **This is a dated checkpoint, not a fresh 2026-11-03 server-health check.**
+
+The latest production source keeps the bounded YouTube metadata worker, POSIX acquisition ownership and Local API inside the Compose network. The next 2026-10-29 section is a dated architectural checkpoint, not the current image identity.
+
 
 ## Checkpoint 2026-10-29
 

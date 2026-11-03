@@ -8,9 +8,7 @@ Users submit supported public links and receive verified media in the same chat.
 Video editing inside Telegram is out of scope. The owner approves stage boundaries;
 implementation, LIVE, merge and deployment are distinct gates in [AGENTS.md](../AGENTS.md).
 
-Checkpoint: **2026-10-29**, source main
-`f74dc6c933012b809d4e6dc33ed3f3bdadc39d34` (merged PR #83).
-This is a source checkpoint, not a promise that a server is still running that revision.
+Current documentation checkpoint: **2026-11-03**. **Deployed, not pre-launch.** The Telegram bot [@GetThatVideo_bot](https://t.me/GetThatVideo_bot) is running on HOSTKEY VPS under Docker Compose with an internal Local Telegram Bot API Server. The last saved P9-R4 technical postflight was **PASS on 2026-10-31 at 08:23:43 UTC**, source `1df3fc129c6880555bc021cbbade74c6ce1fe14a` (merged [PR #89](https://github.com/ip52rus/social-video-downloader/pull/89), [post-merge CI SUCCESS](https://github.com/ip52rus/social-video-downloader/actions/runs/41067317374)), image `sha256:f93a3f497ad23761397f557bb849b73eff85e8c57665c9efad8b40d244aedde3` (linux/amd64). Previous image and rollback tag are retained. One poller, bot/API RUNNING, restart 0/OOM false were recorded; MacBook bot/API containers remain stopped. **This is a dated checkpoint, not a fresh 2026-11-03 server-health check.**
 
 ## Current accepted product
 
@@ -32,9 +30,7 @@ This is a source checkpoint, not a promise that a server is still running that r
 - **Phase 9C LOCAL ACCEPTED**: one unfinished cross-platform request per user,
   separate pending/work capacities, /cancel for waiting choices, bounded link replies,
   guarded writes/cleanup; fixed Instagram 25 MiB gates removed. Local owner 5/5 PASS.
-- HOSTKEY cutover received a dated TECHNICAL PASS on 2026-10-28. VPS is the designated
-  sole poller; MacBook bot/API are preserved stopped. No server check was performed
-  for this documentation checkpoint. See [operations](LOCAL_BOT_API.md#hostkey-vps-checkpoint-2026-10-28).
+- HOSTKEY cutover passed on 2026-10-28, and the later P9-R4 bot-only replacement passed on 2026-10-31 with yt-dlp 2026.10.26. VPS is the designated sole poller; MacBook bot/API remain stopped. See [P9-R4 deployment record](LOCAL_BOT_API.md#p9-r4-deployment-checkpoint--2026-10-31). The deployment test is not a Telegram LIVE download acceptance.
 
 Repository defaults and deployed settings differ: flags default off, work capacity
 four; the preserved HOSTKEY evidence has both platform flags on and work capacity one.
@@ -42,6 +38,8 @@ APP_ENV remains development to preserve the existing Instagram production guard;
 physical production deployment does not justify silently changing it.
 
 ## Current boundaries
+The intermittent YouTube metadata/snapshot issue has not been fixed. P9-R5f confirmed a synthetic offline conflict in the private diagnostic guard, which does not establish the original production failure. P9-R5g offline-only hardening is authorized, completion not yet reported. No production fix or external follow-up is authorized by this documentation update.
+
 
 **Phase 9 remains OPEN**: load, restart/recovery, fault handling, rollback rehearsal,
 large/long files and additional clients are not accepted by the small functional sample.

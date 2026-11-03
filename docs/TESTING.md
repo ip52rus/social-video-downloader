@@ -1,4 +1,12 @@
 # Testing Strategy
+## Current deployment and investigation checkpoint — 2026-11-03
+
+**Deployed, not pre-launch.** The Telegram bot [@GetThatVideo_bot](https://t.me/GetThatVideo_bot) is running on HOSTKEY VPS under Docker Compose with an internal Local Telegram Bot API Server. The last saved P9-R4 technical postflight was **PASS on 2026-10-31 at 08:23:43 UTC**, source `1df3fc129c6880555bc021cbbade74c6ce1fe14a` (merged [PR #89](https://github.com/ip52rus/social-video-downloader/pull/89), [post-merge CI SUCCESS](https://github.com/ip52rus/social-video-downloader/actions/runs/41067317374)), image `sha256:f93a3f497ad23761397f557bb849b73eff85e8c57665c9efad8b40d244aedde3` (linux/amd64). Previous image and rollback tag are retained. One poller, bot/API RUNNING, restart 0/OOM false were recorded; MacBook bot/API containers remain stopped. **This is a dated checkpoint, not a fresh 2026-11-03 server-health check.**
+
+**Limits:** Phase 8 MVP accepted with documented limitations; Phase 9C locally accepted (owner 5/5); Phase 9 reliability remains OPEN. P9-R2 LIVE concurrency responsiveness is INCONCLUSIVE. P9-R4 did not perform Telegram LIVE downloads/uploads. The YouTube metadata/snapshot production root cause remains UNKNOWN. P9-R5f proved a conflict in the *private offline diagnostic guard*, not a production fix. P9-R5g offline hardening was authorized, but no result is recorded at this checkpoint. No claim of broad platform reliability or near-2 GB support.
+
+Evidence remains separate: PR #89 post-merge CI SUCCESS; P9-R4 29/29 locked Linux runtime distributions and dated VPS technical PASS; P9-R2 qualified overlap 0 (INCONCLUSIVE); old A/B returned metadata but the exact snapshot refusal was not retained. P9-R5b and P9-R5d were single-use metadata-only probes that did not reach snapshot validation. P9-R5f used true yt-dlp extractor helpers with synthetic transport: **303 offline tests PASS**, 24 Linux differential cases, zero external network/DNS and zero media acquisition; proved only a *private harness* manifest classification conflict. P9-R5g has not produced an acceptance report. No new VPS check or Telegram LIVE test was made for this docs update. Private diagnostic reports are not committed to Git.
+
 
 ## yt-dlp stable upgrade — 2026-10-30
 
