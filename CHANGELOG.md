@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Documentation-only 2026-11-03 update: reflect live HOSTKEY VPS deployment of @GetThatVideo_bot, not an upcoming launch; link the dated P9-R4 technical checkpoint and retained rollback.
+- PR #89 yt-dlp 2026.10.26 was merged and separately deployed successfully; Local Bot API unchanged. Phase 9 LIVE acceptance and the YouTube metadata/snapshot issue remain open.
+- Keep P9-R5f private offline diagnostic-guard conflict distinct from production failures. No runtime, config, source or deployment change in this documentation update.
+
 
 - Preserve the 2026-10-29 documentation checkpoint, agent rules, self-contained chat
   handoff and canonical deferred Short Drama research; no runtime changes.

@@ -1,4 +1,17 @@
 # Local Telegram Bot API Server
+## P9-R4 deployment checkpoint — 2026-10-31
+
+**Deployed, not pre-launch.** The Telegram bot [@GetThatVideo_bot](https://t.me/GetThatVideo_bot) is running on HOSTKEY VPS under Docker Compose with an internal Local Telegram Bot API Server. The last saved P9-R4 technical postflight was **PASS on 2026-10-31 at 08:23:43 UTC**, source `1df3fc129c6880555bc021cbbade74c6ce1fe14a` (merged [PR #89](https://github.com/ip52rus/social-video-downloader/pull/89), [post-merge CI SUCCESS](https://github.com/ip52rus/social-video-downloader/actions/runs/41067317374)), image `sha256:f93a3f497ad23761397f557bb849b73eff85e8c57665c9efad8b40d244aedde3` (linux/amd64). Previous image and rollback tag are retained. One poller, bot/API RUNNING, restart 0/OOM false were recorded; MacBook bot/API containers remain stopped. **This is a dated checkpoint, not a fresh 2026-11-03 server-health check.**
+
+- Release image tag: `youtubedownloader-bot:p9-r4-1df3fc1-20261031t081739z`.
+- Verified rollback tag: `youtubedownloader-bot:rollback-p9-r4-20261031t081739z` points to previous image `sha256:b8008135294f3fe153c7282b220756340ed20850f36f6d0a11aa7567fe448ee8`; older images/tags retained.
+- Approved image transferred by Docker save/load, not rebuilt on HOSTKEY. Previous bot exited gracefully before new bot started; one poller throughout. Local Bot API container, image, mounts and volume were unchanged and not restarted.
+- Effective settings preserved: `DOWNLOAD_MAX_ACTIVE_REQUESTS=1`, `CONCURRENCY_DIAGNOSTICS=false`, Instagram/TikTok enabled, `APP_ENV=development` (required by existing Instagram activation policy), timeout 1800 s.
+- Confirmed at dated postflight: yt-dlp 2026.10.26, Python 3.13.18, Deno 2.9.7, EJS 0.8.0, FFmpeg/ffprobe 7.1.5; free disk 47.56 GiB, available RAM 3.06 GiB. Resource values are dated, not current.
+- **No new Telegram LIVE upload/download was performed**. This deployment does not close the YouTube metadata issue or Phase 9 reliability. Do not initiate a second poller or modify production configuration solely to refresh documentation.
+
+Older sections below are historical snapshots and retain their dates. P9-R4 supersedes previous bot image/source checkpoints without erasing their evidence.
+
 
 ## P9-R2d deployment checkpoint — 2026-10-30
 

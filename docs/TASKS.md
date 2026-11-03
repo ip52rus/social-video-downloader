@@ -1,4 +1,19 @@
 # Task Decomposition
+## Current deployment gates — 2026-11-03
+
+**Deployed, not pre-launch.** The Telegram bot [@GetThatVideo_bot](https://t.me/GetThatVideo_bot) is running on HOSTKEY VPS under Docker Compose with an internal Local Telegram Bot API Server. The last saved P9-R4 technical postflight was **PASS on 2026-10-31 at 08:23:43 UTC**, source `1df3fc129c6880555bc021cbbade74c6ce1fe14a` (merged [PR #89](https://github.com/ip52rus/social-video-downloader/pull/89), [post-merge CI SUCCESS](https://github.com/ip52rus/social-video-downloader/actions/runs/41067317374)), image `sha256:f93a3f497ad23761397f557bb849b73eff85e8c57665c9efad8b40d244aedde3` (linux/amd64). Previous image and rollback tag are retained. One poller, bot/API RUNNING, restart 0/OOM false were recorded; MacBook bot/API containers remain stopped. **This is a dated checkpoint, not a fresh 2026-11-03 server-health check.**
+
+- [x] PR #88 upload ownership fix reviewed/merged; P9-R3b bot-only deployment technical PASS (2026-10-30).
+- [x] PR #89 dependency upgrade to yt-dlp 2026.10.26 reviewed/merged and exact-head CI SUCCESS.
+- [x] P9-R4 authorized bot-only deployment technical PASS; rollback image retained; Local API unchanged.
+- [x] P9-R5f confirmed an offline-only synthetic private diagnostic guard/manifest conflict.
+- [ ] Review the separately authorized P9-R5g offline hardening report (no result supplied yet).
+- [ ] Establish root cause of intermittent YouTube metadata/snapshot error before any production fix.
+- [ ] Obtain separate authorization and complete Phase 9 LIVE callback responsiveness, recovery/load/large-file gates; P9-R2 remains INCONCLUSIVE.
+- [ ] Broad Instagram/TikTok/near-2 GB reliability acceptance remains open.
+
+Historical unchecked gates below describe their original 2026-10-30 stage; PR #88/#89 and P9-R3b/P9-R4 subsequently completed the recorded review/merge/deploy gates, not LIVE acceptance.
+
 
 ## yt-dlp stable upgrade — 2026-10-30 (offline verified)
 
@@ -15,8 +30,8 @@ Phase 9 remains OPEN.
 - [x] Complete offline/quality gates: 304 focused + 4 compatibility checks; full
   suite 3006 passed, 1 opt-in LIVE skip; wheel/frozen install, Ruff/privacy/links PASS.
 - [x] Synchronize evidence and the stable maintenance policy.
-- [ ] Independent review; exact-head CI is recorded on the Draft PR after publication.
-- [ ] Separately authorize any merge/deployment or further metadata investigation.
+- [x] Independent review/exact-head CI completed for PR #89.
+- [x] Separate merge and P9-R4 deployment authorization granted and executed; metadata root cause remains UNKNOWN.
 
 Dependency compatibility is **OFFLINE VERIFIED**; the video issue is not demonstrated
 fixed. [A/B, package evidence and release limits](YTDLP_STABLE_UPGRADE.md).
@@ -43,8 +58,9 @@ or LIVE recovery acceptance is implied.
   separate owner authorization for the minimal production fix.
 - [x] Verify Video/Audio A–I transport cases, cancellation/repeated cancellation,
   no-resend, ownership drain, quarantine and next-request admission offline.
-- [ ] Complete independent review and exact-head CI of the P9-R3a Draft PR.
-- [ ] Any merge, deployment or LIVE recovery acceptance requires separate owner scope.
+- [x] Independent review/exact-head CI completed for PR #88; merged.
+- [x] Separately authorized P9-R3b bot-only deployment technical PASS.
+- [ ] LIVE recovery acceptance remains separate and open.
 
 ## P9-R2d deployment checkpoint — 2026-10-30
 
